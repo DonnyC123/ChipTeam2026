@@ -1,0 +1,4 @@
+1) Install Mini Conda using the provided script.
+
+2) Copy the default environment using the following command:
+    conda env create -f environment.yml

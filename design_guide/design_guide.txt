@@ -1,0 +1,122 @@
+Design Guide
+  This is a design guide for the 2026 Chip Design Team. None of the
+  conventions or principles listed below are absolute. They are just
+  strong recommendations.
+
+Naming Conventions
+
+1.  Registered values should have a _d and _q signal.
+    If you need to register the q again please use 2q .. etc
+    This is because always_ff blocks should be very very simple
+
+    Example:
+      always_comb begin
+        sum_d = num_a + num_b + num_c;
+      end
+
+      always_ff @(posedge clk) begin
+        sum_q   <= sum_d;
+        sum_2q  <= sum_q;
+      end
+
+2.  All input and output logic types should have _i for input
+    and _o for output. This doesn't apply for clk and rst signals
+
+    Example:
+      input  logic clk,
+      input  logic start_i,
+      output logic done_o
+
+3.  All logic will be in snake_case. All parameters will be in
+    SCREAMING_SNAKE_CASE.
+
+4.  All parameters for the width of a logic type should end in _W.
+
+    Example:
+      localparam int DATA_W = 8;
+
+5.  All packages should end in _pkg and all interfaces should
+    end in _if.
+
+    Example:
+      package my_example_pkg;
+      interface my_example_if();
+
+
+Format Conventions
+
+1.  Only declare one variable per line.
+
+2.  All equal signs in the same part of a block should be lined up 
+    within reason.
+
+    Example:
+      always_comb begin
+        case(state)
+        STATE_1: begin
+          num_4             = num_2 + num_3;
+          if (num_2 == 3) begin
+            super_long_num  = num_3 - num_1;
+          end
+        end
+        STATE_2: begin
+          num_5 = num_1 + num_2; 
+        end
+        endcase
+      end
+
+3.  All module declarations should be lined up within reason. See
+    example modules.
+
+4.  All variable and parameter declarations should line up when possible
+
+5.  In general line your stuff up.
+
+6.  Use the following format for creating instances of module
+
+    Example:
+      my_module # (
+        .DATA_W       (DATA_W),
+        .COUNTER_LEN  (COUNTER_LEN)
+      ) my_module_inst (
+        .clk    (clk),
+        .rst    (rst),
+        .data_i (data_i),
+        .data_o (data_o)
+      );
+
+
+RTL Design Principles
+
+1.  All sequential logic will change on the positive edge of the
+    clk.
+
+2.  All resets with be positive synchronous resets. Only reset 
+    signals that require a reset
+
+    Example:
+      always_ff @(posedge clk) begin
+        if (rst) begin
+          data_valid_q <= '0;
+        end else begin
+          data_valid_q <= data_valid_d;
+          data_q       <= data_d;
+        end
+      end
+
+3.  Try to use the data_pipeline and data_shift modules when possible.
+    This makes trying to optimize for a clock frequency easier.
+
+4.  Split logic into separate always_comb and always_ff blocks.
+    Very little should be written in an always_ff block besides assigning values
+
+5.  All parameters outside of port declarations should be localparam.
+
+6.  Unless it is necessary define localparam and types inside of packages.
+
+7.  Importing packages should always be done below module declaration name.
+
+8.  No magic numbers. Your RTL shouldn't have a bunch of numbers scattered
+    throughout. Declare parameters. However, if you are doing something as trivial
+    as adding 1, you don't need to create a parameter.
+

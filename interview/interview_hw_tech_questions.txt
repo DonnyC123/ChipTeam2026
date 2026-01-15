@@ -1,0 +1,12 @@
+List of hardware technical questions
+  1.
+    a. What set up/hold time
+    b. What what happens when these conditions are not met
+    c. What are some ways to fix these violations?
+
+  2. What are the two ways to represent decimal numbers in hardware?
+
+Other good questions to ask
+  What languages are you comfortable programming in?
+  Do you prefer SV, V or VHDL.
+  How much time are you willing to dedicate to this project?
