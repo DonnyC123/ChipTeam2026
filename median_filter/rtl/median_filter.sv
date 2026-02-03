@@ -16,14 +16,16 @@ module median_filter #(
   localparam int PIXEL_W     = 24;
   localparam int KERNEL_LEN  = 2;
 
-  logic [ADDR_W-1:0]      bram_addra_d;
   logic [ADDR_W-1:0]      bram_addra_q;
+  logic [ADDR_W-1:0]      bram_addrb_q;
   
   logic                   bram_ena;
   logic                   bram_enb;
 
-  logic [PIXEL_W-1:0]     bram_datai_d;
-  logic [PIXEL_W-1:0]     bram_datao_q;
+  logic [PIXEL_W-1:0]     bram_data_d;
+  logic [PIXEL_W-1:0]     bram_data_q;
+
+  logic [PIXEL_W-1:0] bram_data_pipe;
 
   bram #(
     .BRAM_ADDR_W (ADDR_W),
@@ -34,21 +36,17 @@ module median_filter #(
     .addrb              (bram_addrb_q),
     .ena                (bram_ena),
     .enb                (bram_enb),
-    .bram_data_i        (bram_datai_d),
-    .bram_data_o        (bram_datao_q)
+    .bram_data_i        (bram_data_d),
+    .bram_data_o        (bram_data_q)
   );
 
-  logic                 read_active; 
+  logic [ADDR_W-1:0]    x_coord;
+  logic [ADDR_H-1:0]    y_coord;
+  logic [ADDR_W-1:0]    write_addr;
+  logic [ADDR_W-1:0]    read_addr;
+  logic                 read_active;
 
-  reg [ADDR_W-1:0]      x_coord;
-  reg [ADDR_H-1:0]      y_coord;
-  reg [ADDR_W:0]        write_addr; 
-  reg [ADDR_W:0]        read_addr;
-
-  reg [PIXEL_W-1:0]     d0;
-  reg [PIXEL_W-1:0]     d1;
-  reg [PIXEL_W-1:0]     d2; 
-  reg [PIXEL_W-1:0]     d3;
+  logic [PIXEL_W-1:0]   d0, d1, d2, d3;
 
   // setting the x and y coordinate regs
   always_ff @(posedge clk) begin
@@ -75,7 +73,6 @@ module median_filter #(
   always_ff @(posedge clk) begin
     if(rst) begin
       write_addr  <= 1'b0;
-      read_addr   <= 1'b0;
     end else
     if(pixel_valid_if_i.valid) begin
       write_addr  <= write_addr + 1;
@@ -87,29 +84,34 @@ module median_filter #(
     if(rst) begin
       read_active <= 1'b0;
       read_addr   <= '0;
-    end else 
-    if(x_coord >= IMAGE_LEN - 1) begin
-      read_active <= 1'b1;
-    end
-    if(read_active && pixel_valid_if_i.valid) begin
-      read_addr <= read_addr + 1;
+    end else begin
+      read_active <= (y_coord >= 1);
+
+      if (read_active && pixel_valid_if_i.valid)
+        read_addr <= write_addr - IMAGE_LEN;
     end
   end
 
   always_comb begin
-    bram_enb    = read_active;
+    //READING COMB
+    bram_enb     = read_active;
     bram_addrb_q = read_addr;
-  end
 
-// WRITING
-  always_comb begin 
+    // WRITING COMB
     bram_addra_q = write_addr;
-    bram_datai_d = pixel_valid_if_i.pixel;
-    bram_ena    = pixel_valid_if_i.valid;
+    bram_data_d = pixel_valid_if_i.pixel;
+    bram_ena     = pixel_valid_if_i.valid;
   end
 
 //d0 d1 .....
 //d2 d3 .....
+
+ always_ff @(posedge clk) begin
+    if (rst)
+      bram_data_pipe <= '0;
+    else
+      bram_data_pipe <= bram_data_q;
+  end
 
 // READING THE 4 PIXELS INTO D REGISTERS
   always_ff @(posedge clk) begin
@@ -122,36 +124,39 @@ module median_filter #(
     if(pixel_valid_if_i.valid) begin
       d3          <= pixel_valid_if_i.pixel;
       d2          <= d3;
-      d1          <= bram_data_q;
+      d1          <= bram_data_pipe;
       d0          <= d1;
     end
   end
 
+  logic [10:0] red_total, green_total, blue_total;
+  logic [7:0] max_red, min_red, max_green, min_green, max_blue, min_blue;
+  max_module red_max (.a(d0.red), .b(d1.red), .c(d2.red), .d(d3.red), .out(max_red));
+  max_module blue_max (.a(d0.blue), .b(d1.blue), .c(d2.blue), .d(d3.blue), .out(max_blue));
+  max_module green_max (.a(d0.green), .b(d1.green), .c(d2.green), .d(d3.green), .out(max_green));
+
+  min_module red_min (.a(d0.red), .b(d1.red), .c(d2.red), .d(d3.red), .out(min_red));
+  min_module green_min (.a(d0.green), .b(d1.green), .c(d2.green), .d(d3.green), .out(min_green));
+  min_module blue_min (.a(d0.blue), .b(d1.blue), .c(d2.blue), .d(d3.blue), .out(min_blue));
+
 // Median filter logic
   always_comb begin
-    logic [9:0] red_total, green_total, blue_total;
-    logic [7:0] max_red, min_red, max_green, min_green, max_blue, min_blue;
     
     red_total = d0.red+d1.red+d2.red+d3.red;
     green_total = d0.green+d1.green+d2.green+d3.green;
     blue_total = d0.blue+d1.blue+d2.blue+d3.blue;
 
-    max_module red_max (.a(d0.red), .b(d1.red), .c(d2.red), .d(d3.red), .out(max_red));
-    max_module blue_max (.a(d0.blue), .b(d1.blue), .c(d2.blue), .d(d3.blue), .out(max_blue));
-    max_module green_max (.a(d0.green), .b(d1.green), .c(d2.green), .d(d3.green), .out(max_green));
-
-    min_module red_min (.a(d0.red), .b(d1.red), .c(d2.red), .d(d3.red), .out(min_red));
-    min_module green_min (.a(d0.green), .b(d1.green), .c(d2.green), .d(d3.green), .out(min_green));
-    min_module blue_min (.a(d0.blue), .b(d1.blue), .c(d2.blue), .d(d3.blue), .out(min_blue));
-
     red_total = (red_total - max_red - min_red+1)/2;
-    green_total = (green_total - max_green - min_green+1)/2;
-    blue_total = (blue_total - max_blue - min_blue+1)/2;
+    green_total = (green_total - max_green - min_green+1) >> 1;
+    blue_total = (blue_total - max_blue - min_blue+1) >> 1;
 
     pixel_valid_if_o.pixel.red   = red_total[7:0];
     pixel_valid_if_o.pixel.green = green_total[7:0];
     pixel_valid_if_o.pixel.blue  = blue_total[7:0];
+    
   end
+
+  assign pixel_valid_if_o.valid = read_active && pixel_valid_if_i.valid && (x_coord >= 1);
 
 endmodule
 
