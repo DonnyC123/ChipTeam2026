@@ -14,26 +14,25 @@ module median_filter #(
   localparam int ADDR_W      = $clog2(IMAGE_LEN);
   localparam int ADDR_H      = $clog2(IMAGE_HEIGHT);
   localparam int PIXEL_W     = 24;
-  localparam int KERNEL_LEN  = 2;
 
-  logic [ADDR_W-1:0]      bram_addra_q;
-  logic [ADDR_W-1:0]      bram_addrb_q;
-  
   logic                   bram_ena;
   logic                   bram_enb;
+
+  logic [ADDR_W-1:0]      bram_addra;
+  logic [ADDR_W-1:0]      bram_addrb;
 
   logic [PIXEL_W-1:0]     bram_data_d;
   logic [PIXEL_W-1:0]     bram_data_q;
 
-  logic [PIXEL_W-1:0] bram_data_pipe;
+  logic [PIXEL_W-1:0]     bram_data_pipe;
 
   bram #(
     .BRAM_ADDR_W (ADDR_W),
     .BRAM_DATA_W (PIXEL_W)
   ) line_buffer_bram (
     .clk                (clk),
-    .addra              (bram_addra_q),
-    .addrb              (bram_addrb_q),
+    .addra              (bram_addra),
+    .addrb              (bram_addrb),
     .ena                (bram_ena),
     .enb                (bram_enb),
     .bram_data_i        (bram_data_d),
@@ -94,13 +93,13 @@ module median_filter #(
 
   always_comb begin
     //READING COMB
-    bram_enb     = read_active;
-    bram_addrb_q = read_addr;
+    bram_enb      = read_active;
+    bram_addrb    = read_addr;
 
     // WRITING COMB
-    bram_addra_q = write_addr;
-    bram_data_d = pixel_valid_if_i.pixel;
-    bram_ena     = pixel_valid_if_i.valid;
+    bram_addra    = write_addr;
+    bram_data_d   = pixel_valid_if_i.pixel;
+    bram_ena      = pixel_valid_if_i.valid;
   end
 
 //d0 d1 .....
@@ -141,7 +140,6 @@ module median_filter #(
 
 // Median filter logic
   always_comb begin
-    
     red_total = d0.red+d1.red+d2.red+d3.red;
     green_total = d0.green+d1.green+d2.green+d3.green;
     blue_total = d0.blue+d1.blue+d2.blue+d3.blue;
