@@ -144,7 +144,7 @@ module median_filter #(
     green_total = d0.green+d1.green+d2.green+d3.green;
     blue_total = d0.blue+d1.blue+d2.blue+d3.blue;
 
-    red_total = (red_total - max_red - min_red+1)/2;
+    red_total = (red_total - max_red - min_red+1) >> 1;
     green_total = (green_total - max_green - min_green+1) >> 1;
     blue_total = (blue_total - max_blue - min_blue+1) >> 1;
 
@@ -154,7 +154,26 @@ module median_filter #(
     
   end
 
-  assign pixel_valid_if_o.valid = read_active && pixel_valid_if_i.valid && (x_coord >= 1);
+// VALID PIXEL
+  always_ff @(posedge clk or posedge rst) begin
+    if (rst) begin
+        pixel_valid_if_o.valid <= 1'b0;
+    end else begin
+        pixel_valid_if_o.valid <= read_active && pixel_valid_if_i.valid && (x_coord >= 1);
+    end
+  end
+
+// DONE SIGNAL
+  always_ff @(posedge clk) begin
+    if (rst) begin
+        done_o <= 1'b0;
+    end else 
+     if (pixel_valid_if_i.valid && x_coord == IMAGE_LEN-1 && y_coord == IMAGE_HEIGHT-1) begin
+        done_o <= 1'b1;
+     end else begin
+        done_o <= 1'b0; 
+    end
+  end
 
 endmodule
 
