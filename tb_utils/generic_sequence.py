@@ -14,12 +14,12 @@ class GenericSequence(Generic[SequenceItem]):
         self.transaction_subscribers.extend(subscribers)
 
     async def add_transaction(self, transaction: SequenceItem):
-        await self.notify_subscribers(transaction)
         await self.driver.send(transaction)
 
     async def notify_subscribers(self, transaction):
         for sub in self.transaction_subscribers:
             if hasattr(sub, "notify"):
                 await sub.notify(transaction)
+
             else:
                 print(f"Warning: Don't know how to notify {sub}")
