@@ -13,14 +13,14 @@ module fast_multiplier #(
 
   import multiplier_pkg::*;
 
-  localparam int HALF_W     = DIN_W + 1 / 2;
+  localparam int HALF_W     = (DIN_W + 1) / 2;
   localparam int TOP_HALF_W = DIN_W - HALF_W;
 
   logic [DOUT_W-1:0] large_product;
   logic [DOUT_W-1:0] product_d;
   logic [DOUT_W-1:0] product_q;
-  logic [DOUT_W-1:0] product_valid_d;
-  logic [DOUT_W-1:0] product_valid_q;
+  logic 	           product_valid_d;
+  logic              product_valid_q;
   logic [ DIN_W-1:0] small_product;
 
   logic              small_a_operand;
@@ -29,8 +29,7 @@ module fast_multiplier #(
 
   logic              valid_big_operands_new;
   logic              valid_small_operands_new;
-  logic              valid_big_operands_pipe  [PIPE_VALID_PROD_LEN];
-
+  logic              valid_big_operands_pipe [PIPE_VALID_PROD_LEN];      
 
   multiplier #(
       .DIN_W (DIN_W),
@@ -48,7 +47,7 @@ module fast_multiplier #(
   always_comb begin
     small_a_operand          = !(|(a_operand_i[DIN_W-1:HALF_W]));
     small_b_operand          = !(|(b_operand_i[DIN_W-1:HALF_W]));
-    small_operands           = small_a_operand && small_b_operand && !(|valid_big_operands_pipe);
+    small_operands           = small_a_operand && small_b_operand && !(valid_big_operands_pipe.or());
 
     valid_small_operands_new = operands_valid_i && small_operands;
     valid_big_operands_new   = operands_valid_i && !small_operands;
@@ -79,7 +78,7 @@ module fast_multiplier #(
 
 
   data_status_pipeline #(
-      .DATA_W    (1),
+      .DATA_W    (DOUT_W),
       .STATUS_W  (1),
       .PIPE_DEPTH(1)
   ) multiplier_stages_valid (

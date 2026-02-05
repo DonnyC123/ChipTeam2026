@@ -25,6 +25,10 @@ class FastMultiplierSequenceItem(AbstractTransaction):
     def valid(self) -> bool:
         return bool(self.operands_valid_i)
 
+    @property
+    def to_data(self) -> bool:
+        pass
+
     @valid.setter
     def valid(self, value: bool):
         self.operands_valid_i = Logic(value)

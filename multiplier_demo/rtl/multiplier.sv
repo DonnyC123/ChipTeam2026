@@ -15,6 +15,7 @@ module multiplier #(
   localparam int HALF_W         = (DIN_W + 1) / 2;
   localparam int HIGH_SUM_W     = HALF_W + 1;
   localparam int PARTIAL_MULT_W = 2 * HALF_W + 1;
+  localparam int HIGH_LOW_SUM_W = HALF_W + 1;
 
   logic [        HALF_W-1:0] a_low;
   logic [        HALF_W-1:0] a_high;
@@ -30,8 +31,8 @@ module multiplier #(
   logic [      2*HALF_W-1:0] partial_mult_low_q;
   logic [      2*HALF_W-1:0] partial_mult_high_d;
   logic [      2*HALF_W-1:0] partial_mult_high_q;
-  logic [      2*HALF_W+1:0] partial_mult_sum_d;
-  logic [      2*HALF_W+1:0] partial_mult_sum_q;
+  logic [      2*HIGH_LOW_SUM_W-1:0] partial_mult_sum_d;
+  logic [      2*HIGH_LOW_SUM_W-1:0] partial_mult_sum_q;
   logic [      2*HALF_W+1:0] mid_term;
 
 
@@ -60,10 +61,10 @@ module multiplier #(
   );
 
   data_pipeline #(
-      .DATA_W    (2 * HIGH_LOW_SUM_W),
+      .DATA_W    (2 * DIN_W),
       .PIPE_DEPTH(PIPE_HIGH_LOW_MULT_LEN),
       .RST_EN    (0)
-  ) data_pipeline_high_low_sum (
+  ) data_pipeline_sum (
       .clk   (clk),
       .rst   (rst),
       .data_i({partial_mult_low_d, partial_mult_high_d}),
@@ -79,8 +80,8 @@ module multiplier #(
   ) data_pipeline_partial_mult_inst (
       .clk   (clk),
       .rst   (rst),
-      .data_i({partial_mult_low_d, partial_mult_high_d}),
-      .data_o({partial_mult_low_q, partial_mult_high_q})
+      .data_i(partial_mult_sum_d),
+      .data_o(partial_mult_sum_q)
   );
 
   always_comb begin
@@ -88,5 +89,5 @@ module multiplier #(
     product_o = (partial_mult_high_q << DIN_W) + (mid_term << HALF_W) + partial_mult_low_q;
   end
 
-  assign small_product_o = partial_mault_low_d;
+  assign small_product_o = partial_mult_low_d;
 endmodule
