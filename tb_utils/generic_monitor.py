@@ -22,7 +22,7 @@ class GenericMonitor(Generic[OutputTransaction]):
     async def monitor_loop(self):
         while True:
             output_transaction = await self.receive_transaction()
-            await self.actual_queue.put(output_transaction)
+            await self.actual_queue.put(output_transaction.to_data)
 
     async def receive_transaction(self) -> OutputTransaction:
         await RisingEdge(self.dut.clk)
@@ -45,15 +45,16 @@ OutputValidTransaction = TypeVar(
 
 class GenericValidMonitor(GenericMonitor[OutputValidTransaction]):
     async def receive_transaction(self) -> OutputValidTransaction:
-        await RisingEdge(self.dut.clk)
-        await ReadOnly()
+        while True:
+            await RisingEdge(self.dut.clk)
+            await ReadOnly()
 
-        output_transaction = self.output_transaction()
-        if output_transaction.valid:
+            output_transaction = self.output_transaction()
             for field in fields(output_transaction):
                 if hasattr(self.dut, field.name):
                     value = getattr(self.dut, field.name).value
                     setattr(output_transaction, field.name, value)
                 else:
                     raise AttributeError(f"DUT has no signal named '{field.name}'")
-        return output_transaction
+            if output_transaction.valid:
+                return output_transaction

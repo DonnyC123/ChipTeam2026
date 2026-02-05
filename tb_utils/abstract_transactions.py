@@ -29,6 +29,11 @@ class AbstractTransaction(ABC):
     def invalid_seq_item(cls) -> Self:
         pass
 
+    @property
+    @abstractmethod
+    def to_data(self) -> int:
+        pass
+
 
 @dataclass
 class AbstractValidTransaction(AbstractTransaction):
