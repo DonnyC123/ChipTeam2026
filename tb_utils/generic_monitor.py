@@ -48,9 +48,8 @@ class GenericMonitor(Generic[OutputTransaction]):
 
             else:
                 raise AttributeError(
-                    f"Field '{f.name}' found in sequence item but NOT in DUT handle '{
-                        input_parent._name
-                    }'."
+                    f"Field '{field_name}' found in sequence item "
+                    f"but NOT in DUT handle '{input_parent._name}'."
                 )
 
 

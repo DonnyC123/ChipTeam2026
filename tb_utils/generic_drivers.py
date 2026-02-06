@@ -55,11 +55,8 @@ class GenericDriver(Generic[GenericSequenceItem]):
 
             else:
                 raise AttributeError(
-                    f"Field '{
-                        field_name
-                    }' found in sequence item but NOT in DUT handle '{
-                        input_parent._name
-                    }'."
+                    f"Field '{field_name}' found in sequence item "
+                    f"but NOT in DUT handle '{input_parent._name}'."
                 )
 
     async def wait_until_idle(self):
