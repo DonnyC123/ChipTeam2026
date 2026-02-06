@@ -1,8 +1,8 @@
 from cocotb import start_soon
 from cocotb.triggers import RisingEdge
 from cocotb.queue import Queue
-from dataclasses import fields
 from typing import Generic, TypeVar
+from dataclasses import fields, is_dataclass
 
 from tb_utils.abstract_transactions import (
     AbstractTransaction,
@@ -37,12 +37,30 @@ class GenericDriver(Generic[GenericSequenceItem]):
         return not self.seq_item_queue.empty()
 
     async def drive_transaction(self, sequenece_item: GenericSequenceItem):
-        for field in fields(sequenece_item):
-            value = getattr(sequenece_item, field.name)
-            if hasattr(self.dut, field.name):
-                getattr(self.dut, field.name).value = value
+        await self.recursive_drive(self.dut, sequenece_item)
+
+    async def recursive_drive(self, input_parent, item):
+        for f in fields(item):
+            field_name = f.name
+            value = getattr(item, field_name)
+
+            if hasattr(input_parent, field_name):
+                signal_or_interface = getattr(input_parent, field_name)
+
+                if is_dataclass(value):
+                    await self.recursive_drive(signal_or_interface, value)
+
+                else:
+                    signal_or_interface.value = value
+
             else:
-                raise AttributeError(f"DUT has no signal named '{field.name}'")
+                raise AttributeError(
+                    f"Field '{
+                        field_name
+                    }' found in sequence item but NOT in DUT handle '{
+                        input_parent._name
+                    }'."
+                )
 
     async def wait_until_idle(self):
         while not self.seq_item_queue.empty():
