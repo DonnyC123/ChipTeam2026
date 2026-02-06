@@ -16,7 +16,7 @@ class GenericMonitor(Generic[OutputTransaction]):
     def __init__(self, dut, output_transaction: Type[OutputTransaction]):
         self.dut = dut
         self.output_transaction: Type[OutputTransaction] = output_transaction
-        self.actual_queue: Queue[OutputTransaction] = Queue()
+        self.actual_queue: Queue = Queue()
         start_soon(self.monitor_loop())
 
     async def monitor_loop(self):
