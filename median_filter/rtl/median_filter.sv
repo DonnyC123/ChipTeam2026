@@ -10,60 +10,81 @@ module median_filter #(
            pixel_valid_if.master pixel_valid_if_o
 );
   import median_filter_pkg::*;
-
+  parameter int BUFFER_LEN = IMAGE_LEN*(KERNEL_LEN-1)+KERNEL_LEN;
   typedef enum logic [1:0] {INIT, CALC, DONE} state_t;
-  state_t  current_state, next_state;
+  state_t  state_q, state_c;
 
-  pixel_t buffer [IMAGE_LEN*(KERNEL_LEN-1)+KERNEL_LEN-1:0];
-  pixel_t output_pixel;
+  pixel_t buffer_q [BUFFER_LEN-1:0];
+  pixel_t buffer_c [BUFFER_LEN-1:0];
+  pixel_t output_pixel_q, output_pixel_c;
+  logic [$clog2(IMAGE_LEN)-1:0] x_counter_q, x_counter_c;
+  logic [$clog2(IMAGE_HEIGHT)-1:0] y_counter_q, y_counter_c;
+
 
   int pixel_count;
 
-  always_ff @(posedge clk) begin
+  always_ff @(posedge clk or posedge rst) begin
     if (rst) begin
-        current_state <= INIT;
-        buffer <= '{default: '0};
+        current_state   <= INIT;
+        buffer_q        <= 0;
+        output_pixel_q  <= 0;
+        x_counter_q     <= 0;
+        y_counter_q     <= 0;
     end else begin
-      current_state <= next_state;
-      if(pixel_valid_if_i.valid)begin
-        buffer[0] <= pixel_valid_if_i.pixel;
-        for(int i = 1; i < IMAGE_LEN*(KERNEL_LEN-1)+KERNEL_LEN; i++)begin
-          buffer[i] <= buffer[i-1];
-        end
-      end
-      if (current_state == CALC) begin
-        if (pixel_count >= (IMAGE_LEN * IMAGE_HEIGHT) - 1) begin
-          pixel_count <= 0;
-        end else begin
-          pixel_count <= pixel_count + 1;
-        end
-      end
+        state_q         <= state_c;
+        output_pixel_q  <= output_pixel_c;
+        x_counter_q     <= x_counter_c;
+        y_counter_q     <= y_counter_c;
+        buffer_q        <= buffer_c;
     end
   end
   
   always_comb begin
-    next_state = current_state;
-    output_pixel.red   = median_avg(buffer[0].red,   buffer[1].red,   buffer[IMAGE_LEN].red,   buffer[IMAGE_LEN+1].red);
-    output_pixel.green = median_avg(buffer[0].green, buffer[1].green, buffer[IMAGE_LEN].green, buffer[IMAGE_LEN+1].green);
-    output_pixel.blue  = median_avg(buffer[0].blue,  buffer[1].blue,  buffer[IMAGE_LEN].blue,  buffer[IMAGE_LEN+1].blue);    
+    state_c = state_q;
     pixel_valid_if_o.valid = 1'b0;
     pixel_valid_if_o.pixel = '{default: '0};
     done_o = 1'b0;
+    x_counter_c = x_counter_q;
+    y_counter_c = y_counter_q;
+    buffer_c = buffer_q;
 
-    case(current_state)
+    case(state_c)
       INIT: begin
         if (start_i) begin
-          next_state = CALC;
+          state_c = CALC;
         end else begin 
-          next_state = INIT;
+          state_c = INIT;
         end
       end
 
       CALC: begin
-        pixel_valid_if_o.valid = pixel_valid_if_i.valid; 
-        pixel_valid_if_o.pixel = output_pixel;
+        if(pixel_valid_if_i.valid || y_counter_q == IMAGE_HEIGHT - 1) begin
+            if(x_counter_q == 0) begin
+              buffer_c = {in_dout, buffer_q[BUFFER_LEN-1-: BUFFER_LEN-8]};
+              x_counter_c = x_counter_q + 1;
+              pixel_valid_if_o.valid = 1'b0;
+              state_c = CALC;     
+            end else if(x_counter_q == IMAGE_LEN - 1) begin
+              buffer_c = {in_dout, buffer_q[BUFFER_LEN-1-: BUFFER_LEN-8]};
+              x_counter_c = 0;
+              pixel_valid_if_o.valid = 1'b0;
+              y_counter_c = y_counter_q + 1;
+              if (y_counter_q == IMAGE_HEIGHT - 1) begin
+                  state_c = DONE;     
+              end else begin 
+                  state_c = CALC;     
+              end
+            end else begin
+                output_pixel_c.red   = median_avg(buffer_q[0].red,   buffer_q[1].red,   buffer_q[IMAGE_LEN].red,   buffer_q[IMAGE_LEN+1].red);
+                output_pixel_c.green = median_avg(buffer_q[0].green, buffer_q[1].green, buffer_q[IMAGE_LEN].green, buffer_q[IMAGE_LEN+1].green);
+                output_pixel_c.blue  = median_avg(buffer_q[0].blue,  buffer_q[1].blue,  buffer_q[IMAGE_LEN].blue,  buffer_q[IMAGE_LEN+1].blue);    
+                pixel_valid_if_o.valid = 1'b1;
+                pixel_valid_if_o.pixel = output_pixel_c;
+                state_c = CALC;     
+            end
+        end 
       end
-
+      
       DONE: begin
         done_o = 1'b1;
         next_state = IDLE;     
