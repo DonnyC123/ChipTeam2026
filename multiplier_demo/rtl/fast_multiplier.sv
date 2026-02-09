@@ -1,0 +1,99 @@
+module fast_multiplier #(
+    parameter int DIN_W  = 8,
+    parameter int DOUT_W = 2 * DIN_W
+) (
+    input  logic              clk,
+    input  logic              rst,
+    input  logic [ DIN_W-1:0] a_operand_i,
+    input  logic [ DIN_W-1:0] b_operand_i,
+    input  logic              operands_valid_i,
+    output logic [DOUT_W-1:0] product_o,
+    output logic              product_valid_o
+);
+
+  import multiplier_pkg::*;
+
+  localparam int HALF_W     = (DIN_W + 1) / 2;
+  localparam int TOP_HALF_W = DIN_W - HALF_W;
+
+  logic [DOUT_W-1:0] large_product;
+  logic [DOUT_W-1:0] product_d;
+  logic [DOUT_W-1:0] product_q;
+  logic 	           product_valid_d;
+  logic              product_valid_q;
+  logic [ DIN_W-1:0] small_product;
+
+  logic              small_a_operand;
+  logic              small_b_operand;
+  logic              small_operands;
+
+  logic              valid_big_operands_new;
+  logic              valid_small_operands_new;
+  logic              valid_big_operands_pipe [PIPE_VALID_PROD_LEN];      
+
+  multiplier #(
+      .DIN_W (DIN_W),
+      .DOUT_W(DOUT_W)
+  ) mult_inst (
+      .clk            (clk),
+      .rst            (rst),
+      .a_operand_i    (a_operand_i),
+      .b_operand_i    (b_operand_i),
+      .small_product_o(small_product),
+      .product_o      (large_product)
+  );
+
+
+  always_comb begin
+    small_a_operand          = !(|(a_operand_i[DIN_W-1:HALF_W]));
+    small_b_operand          = !(|(b_operand_i[DIN_W-1:HALF_W]));
+    small_operands           = small_a_operand && small_b_operand && !(valid_big_operands_pipe.or());
+
+    valid_small_operands_new = operands_valid_i && small_operands;
+    valid_big_operands_new   = operands_valid_i && !small_operands;
+
+  end
+
+  shift_reg #(
+      .DATA_W    (1),
+      .PIPE_DEPTH(PIPE_VALID_PROD_LEN),
+      .RST_EN    (1),
+      .RST_VAL   (0)
+  ) shift_reg_mult_busy (
+      .clk   (clk),
+      .rst   (rst),
+      .data_i(valid_big_operands_new),
+      .data_o(valid_big_operands_pipe)
+  );
+
+
+  always_comb begin
+    product_valid_d = valid_small_operands_new || valid_big_operands_pipe[PIPE_VALID_PROD_LEN-1];
+    product_d       = large_product;
+
+    if (valid_small_operands_new) begin
+      product_d = {{TOP_HALF_W{1'b0}}, small_product};
+    end
+  end
+
+
+  data_status_pipeline #(
+      .DATA_W    (DOUT_W),
+      .STATUS_W  (1),
+      .PIPE_DEPTH(1)
+  ) multiplier_stages_valid (
+      .clk     (clk),
+      .rst     (rst),
+      .data_i  (product_d),
+      .status_i(product_valid_d),
+      .data_o  (product_q),
+      .status_o(product_valid_q)
+  );
+
+  assign product_o       = product_q;
+  assign product_valid_o = product_valid_q;
+
+endmodule
+
+
+

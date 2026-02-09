@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, fields
 from random import randint
-from typing import Self
+from typing import Self, Any
 from cocotb.types import LogicArray, Logic
 
 
@@ -27,6 +27,11 @@ class AbstractTransaction(ABC):
     @classmethod
     @abstractmethod
     def invalid_seq_item(cls) -> Self:
+        pass
+
+    @property
+    @abstractmethod
+    def to_data(self) -> Any:
         pass
 
 

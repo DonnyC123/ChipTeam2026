@@ -1,5 +1,5 @@
 interface fifo_rd_if #(
-    parameter DATA_W = 32
+    parameter int DATA_W = 32
 );
 
   logic [DATA_W-1:0] data;
@@ -11,4 +11,3 @@ interface fifo_rd_if #(
   modport master(output rd_en, input data, input empty);
 
 endinterface
-
