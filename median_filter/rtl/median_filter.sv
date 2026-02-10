@@ -24,11 +24,20 @@ module median_filter #(
   logic [PIXEL_W-1:0]     bram_data_d;
   logic [PIXEL_W-1:0]     bram_data_q;
 
+  pixel_t                 input_pipe1_d;
+  pixel_t                 input_pipe1_q;
+  logic                   input_pipe1_valid_d;
+  logic                   input_pipe1_valid_q;
+  pixel_t                 input_pipe2_d;
+  pixel_t                 input_pipe2_q;
+  logic                   input_pipe2_valid_d;
+  logic                   input_pipe2_valid_q;
+
   logic [PIXEL_W-1:0]     bram_data_pipe;
 
   bram #(
-    .BRAM_ADDR_W (ADDR_W),
-    .BRAM_DATA_W (PIXEL_W)
+    .BRAM_ADDR_WIDTH (ADDR_W),
+    .BRAM_DATA_WIDTH (PIXEL_W)
   ) line_buffer_bram (
     .clk                (clk),
     .addra              (bram_addra),
@@ -45,7 +54,7 @@ module median_filter #(
   logic [ADDR_W-1:0]    read_addr;
   logic                 read_active;
 
-  logic [PIXEL_W-1:0]   d0, d1, d2, d3;
+  pixel_t               d0, d1, d2, d3;
 
   // setting the x and y coordinate regs
   always_ff @(posedge clk) begin
@@ -91,6 +100,12 @@ module median_filter #(
     end
   end
 
+logic [23:0] bram_input;
+from_pixel to_pixel_inst (
+  .a      (pixel_valid_if_i.pixel),
+  .out    (bram_input)
+);
+
   always_comb begin
     //READING COMB
     bram_enb      = read_active;
@@ -98,7 +113,7 @@ module median_filter #(
 
     // WRITING COMB
     bram_addra    = write_addr;
-    bram_data_d   = pixel_valid_if_i.pixel;
+    bram_data_d   = bram_input;
     bram_ena      = pixel_valid_if_i.valid;
   end
 
@@ -112,18 +127,39 @@ module median_filter #(
       bram_data_pipe <= bram_data_q;
   end
 
+//pipelining the input data. 
+  always_ff @(posedge clk) begin
+    if (rst) begin
+      input_pipe1_valid_q <= 1'b0;
+      input_pipe2_valid_q <= 1'b0;
+    end else begin
+      input_pipe1_valid_q <= input_pipe1_valid_d;
+      input_pipe2_valid_q <= input_pipe2_valid_d;
+    end
+    input_pipe1_q       <= input_pipe1_d;
+    input_pipe2_q       <= input_pipe2_d;
+  end 
+
+  always_comb begin
+    input_pipe1_d       = pixel_valid_if_i.pixel;
+    input_pipe1_valid_d = pixel_valid_if_i.valid;
+    input_pipe2_d       = input_pipe1_q;
+    input_pipe2_valid_d = input_pipe1_valid_q;
+  end
+
+pixel_t bram_data_pipe_pixel;
+
+to_pixel bram_pixel (
+  .a      (bram_data_pipe),
+  .out    (bram_data_pipe_pixel)
+);
+
 // READING THE 4 PIXELS INTO D REGISTERS
   always_ff @(posedge clk) begin
-    if(rst) begin
-      d0          <= '0;
-      d1          <= '0;
-      d2          <= '0;
-      d3          <= '0;
-    end else 
-    if(pixel_valid_if_i.valid) begin
-      d3          <= pixel_valid_if_i.pixel;
+    if(input_pipe2_valid_q) begin
+      d3          <= input_pipe2_q;
       d2          <= d3;
-      d1          <= bram_data_pipe;
+      d1          <= bram_data_pipe_pixel;
       d0          <= d1;
     end
   end
@@ -159,7 +195,7 @@ module median_filter #(
     if (rst) begin
         pixel_valid_if_o.valid <= 1'b0;
     end else begin
-        pixel_valid_if_o.valid <= read_active && pixel_valid_if_i.valid && (x_coord >= 1);
+        pixel_valid_if_o.valid <= read_active && input_pipe2_valid_q && (x_coord >= 1);
     end
   end
 
@@ -168,7 +204,7 @@ module median_filter #(
     if (rst) begin
         done_o <= 1'b0;
     end else 
-     if (pixel_valid_if_i.valid && x_coord == IMAGE_LEN-1 && y_coord == IMAGE_HEIGHT-1) begin
+     if (input_pipe2_valid_q && x_coord == IMAGE_LEN-1 && y_coord == IMAGE_HEIGHT-1) begin
         done_o <= 1'b1;
      end else begin
         done_o <= 1'b0; 
@@ -190,4 +226,26 @@ module min_module (input [7:0] a, input [7:0] b, input [7:0] c, input [7:0] d, o
   assign min1 = (a < b) ? a : b;
   assign min2 = (c < d) ? c : d;
   assign out = (min1 < min2) ? min1 : min2;
+endmodule
+
+import median_filter_pkg::*;
+
+module to_pixel (
+    input  logic [23:0] a,
+    output pixel_t      out
+);
+    always_comb begin
+        out.red   = a[23:16];
+        out.green = a[15:8];
+        out.blue  = a[7:0];
+    end
+endmodule
+
+module from_pixel (
+    input  pixel_t      a,
+    output logic [23:0] out
+);
+    always_comb begin
+        out = {a.red, a.green, a.blue};
+    end
 endmodule
