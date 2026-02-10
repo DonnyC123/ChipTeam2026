@@ -21,7 +21,7 @@ class GenericChecker:
 
             if monitor_out != model_out:
                 msg = f""""Mismatch in model and monitor outputs:
-          model output={model_out}, 
+          model output={model_out},
           monitor output={monitor_out}"""
                 if self.fatal:
                     raise RuntimeError(msg)

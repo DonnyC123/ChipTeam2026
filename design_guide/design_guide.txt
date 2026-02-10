@@ -45,7 +45,7 @@ Naming Conventions
 
 Format Conventions
 
-1.  Only declare one variable per line.
+1.  Only declare one variable per line except for paired register variables
 
 2.  All equal signs in the same part of a block should be lined up 
     within reason.
@@ -54,9 +54,10 @@ Format Conventions
       always_comb begin
         case(state)
         STATE_1: begin
-          num_4             = num_2 + num_3;
+          num_4 = num_2 + num_3;
           if (num_2 == 3) begin
-            super_long_num  = num_3 - num_1;
+            super_long_num      = num_3 - num_1;
+            super_long_neg_num  = num_3 - num_1;
           end
         end
         STATE_2: begin
