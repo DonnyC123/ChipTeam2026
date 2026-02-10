@@ -1,12 +1,13 @@
 module median_filter #(
   parameter int IMAGE_LEN    = 1080,
-  parameter int IMAGE_HEIGHT = 720
+  parameter int IMAGE_HEIGHT = 720,
+  parameter bit DEBUG_PASSTHROUGH = 1'b0   //Debug flag to do passthrough without convolution
 ) (
-  input  logic                clk,
-  input  logic                rst,
-  input  logic                start_i,
+  input  logic                 clk,
+  input  logic                 rst,
+  input  logic                 start_i,
          pixel_valid_if.slave  pixel_valid_if_i,
-  output logic                done_o,
+  output logic                 done_o,
          pixel_valid_if.master pixel_valid_if_o
 );
   import median_filter_pkg::*;
@@ -15,9 +16,10 @@ module median_filter #(
   localparam int DATA_W       = PIXEL_W * NUM_CHANNELS;
   localparam int ADDR_W       = $clog2(IMAGE_LEN);
   localparam int ROW_W        = $clog2(IMAGE_HEIGHT);
-  localparam int WINDOW_LEN   = KERNEL_LEN * KERNEL_LEN;
+  localparam int WINDOW_LEN   = KERNEL_LEN * KERNEL_LEN; 
 
 
+  // BRAM signals
   logic              bram_wr_en_i;
   logic [DATA_W-1:0] bram_wr_data_i;
   logic [ADDR_W-1:0] bram_wr_addr_i;
@@ -37,44 +39,14 @@ module median_filter #(
   );
 
 
-  logic              started_d;
+  // Stage S0 pipelined registers
   logic              started_q;
-
-  logic [ADDR_W-1:0] curr_col_d;
-  logic [ADDR_W-1:0] curr_col_q;
-
-  logic [ROW_W-1:0]  curr_row_d;
-  logic [ROW_W-1:0]  curr_row_q;
-
+  logic [ADDR_W-1:0] curr_col_q, curr_col_d;
+  logic [ROW_W-1:0]  curr_row_q, curr_row_d;
 
   logic              in_fire;
-
-
   logic [DATA_W-1:0] in_pixel_bus;
 
-  logic [DATA_W-1:0] pixel_pipe_d;
-  logic [DATA_W-1:0] pixel_pipe_q;
-
-  logic [ADDR_W-1:0] col_pipe_d;
-  logic [ADDR_W-1:0] col_pipe_q;
-
-  logic [ROW_W-1:0]  row_pipe_d;
-  logic [ROW_W-1:0]  row_pipe_q;
-
-  logic              fire_pipe_d;
-  logic              fire_pipe_q;
-
-  logic [DATA_W-1:0] window_d [0:WINDOW_LEN-1];
-  logic [DATA_W-1:0] window_q [0:WINDOW_LEN-1];
-
-
-  logic              out_fire;
-  logic              last_out_fire;
-
-  logic              done_pulse_d;
-  logic              done_pulse_q;
-
-  //Get pixel if valid
   always_comb begin
     in_pixel_bus = '0;
     if (pixel_valid_if_i.valid) begin
@@ -86,21 +58,11 @@ module median_filter #(
     end
   end
 
-
-  always_comb begin
-    started_d = started_q;
-    if (start_i) begin
-      started_d = 1'b1;
-    end
-  end
-
-  //Check whether new pixel to process has come in
+  // Check whether to process current pixel
   always_comb begin
     in_fire = started_q && pixel_valid_if_i.valid;
   end
 
-
-  //Handle row and column counter increment logic
   always_comb begin
     curr_col_d = curr_col_q;
     curr_row_d = curr_row_q;
@@ -117,8 +79,6 @@ module median_filter #(
     end
   end
 
-
-  //Write current value in col to and read prev value in col from BRAM
   always_comb begin
     bram_rd_addr_i = curr_col_q;
     bram_wr_addr_i = curr_col_q;
@@ -126,194 +86,125 @@ module median_filter #(
     bram_wr_data_i = in_pixel_bus;
   end
 
-  //Pipeline current pixel, row, and column values
-  always_comb begin
-    pixel_pipe_d = pixel_pipe_q;
-    col_pipe_d   = col_pipe_q;
-    row_pipe_d   = row_pipe_q;
-    fire_pipe_d  = in_fire;
-
-    if (in_fire) begin
-      pixel_pipe_d = in_pixel_bus;
-      col_pipe_d   = curr_col_q;
-      row_pipe_d   = curr_row_q;
-    end
-  end
+  // S1 stage pipeline registers. Further pipeline because of BRAM latency
+  logic              fire_s1_q;
+  logic [DATA_W-1:0] pix_s1_q;
+  logic [ADDR_W-1:0] col_s1_q;
+  logic [ROW_W-1:0]  row_s1_q;
 
 
+  logic [DATA_W-1:0] window_q   [0:WINDOW_LEN-1];
+  logic [DATA_W-1:0] window_d   [0:WINDOW_LEN-1];
+
+ 
   always_comb begin
     for (int i = 0; i < WINDOW_LEN; i++) begin
       window_d[i] = window_q[i];
     end
 
-    if (fire_pipe_q) begin
-      if (col_pipe_q == 0) begin
-        window_d[0] = '0;          
-        window_d[2] = '0;          
+    if (fire_s1_q) begin
+      if (col_s1_q == 0) begin
+        window_d[0] = '0;  
+        window_d[2] = '0;  
       end else begin
         window_d[0] = window_q[1]; 
         window_d[2] = window_q[3]; 
       end
 
-      window_d[1] = bram_rd_data_o; 
-      window_d[3] = pixel_pipe_q;   
+      window_d[1] = bram_rd_data_o;
+      window_d[3] = pix_s1_q;
     end
   end
 
-  
-  logic [PIXEL_W-1:0] red_median;
-  logic [PIXEL_W-1:0] green_median;
-  logic [PIXEL_W-1:0] blue_median;
 
-  int unsigned        max_red_i;
-  int unsigned        min_red_i;
-  logic [PIXEL_W-1:0] max_red_v;
-  logic [PIXEL_W-1:0] min_red_v;
+  function automatic logic [PIXEL_W-1:0] median4_chan(
+    input logic [PIXEL_W-1:0] a,
+    input logic [PIXEL_W-1:0] b,
+    input logic [PIXEL_W-1:0] c,
+    input logic [PIXEL_W-1:0] d
+  );
 
-  //Get min and max channel indices
+    logic [PIXEL_W-1:0] low_1;
+    logic [PIXEL_W-1:0] high_1;
+    logic [PIXEL_W-1:0] low_2;
+    logic [PIXEL_W-1:0] high_2;
 
-  //Red
-  always_comb begin
-    max_red_i = 0;
-    min_red_i = 0;
+    logic [PIXEL_W-1:0] lower_median;
+    logic [PIXEL_W-1:0] upper_median;
 
-    max_red_v = window_q[0][DATA_W-1 -: PIXEL_W];
-    min_red_v = window_q[0][DATA_W-1 -: PIXEL_W];
-
-    for (int i = 1; i < WINDOW_LEN; i++) begin
-      logic [PIXEL_W-1:0] red_i;
-      red_i = window_q[i][DATA_W-1 -: PIXEL_W];
-
-      if (red_i > max_red_v) begin
-        max_red_v = red_i;
-        max_red_i = i;
+    begin 
+      if(a < b) begin
+        low_1 = a;
+        high_1 = b;
+      end
+      else begin 
+        low_1 = b;
+        high_1 = a;
       end
 
-      if (red_i < min_red_v) begin
-        min_red_v = red_i;
-        min_red_i = i;
+      if(c < d) begin
+        low_2 = c;
+        high_2 = d;
       end
-    end
-  end
-
-  //Green  
-  int unsigned        max_green_i;
-  int unsigned        min_green_i;
-  logic [PIXEL_W-1:0] max_green_v;
-  logic [PIXEL_W-1:0] min_green_v;
-
-  always_comb begin
-    max_green_i = 0;
-    min_green_i = 0;
-
-    max_green_v = window_q[0][DATA_W-1-PIXEL_W -: PIXEL_W];
-    min_green_v = window_q[0][DATA_W-1-PIXEL_W -: PIXEL_W];
-
-    for (int i = 1; i < WINDOW_LEN; i++) begin
-      logic [PIXEL_W-1:0] green_i;
-      green_i = window_q[i][DATA_W-1-PIXEL_W -: PIXEL_W];
-
-      if (green_i > max_green_v) begin
-        max_green_v = green_i;
-        max_green_i = i;
+      else begin 
+        low_2 = d;
+        high_2 = c;
       end
-
-      if (green_i < min_green_v) begin
-        min_green_v = green_i;
-        min_green_i = i;
-      end
-    end
-  end
-
-  //Blue
-  int unsigned        max_blue_i;
-  int unsigned        min_blue_i;
-  logic [PIXEL_W-1:0] max_blue_v;
-  logic [PIXEL_W-1:0] min_blue_v;
-
-  always_comb begin
-    max_blue_i = 0;
-    min_blue_i = 0;
-
-    max_blue_v = window_q[0][PIXEL_W-1:0];
-    min_blue_v = window_q[0][PIXEL_W-1:0];
-
-    for (int i = 1; i < WINDOW_LEN; i++) begin
-      logic [PIXEL_W-1:0] blue_i;
-      blue_i = window_q[i][PIXEL_W-1:0];
-
-      if (blue_i > max_blue_v) begin
-        max_blue_v = blue_i;
-        max_blue_i = i;
-      end
-
-      if (blue_i < min_blue_v) begin
-        min_blue_v = blue_i;
-        min_blue_i = i;
-      end
-    end
-  end
-
-  //Get median channel values
-
-
-  //Red
-  always_comb begin
-    logic [PIXEL_W:0] red_total;
-    red_total = '0;
-
-    for (int i = 0; i < WINDOW_LEN; i++) begin
-      logic [PIXEL_W-1:0] red_i;
-      red_i = window_q[i][DATA_W-1 -: PIXEL_W];
-
-      if ((i != min_red_i) && (i != max_red_i)) begin
-        red_total += red_i;
-      end
-    end
-
-    red_median = (red_total + 1'b1) >> 1;
-  end
-
-  //Greem
-  always_comb begin
-    logic [PIXEL_W:0] green_total;
-    green_total = '0;
-
-    for (int i = 0; i < WINDOW_LEN; i++) begin
-      logic [PIXEL_W-1:0] green_i;
-      green_i = window_q[i][DATA_W-1-PIXEL_W -: PIXEL_W];
-
-      if ((i != min_green_i) && (i != max_green_i)) begin
-        green_total += green_i;
-      end
-    end
-
-    green_median = (green_total + 1'b1) >> 1;
-  end
-
-  //Blue
-  always_comb begin
-    logic [PIXEL_W:0] blue_total;
-    blue_total = '0;
-
-    for (int i = 0; i < WINDOW_LEN; i++) begin
-      logic [PIXEL_W-1:0] blue_i;
-      blue_i = window_q[i][PIXEL_W-1:0];
-
-      if ((i != min_blue_i) && (i != max_blue_i)) begin
-        blue_total += blue_i;
-      end
-    end
-
-    blue_median = (blue_total + 1'b1) >> 1;
-  end
-
-
-  always_comb begin
-    out_fire = fire_pipe_q && (row_pipe_q > 0) && (col_pipe_q > 0);
-  end
-
  
+      lower_median = low_1 < low_2 ? low_2 : low_1;
+      upper_median = high_1 < high_2 ? high_1 : high_2;
+
+      
+      median4_chan = (lower_median + upper_median + 1) >> 1;
+    end
+  endfunction
+
+
+  function automatic logic [PIXEL_W-1:0] get_red  (input logic [DATA_W-1:0] px);
+    return px[DATA_W-1 -: PIXEL_W];
+  endfunction
+  function automatic logic [PIXEL_W-1:0] get_green(input logic [DATA_W-1:0] px);
+    return px[DATA_W-1-PIXEL_W -: PIXEL_W];
+  endfunction
+  function automatic logic [PIXEL_W-1:0] get_blue (input logic [DATA_W-1:0] px);
+    return px[PIXEL_W-1:0];
+  endfunction
+
+
+  logic out_fire;
+  always_comb begin
+    out_fire = fire_s1_q && (row_s1_q > 0) && (col_s1_q > 0);
+  end
+
+  logic [PIXEL_W-1:0] red_out, green_out, blue_out;
+
+  always_comb begin
+    if (DEBUG_PASSTHROUGH) begin
+      red_out   = get_red(window_d[3]);
+      green_out = get_green(window_d[3]);
+      blue_out  = get_blue(window_d[3]);
+    end else begin
+      red_out = median4_chan(
+        get_red(window_d[0]),
+        get_red(window_d[1]),
+        get_red(window_d[2]),
+        get_red(window_d[3])
+      );
+      green_out = median4_chan(
+        get_green(window_d[0]),
+        get_green(window_d[1]),
+        get_green(window_d[2]),
+        get_green(window_d[3])
+      );
+      blue_out = median4_chan(
+        get_blue(window_d[0]),
+        get_blue(window_d[1]),
+        get_blue(window_d[2]),
+        get_blue(window_d[3])
+      );
+    end
+  end
+
   always_comb begin
     pixel_valid_if_o.valid       = 1'b0;
     pixel_valid_if_o.pixel.red   = '0;
@@ -322,50 +213,67 @@ module median_filter #(
 
     if (out_fire) begin
       pixel_valid_if_o.valid       = 1'b1;
-      pixel_valid_if_o.pixel.red   = red_median;
-      pixel_valid_if_o.pixel.green = green_median;
-      pixel_valid_if_o.pixel.blue  = blue_median;
+      pixel_valid_if_o.pixel.red   = red_out;
+      pixel_valid_if_o.pixel.green = green_out;
+      pixel_valid_if_o.pixel.blue  = blue_out;
     end
   end
 
-
+  logic done_pulse_d, done_pulse_q;
   always_comb begin
-    last_out_fire  = out_fire
-                  && (row_pipe_q == IMAGE_HEIGHT-1)
-                  && (col_pipe_q == IMAGE_LEN-1);
-
-    done_pulse_d   = last_out_fire;
-    done_o         = done_pulse_q;
+    done_pulse_d = out_fire
+                && (row_s1_q == IMAGE_HEIGHT-1)
+                && (col_s1_q == IMAGE_LEN-1);
+    done_o = done_pulse_q;
   end
 
- 
+
   always_ff @(posedge clk) begin
     if (rst) begin
-      started_q     <= 1'b0;
-      curr_col_q    <= '0;
-      curr_row_q    <= '0;
-      pixel_pipe_q  <= '0;
-      col_pipe_q    <= '0;
-      row_pipe_q    <= '0;
-      fire_pipe_q   <= 1'b0;
-      done_pulse_q  <= 1'b0;
+      started_q    <= 1'b0;
+      curr_col_q   <= '0;
+      curr_row_q   <= '0;
+
+      fire_s1_q    <= 1'b0;
+      pix_s1_q     <= '0;
+      col_s1_q     <= '0;
+      row_s1_q     <= '0;
+
+      done_pulse_q <= 1'b0;
 
       for (int i = 0; i < WINDOW_LEN; i++) begin
         window_q[i] <= '0;
       end
     end else begin
-      started_q     <= started_d;
-      curr_col_q    <= curr_col_d;
-      curr_row_q    <= curr_row_d;
-      pixel_pipe_q  <= pixel_pipe_d;
-      col_pipe_q    <= col_pipe_d;
-      row_pipe_q    <= row_pipe_d;
-      fire_pipe_q   <= fire_pipe_d;
-      done_pulse_q  <= done_pulse_d;
+      if (start_i) begin
+        started_q  <= 1'b1;
+        curr_col_q <= '0;
+        curr_row_q <= '0;
 
-      for (int i = 0; i < WINDOW_LEN; i++) begin
-        window_q[i] <= window_d[i];
+        fire_s1_q  <= 1'b0;
+
+        for (int i = 0; i < WINDOW_LEN; i++) begin
+          window_q[i] <= '0;
+        end
+      end else begin
+        curr_col_q <= curr_col_d;
+        curr_row_q <= curr_row_d;
+        started_q  <= started_q;
       end
+
+      fire_s1_q <= in_fire;
+      if (in_fire) begin
+        pix_s1_q <= in_pixel_bus;
+        col_s1_q <= curr_col_q;
+        row_s1_q <= curr_row_q;
+      end
+
+      if (fire_s1_q) begin
+        for (int i = 0; i < WINDOW_LEN; i++) begin
+          window_q[i] <= window_d[i];
+        end
+      end
+      done_pulse_q <= done_pulse_d;
     end
   end
 
