@@ -40,3 +40,4 @@ class FastMultiplierTestBase(GenericTestBase):
             model,
             checker,
         )
+        self.sequence.add_subscriber(self.scoreboard)
