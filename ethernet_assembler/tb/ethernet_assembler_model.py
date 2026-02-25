@@ -23,7 +23,6 @@ from tb_utils.generic_model import GenericModel
 #     - We need a variale to track wether we are inside of a frame, that gets set/changed
 # - else If those bits are == 01 this is a data frame, and if we are inside a frame, then we can set all of the data_valid signals to high
 
-# TODO: we need to flip all the bits as well
 # NETWORK ORDER: BIG ENDIAN 
 # NETWORK ORDER: THE LSB is first ex.) 0x8 becomes 0x1
 
@@ -31,6 +30,7 @@ class EthernetAssemblerModel(GenericModel):
     DATA_SYNC_HEADER    = 0b01
     CONTROL_SYNC_HEADER = 0b10
     DATA_MASK_64        = (1 << 64) - 1
+    BIT_REVERSE_TABLE   = tuple(int(f"{i:08b}"[::-1], 2) for i in range(256))
 
     # Start blocks (64b/66b control block type in byte [63:56]).
     START_VALID_MASKS: Dict[int, Tuple[bool, ...]] = {
@@ -43,18 +43,23 @@ class EthernetAssemblerModel(GenericModel):
     # Terminate blocks
     END_VALID_MASKS: Dict[int, Tuple[bool, ...]] = {
         0x87: (False, False, False, False, False, False, False, False),  # T0
-        0x99: (True, False, False, False, False, False, False, False),   # T1
-        0xAA: (True, True, False, False, False, False, False, False),    # T2
-        0xB4: (True, True, True, False, False, False, False, False),     # T3
-        0xCC: (True, True, True, True, False, False, False, False),      # T4
-        0xD2: (True, True, True, True, True, False, False, False),       # T5
-        0xE1: (True, True, True, True, True, True, False, False),        # T6
-        0xFF: (True, True, True, True, True, True, True, False),         # T7
+        0x99: (False, True, False, False, False, False, False, False),   # T1
+        0xAA: (False, True, True, False, False, False, False, False),    # T2
+        0xB4: (False, True, True, True, False, False, False, False),     # T3
+        0xCC: (False, True, True, True, True, False, False, False),      # T4
+        0xD2: (False, True, True, True, True, True, False, False),       # T5
+        0xE1: (False, True, True, True, True, True, True, False),        # T6
+        0xFF: (False, True, True, True, True, True, True, True),         # T7
     }
 
     # Common idle / non-payload control blocks.
     IDLE_BLOCK_TYPES = {0x1E}
-    NON_PAYLOAD_CONTROL_TYPES = {0x2D, 0x4B, 0x55, 0x66}
+    NON_PAYLOAD_CONTROL_TYPES: Dict[int, Tuple[bool, ...]] = {
+        0x66: (False, True, True, True, False, True, True, True),  
+        0x55: (False, True, True, True, False, True, True, True),   
+        0x4B: (False, True, True, True, False, False, False, False),
+        0x2D: (False, False, False, False, False, True, True, True),    
+    }
 
     def __init__(self):
         super().__init__()
@@ -77,9 +82,27 @@ class EthernetAssemblerModel(GenericModel):
 
     @staticmethod
     def _reverse_bits(value: int, width: int) -> int:
+        if width <= 0:
+            return 0
+
+        value &= (1 << width) - 1
         reversed_value = 0
-        for bit_idx in range(width):
-            reversed_value = (reversed_value << 1) | ((value >> bit_idx) & 1)
+        full_bytes, remaining_bits = divmod(width, 8)
+
+        for byte_idx in range(full_bytes):
+            shift = byte_idx * 8
+            byte = (value >> shift) & 0xFF
+            reversed_value |= EthernetAssemblerModel.BIT_REVERSE_TABLE[byte] << shift
+
+        if remaining_bits:
+            shift = full_bytes * 8
+            rem_mask = (1 << remaining_bits) - 1
+            rem_bits = (value >> shift) & rem_mask
+            rem_reversed = 0
+            for bit_idx in range(remaining_bits):
+                rem_reversed = (rem_reversed << 1) | ((rem_bits >> bit_idx) & 1)
+            reversed_value |= rem_reversed << shift
+
         return reversed_value
 
     def _decode_block(self, input_data: int, in_valid: bool, locked: bool) -> Dict[str, Any]:
@@ -109,7 +132,8 @@ class EthernetAssemblerModel(GenericModel):
             elif block_type in self.IDLE_BLOCK_TYPES:
                 self.in_frame = False
             elif block_type in self.NON_PAYLOAD_CONTROL_TYPES:
-                pass
+                if self.in_frame:
+                    data_valid = list(self.NON_PAYLOAD_CONTROL_TYPES[block_type])
             else:
                 # Unknown control block: emit no payload and preserve frame state.
                 pass
