@@ -15,11 +15,7 @@
 //     - We set the data_valid array based on that
 //     - We need a variale to track wether we are inside of a frame, that gets set/changed
 // - else If those bits are == 01 this is a data frame, and if we are inside a frame, then we can set all of the data_valid signals to high
-
-// These are for ordered sets. Ordered sets are only sent in between packets, never within a packet.
-// Control characters and ordered sets are not allowed within packets; if they appear inside a packet then it's an error and the receiving MAC should drop the frame.
-// These can be ignored, similar to idle frames
-
+// 
 // 0x2d block: four control characters followed by an ordered set
 // 0x55 block: two ordered sets
 // 0x4b block: ordered set followed by four control characters
@@ -54,19 +50,24 @@ logic                  out_valid_o_d;
 logic                  can_read;
 logic                  in_frame_d, in_frame_q;
 
-function automatic logic [DATA_OUT_W-1:0] bit_reverse(input logic [DATA_OUT_W-1:0] DATA_IN_W);
-    integer i;
+// Flip the BIT order within the BYTES (get rid of network order)
+function automatic logic [DATA_OUT_W-1:0] bit_reverse(input logic [DATA_OUT_W-1:0] DATA_IN);
+    integer byte_idx;
+    integer bit_idx;
     begin
-        for (i = 0; i < DATA_OUT_W; i = i + 1) begin
-            bit_reverse[i] = DATA_IN_W[DATA_OUT_W-1-i];
+        for (byte_idx = 0; byte_idx < BYTES_OUT; byte_idx = byte_idx + 1) begin
+            for (bit_idx = 0; bit_idx < 8; bit_idx = bit_idx + 1) begin
+                bit_reverse[byte_idx*8 + bit_idx] = DATA_IN[byte_idx*8 + (7-bit_idx)];
+            end
         end
     end
 endfunction
 
 assign out_data_o_d = bit_reverse(input_data_i[DATA_OUT_W-1:0]);
 assign can_read     = in_valid_i && locked_i;
-assign header_bits  = input_data_i[DATA_IN_W-1 -: 2];
-assign control_byte = input_data_i[DATA_OUT_W-1 -: 8];
+// TODO: I dont actually know if the sync/control bits is in network orders
+assign header_bits  = {input_data_i[DATA_IN_W-2], input_data_i[DATA_IN_W-1]}; // Filp sync/control bits from network -> regular order
+assign control_byte = out_data_o_d[DATA_OUT_W-1 -: 8];
 
 always_comb begin
     // defaults
