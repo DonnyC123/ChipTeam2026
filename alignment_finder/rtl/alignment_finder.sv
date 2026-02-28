@@ -1,25 +1,22 @@
 module alignment_finder #(
-    parameter int DATA_WIDTH      = 66,  
-    parameter int GOOD_COUNT      = 32, 
-    parameter int BAD_COUNT       = 8   
+    parameter int DATA_WIDTH   = 66,
+    parameter int GOOD_COUNT   = 32,
+    parameter int BAD_COUNT    = 8
 ) (
     input  logic                  clk,
-    input  logic                  rst,        
-    input  logic                  data_valid_i, 
+    input  logic                  rst,
+    input  logic                  data_valid_i,
     input  logic [DATA_WIDTH-1:0] data_i,
 
-    output logic                  locked_o,   
-    output logic                  bitslip_o    
+    output logic                  locked_o,
+    output logic                  bitslip_o
 );
 
-  // good and bad widths for the counters
-  localparam int GOOD_W = (GOOD_COUNT  <= 1) ? 1 : $clog2(GOOD_COUNT+1);
-  localparam int BAD_W  = (BAD_COUNT <= 1) ? 1 : $clog2(BAD_COUNT+1);
+  // WIDTHS for the good and bad counters
+  localparam int GOOD_W = (GOOD_COUNT <= 1) ? 1 : $clog2(GOOD_COUNT+1);
+  localparam int BAD_W  = (BAD_COUNT  <= 1) ? 1 : $clog2(BAD_COUNT+1);
 
-  logic [GOOD_W-1:0] good_count;
-  logic [BAD_W-1:0]  bad_count;
-
-  // three states
+  // FSM states
   typedef enum logic [1:0] {
     RESET  = 2'b00,
     SEARCH = 2'b01,
@@ -28,113 +25,99 @@ module alignment_finder #(
 
   state_t state, state_n;
 
-  // header
-  logic [1:0] hdr;
-  logic hdr_valid;
+  logic [GOOD_W-1:0]        good_count;
+  logic [GOOD_W-1:0]        good_count_n;
+  logic [BAD_W-1:0]         bad_count;
+  logic [BAD_W-1:0]         bad_count_n;
 
-  // header comb logic
-  assign hdr = data_i[65:64];
+  logic                     locked_n;
+  logic                     bitslip_n;
+
+  logic [1:0]               hdr;
+  logic                     hdr_valid;
+
+  //header validity check 
+  assign hdr       = data_i[DATA_WIDTH-1 : DATA_WIDTH-2];    
   assign hdr_valid = (hdr == 2'b01) || (hdr == 2'b10);
 
-  // FSM comb logic (decides the next state)
   always_comb begin
-    state_n   = state;
-    bitslip_o = 1'b0;
+    state_n      = state;
+    good_count_n = good_count;
+    bad_count_n  = bad_count;
+
+    locked_n     = locked_o;
+    bitslip_n    = 1'b0;
 
     case (state)
       RESET: begin
-        state_n = SEARCH;
+        state_n      = SEARCH;
+        locked_n     = 1'b0;
+        good_count_n = '0;
+        bad_count_n  = '0;
       end
 
       SEARCH: begin
+        locked_n     = 1'b0;
+        bad_count_n  = '0;
+
         if (data_valid_i) begin
           if (hdr_valid) begin
-            if (good_count >= GOOD_COUNT-1)
-              state_n = LOCKED;
+            if (good_count >= GOOD_COUNT-1) begin
+              state_n      = LOCKED;
+              locked_n     = 1'b1;
+              good_count_n = '0;
+            end else begin
+              good_count_n = good_count + 1'b1;
+            end
           end else begin
-            bitslip_o = 1'b1;     
-            state_n   = SEARCH; 
+            bitslip_n    = 1'b1;
+            good_count_n = '0;
           end
         end
       end
 
       LOCKED: begin
+        locked_n     = 1'b1;
+        good_count_n = '0;
+
         if (data_valid_i) begin
-          if (!hdr_valid && (bad_count >= BAD_COUNT-1))
-            state_n = SEARCH;
+          if (hdr_valid) begin
+            bad_count_n = '0;
+          end else begin
+            if (bad_count >= BAD_COUNT-1) begin
+              state_n     = SEARCH;
+              locked_n    = 1'b0;
+              bad_count_n = '0;
+            end else begin
+              bad_count_n = bad_count + 1'b1;
+            end
+          end
         end
       end
 
       default: begin
-        state_n = RESET;
+        state_n      = RESET;
+        locked_n     = 1'b0;
+        bitslip_n    = 1'b0;
+        good_count_n = '0;
+        bad_count_n  = '0;
       end
     endcase
   end
 
-  // FSM sequential logic (state updates and counter updates)
   always_ff @(posedge clk) begin
     if (rst) begin
-      state    <= RESET;
-      locked_o <= 1'b0;
+      state      <= RESET;
+      locked_o   <= 1'b0;
+      bitslip_o  <= 1'b0;
       good_count <= '0;
       bad_count  <= '0;
     end else begin
-      state <= state_n;
-
-      case (state)
-        RESET: begin
-          locked_o <= 1'b0;
-          good_count <= '0;
-          bad_count  <= '0;
-        end
-
-        SEARCH: begin
-          locked_o <= 1'b0;
-
-          if (data_valid_i) begin
-            if (hdr_valid) begin
-              if (good_count < GOOD_COUNT-1)
-                good_count <= good_count + 1'b1;
-              else
-                good_count <= good_count;
-            end else begin
-              good_count <= '0;
-            end
-          end
-
-          bad_count <= '0;
-
-        end
-
-        LOCKED: begin
-          locked_o <= 1'b1;
-
-          if (data_valid_i) begin
-            if (hdr_valid) begin
-              bad_count <= '0;
-            end else begin
-              if (bad_count < BAD_COUNT-1)
-                bad_count <= bad_count + 1'b1;
-              else
-                bad_count <= bad_count;
-            end
-          end
-          good_count <= '0;
-
-          if (state_n == SEARCH) begin
-            good_count <= '0;
-            bad_count  <= '0;
-            locked_o <= 1'b0;
-          end
-        end
-
-        default: begin
-          state    <= RESET;
-          locked_o <= 1'b0;
-          good_count <= '0;
-          bad_count  <= '0;
-        end
-      endcase
+      state      <= state_n;
+      locked_o   <= locked_n;
+      bitslip_o  <= bitslip_n;
+      good_count <= good_count_n;
+      bad_count  <= bad_count_n;
     end
   end
 
