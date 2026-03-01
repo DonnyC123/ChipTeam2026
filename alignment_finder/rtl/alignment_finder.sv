@@ -1,7 +1,8 @@
 module alignment_finder #(
     parameter int DATA_WIDTH   = 66,
     parameter int GOOD_COUNT   = 32,
-    parameter int BAD_COUNT    = 8
+    parameter int BAD_COUNT    = 8,
+    parameter int BITSLIP_WAIT = 3
 ) (
     input  logic                  clk,
     input  logic                  rst,
@@ -12,15 +13,17 @@ module alignment_finder #(
     output logic                  bitslip_o
 );
 
-  // WIDTHS for the good and bad counters
+  // WIDTHS for the good and bad counters and bitslip wait counter
   localparam int GOOD_W = (GOOD_COUNT <= 1) ? 1 : $clog2(GOOD_COUNT+1);
   localparam int BAD_W  = (BAD_COUNT  <= 1) ? 1 : $clog2(BAD_COUNT+1);
+  localparam int BSW_W  = (BITSLIP_WAIT <= 0) ? 1 : $clog2(BITSLIP_WAIT+1);
 
   // FSM states
   typedef enum logic [1:0] {
-    RESET  = 2'b00,
-    SEARCH = 2'b01,
-    LOCKED = 2'b10
+    RESET        = 2'b00,
+    SEARCH       = 2'b01,
+    LOCKED       = 2'b10,
+    BITSLIP_HOLD = 2'b11
   } state_t;
 
   state_t state, state_n;
@@ -29,6 +32,9 @@ module alignment_finder #(
   logic [GOOD_W-1:0]        good_count_n;
   logic [BAD_W-1:0]         bad_count;
   logic [BAD_W-1:0]         bad_count_n;
+
+  logic [BSW_W-1:0]         bsw_count;
+  logic [BSW_W-1:0]         bsw_count_n;
 
   logic                     locked_n;
   logic                     bitslip_n;
@@ -44,6 +50,7 @@ module alignment_finder #(
     state_n      = state;
     good_count_n = good_count;
     bad_count_n  = bad_count;
+    bsw_count_n    = bsw_count;
 
     locked_n     = locked_o;
     bitslip_n    = 1'b0;
@@ -54,6 +61,7 @@ module alignment_finder #(
         locked_n     = 1'b0;
         good_count_n = '0;
         bad_count_n  = '0;
+        bsw_count_n    = '0;
       end
 
       SEARCH: begin
@@ -72,6 +80,26 @@ module alignment_finder #(
           end else begin
             bitslip_n    = 1'b1;
             good_count_n = '0;
+
+            if (BITSLIP_WAIT > 0) begin
+              state_n   = BITSLIP_HOLD;
+              bsw_count_n = BITSLIP_WAIT[BSW_W-1:0];
+            end
+          end
+        end
+      end
+
+      BITSLIP_HOLD: begin
+        locked_n     = 1'b0;
+        good_count_n = '0;
+        bad_count_n  = '0;
+
+        if (data_valid_i) begin
+          if (bsw_count <= 1) begin
+            state_n = SEARCH;
+            bsw_count_n  = '0;
+          end else begin
+            bsw_count_n = bsw_count - 1'b1;
           end
         end
       end
@@ -101,6 +129,7 @@ module alignment_finder #(
         bitslip_n    = 1'b0;
         good_count_n = '0;
         bad_count_n  = '0;
+        bsw_count_n    = '0;
       end
     endcase
   end
@@ -112,12 +141,14 @@ module alignment_finder #(
       bitslip_o  <= 1'b0;
       good_count <= '0;
       bad_count  <= '0;
+      bsw_count    <= '0;
     end else begin
       state      <= state_n;
       locked_o   <= locked_n;
       bitslip_o  <= bitslip_n;
       good_count <= good_count_n;
       bad_count  <= bad_count_n;
+      bsw_count    <= bsw_count_n;
     end
   end
 
