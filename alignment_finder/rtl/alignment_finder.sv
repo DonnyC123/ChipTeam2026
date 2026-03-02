@@ -26,18 +26,18 @@ module alignment_finder #(
     BITSLIP_HOLD = 2'b11
   } state_t;
 
-  state_t state, state_n;
+  state_t state_q, state_d;
 
-  logic [GOOD_W-1:0]        good_count;
-  logic [GOOD_W-1:0]        good_count_n;
-  logic [BAD_W-1:0]         bad_count;
-  logic [BAD_W-1:0]         bad_count_n;
+  logic [GOOD_W-1:0]        good_count_q;
+  logic [GOOD_W-1:0]        good_count_d;
+  logic [BAD_W-1:0]         bad_count_q;
+  logic [BAD_W-1:0]         bad_count_d;
 
-  logic [BSW_W-1:0]         bsw_count;
-  logic [BSW_W-1:0]         bsw_count_n;
+  logic [BSW_W-1:0]         bsw_count_q;
+  logic [BSW_W-1:0]         bsw_count_d;
 
-  logic                     locked_n;
-  logic                     bitslip_n;
+  logic                     locked_d;
+  logic                     bitslip_d;
 
   logic [1:0]               hdr;
   logic                     hdr_valid;
@@ -47,108 +47,108 @@ module alignment_finder #(
   assign hdr_valid = (hdr == 2'b01) || (hdr == 2'b10);
 
   always_comb begin
-    state_n      = state;
-    good_count_n = good_count;
-    bad_count_n  = bad_count;
-    bsw_count_n    = bsw_count;
+    state_d      = state_q;
+    good_count_d = good_count_q;
+    bad_count_d  = bad_count_q;
+    bsw_count_d    = bsw_count_q;
 
-    locked_n     = locked_o;
-    bitslip_n    = 1'b0;
+    locked_d     = locked_o;
+    bitslip_d    = 1'b0;
 
-    case (state)
+    case (state_q)
       RESET: begin
-        state_n      = SEARCH;
-        locked_n     = 1'b0;
-        good_count_n = '0;
-        bad_count_n  = '0;
-        bsw_count_n    = '0;
+        state_d      = SEARCH;
+        locked_d     = 1'b0;
+        good_count_d = '0;
+        bad_count_d  = '0;
+        bsw_count_d  = '0;
       end
 
       SEARCH: begin
-        locked_n     = 1'b0;
-        bad_count_n  = '0;
+        locked_d     = 1'b0;
+        bad_count_d  = '0;
 
         if (data_valid_i) begin
           if (hdr_valid) begin
-            if (good_count >= GOOD_COUNT-1) begin
-              state_n      = LOCKED;
-              locked_n     = 1'b1;
-              good_count_n = '0;
+            if (good_count_q >= GOOD_COUNT-1) begin
+              state_d      = LOCKED;
+              locked_d     = 1'b1;
+              good_count_d = '0;
             end else begin
-              good_count_n = good_count + 1'b1;
+              good_count_d = good_count_q + 1'b1;
             end
           end else begin
-            bitslip_n    = 1'b1;
-            good_count_n = '0;
+            bitslip_d    = 1'b1;
+            good_count_d = '0;
 
             if (BITSLIP_WAIT > 0) begin
-              state_n   = BITSLIP_HOLD;
-              bsw_count_n = BITSLIP_WAIT[BSW_W-1:0];
+              state_d     = BITSLIP_HOLD;
+              bsw_count_d = BITSLIP_WAIT;
             end
           end
         end
       end
 
       BITSLIP_HOLD: begin
-        locked_n     = 1'b0;
-        good_count_n = '0;
-        bad_count_n  = '0;
+        locked_d     = 1'b0;
+        good_count_d = '0;
+        bad_count_d  = '0;
 
         if (data_valid_i) begin
-          if (bsw_count <= 1) begin
-            state_n = SEARCH;
-            bsw_count_n  = '0;
+          if (bsw_count_q <= 1) begin
+            state_d = SEARCH;
+            bsw_count_d = '0;
           end else begin
-            bsw_count_n = bsw_count - 1'b1;
+            bsw_count_d = bsw_count_q - 1'b1;
           end
         end
       end
 
       LOCKED: begin
-        locked_n     = 1'b1;
-        good_count_n = '0;
+        locked_d     = 1'b1;
+        good_count_d = '0;
 
         if (data_valid_i) begin
           if (hdr_valid) begin
-            bad_count_n = '0;
+            bad_count_d = '0;
           end else begin
-            if (bad_count >= BAD_COUNT-1) begin
-              state_n     = SEARCH;
-              locked_n    = 1'b0;
-              bad_count_n = '0;
+            if (bad_count_q >= BAD_COUNT-1) begin
+              state_d     = SEARCH;
+              locked_d    = 1'b0;
+              bad_count_d = '0;
             end else begin
-              bad_count_n = bad_count + 1'b1;
+              bad_count_d = bad_count_q + 1'b1;
             end
           end
         end
       end
 
       default: begin
-        state_n      = RESET;
-        locked_n     = 1'b0;
-        bitslip_n    = 1'b0;
-        good_count_n = '0;
-        bad_count_n  = '0;
-        bsw_count_n    = '0;
+        state_d      = RESET;
+        locked_d     = 1'b0;
+        bitslip_d    = 1'b0;
+        good_count_d = '0;
+        bad_count_d  = '0;
+        bsw_count_d  = '0;
       end
     endcase
   end
 
   always_ff @(posedge clk) begin
     if (rst) begin
-      state      <= RESET;
-      locked_o   <= 1'b0;
-      bitslip_o  <= 1'b0;
-      good_count <= '0;
-      bad_count  <= '0;
-      bsw_count    <= '0;
+      state_q      <= RESET;
+      locked_o     <= 1'b0;
+      bitslip_o    <= 1'b0;
+      good_count_q <= '0;
+      bad_count_q  <= '0;
+      bsw_count_q  <= '0;
     end else begin
-      state      <= state_n;
-      locked_o   <= locked_n;
-      bitslip_o  <= bitslip_n;
-      good_count <= good_count_n;
-      bad_count  <= bad_count_n;
-      bsw_count    <= bsw_count_n;
+      state_q      <= state_d;
+      locked_o     <= locked_d;
+      bitslip_o    <= bitslip_d;
+      good_count_q <= good_count_d;
+      bad_count_q  <= bad_count_d;
+      bsw_count_q  <= bsw_count_d;
     end
   end
 

@@ -3,7 +3,7 @@ import cocotb
 from tb_utils.tb_common import initialize_tb
 from alignment_finder.tb.alignment_finder_test_base import AlignmentFinderTestBase
 
-
+# CHANGE THE TESTBASE TO INCLUDE THE REGULAR MODEL INSTEAD OF BAD INPUT
 # @cocotb.test()
 # async def sanity_test(dut):
 #     await initialize_tb(dut, clk_period_ns=10)

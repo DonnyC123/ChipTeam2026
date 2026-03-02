@@ -13,7 +13,6 @@ class AlignmentFinderBadInputModel(GenericModel):
 
     def _reset(self) -> None:
         self.locked = 0
-        # pipeline regs for outputs
         self.bitslip_q = 0
         self.locked_q = 0
 

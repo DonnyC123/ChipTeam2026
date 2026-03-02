@@ -11,7 +11,7 @@ class AlignmentFinderOutTransaction(AbstractTransaction):
 
     @property
     def valid(self) -> bool:
-        return bool(self.data_valid_i)  # only capture when input is valid
+        return bool(self.data_valid_i) 
 
     @property
     def to_data(self):

@@ -22,7 +22,7 @@ class AlignmentFinderSequence(GenericSequence):
     async def add_bubble(self, cycles: int = 1):
         for _ in range(cycles):
             await self.notify_subscribers({
-                "event": "bubble",   # <-- change from "cycle"
+                "event": "bubble", 
                 "data_valid": 0,
                 "data": 0,
             })
