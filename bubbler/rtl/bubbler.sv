@@ -24,9 +24,9 @@ always_comb begin
         remainder_c      = input_64b;
         bits_remaining_c = 64;
     end else begin
-        output_c         = (input_64b << bits_remaining_q) & 66'h3FFFFFFFFFFFFFFFF;
+        output_c         = (66'(input_64b << bits_remaining_q)) & 66'h3FFFFFFFFFFFFFFFF;
         output_c         = output_c + remainder_q;
-        remainder_c      = (input_64b >> (64 - bits_remaining_q)) & 66'h3FFFFFFFFFFFFFFFF;
+        remainder_c      = (66'(input_64b >> (64 - bits_remaining_q))) & 66'h3FFFFFFFFFFFFFFFF;
         bits_remaining_c = bits_remaining_q - 2;
         valid_c = 1'b1;
     end
@@ -41,14 +41,12 @@ always_ff @(posedge clock or posedge reset) begin
     end else begin
         valid_q          <= valid_c;
         bits_remaining_q <= bits_remaining_c;
-        remainder_c      <= remainder_c;
-        output_c         <= output_c;
+        remainder_q      <= remainder_c;
+        output_q         <= output_c;
     end
 end
 
 assign output_66b                   = output_q;
-assign output_bits_remaining        = remainder_q;
-assign output_num_bits_remaining    = bits_remaining_q;
 assign output_valid                 = valid_q;
 
 endmodule
