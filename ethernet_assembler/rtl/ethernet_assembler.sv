@@ -22,7 +22,6 @@
 // 0x66 block: ordered set followed by start and three data bytes.  (dont ignore this one)
 // Basically the equivalent of 0x33, but with an ordered set before the start control character instead of four idles characters.
 
-
 module ethernet_assembler #(
     parameter int DATA_IN_W   = 66,
     parameter int DATA_OUT_W  = 64
@@ -65,7 +64,7 @@ endfunction
 
 assign out_data_o_d = bit_reverse(input_data_i[DATA_OUT_W-1:0]);
 assign can_read     = in_valid_i && locked_i;
-// TODO: I dont actually know if the sync/control bits is in network orders
+// Our team belives the sync/control bit are in network order
 assign header_bits  = {input_data_i[DATA_IN_W-2], input_data_i[DATA_IN_W-1]}; // Filp sync/control bits from network -> regular order
 assign control_byte = out_data_o_d[DATA_OUT_W-1 -: 8];
 
