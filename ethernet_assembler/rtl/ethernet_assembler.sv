@@ -15,17 +15,14 @@
 //     - We set the data_valid array based on that
 //     - We need a variale to track wether we are inside of a frame, that gets set/changed
 // - else If those bits are == 01 this is a data frame, and if we are inside a frame, then we can set all of the data_valid signals to high
-// 
-// 0x2d block: four control characters followed by an ordered set
-// 0x55 block: two ordered sets
-// 0x4b block: ordered set followed by four control characters
-// 0x66 block: ordered set followed by start and three data bytes.  (dont ignore this one)
-// Basically the equivalent of 0x33, but with an ordered set before the start control character instead of four idles characters.
+
 
 module ethernet_assembler #(
-    parameter int DATA_IN_W   = 66,
-    parameter int DATA_OUT_W  = 64
+    parameter  int DATA_IN_W   = 66,
+    parameter  int DATA_OUT_W  = 64,
+    localparam int BYTES_OUT   = DATA_OUT_W / 8
 )(
+
     input logic                   clk,
     input logic                   rst,
     input logic                   in_valid_i,
@@ -36,10 +33,7 @@ module ethernet_assembler #(
     output logic [DATA_OUT_W-1:0] out_data_o,
     output logic [BYTES_OUT-1:0]  bytes_valid_o
 );
-
-localparam logic [1:0] CTRL_HDR  = 2'b10;
-localparam logic [1:0] DATA_HDR  = 2'b01;
-localparam int         BYTES_OUT = DATA_OUT_W / 8;
+import nic_global_pkg::*;
 
 logic [1:0]            header_bits;
 logic [BYTES_OUT-1:0]  bytes_valid_o_d;
@@ -77,8 +71,8 @@ always_comb begin
     if (can_read && !in_frame_q && (header_bits == CTRL_HDR)) begin
         unique case (control_byte)
             // Start Frame Headers
-            8'h78: begin bytes_valid_o_d = 8'b0111_1111; in_frame_d = 1'b1; end
-            8'h33: begin bytes_valid_o_d = 8'b0000_0111; in_frame_d = 1'b1; end
+            SOF_L0: begin bytes_valid_o_d = 8'b0111_1111; in_frame_d = 1'b1; end
+            SOF_L4: begin bytes_valid_o_d = 8'b0000_0111; in_frame_d = 1'b1; end
 
             default: begin bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; end
         endcase
@@ -87,20 +81,20 @@ always_comb begin
     end else if (can_read && in_frame_q && (header_bits == CTRL_HDR)) begin
         unique case (control_byte)
             // End Frame Headers
-            8'h87: begin bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; end
-            8'h99: begin bytes_valid_o_d = 8'b0100_0000; in_frame_d = 1'b0; end
-            8'hAA: begin bytes_valid_o_d = 8'b0110_0000; in_frame_d = 1'b0; end
-            8'hB4: begin bytes_valid_o_d = 8'b0111_0000; in_frame_d = 1'b0; end
-            8'hCC: begin bytes_valid_o_d = 8'b0111_1000; in_frame_d = 1'b0; end
-            8'hD2: begin bytes_valid_o_d = 8'b0111_1100; in_frame_d = 1'b0; end
-            8'hE1: begin bytes_valid_o_d = 8'b0111_1110; in_frame_d = 1'b0; end
-            8'hFF: begin bytes_valid_o_d = 8'b0111_1111; in_frame_d = 1'b0; end
+            TERM_L0: begin bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; end
+            TERM_L1: begin bytes_valid_o_d = 8'b0100_0000; in_frame_d = 1'b0; end
+            TERM_L2: begin bytes_valid_o_d = 8'b0110_0000; in_frame_d = 1'b0; end
+            TERM_L3: begin bytes_valid_o_d = 8'b0111_0000; in_frame_d = 1'b0; end
+            TERM_L4: begin bytes_valid_o_d = 8'b0111_1000; in_frame_d = 1'b0; end
+            TERM_L5: begin bytes_valid_o_d = 8'b0111_1100; in_frame_d = 1'b0; end
+            TERM_L6: begin bytes_valid_o_d = 8'b0111_1110; in_frame_d = 1'b0; end
+            TERM_L7: begin bytes_valid_o_d = 8'b0111_1111; in_frame_d = 1'b0; end
 
             // Ordered Set + Data Headers
-            8'h66: bytes_valid_o_d = 8'b0111_0111;
-            8'h55: bytes_valid_o_d = 8'b0111_0111;
-            8'h4B: bytes_valid_o_d = 8'b0111_0000;
-            8'h2D: bytes_valid_o_d = 8'b0000_0111;
+            OS_D6:  bytes_valid_o_d = 8'b0111_0111;
+            OS_D5:  bytes_valid_o_d = 8'b0111_0111;
+            OS_D3T: bytes_valid_o_d = 8'b0111_0000;
+            OS_D3B: bytes_valid_o_d = 8'b0000_0111;
 
             default: bytes_valid_o_d = 8'b0000_0000;
         endcase
