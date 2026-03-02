@@ -17,7 +17,7 @@ logic [BIT_OUT_COUNT_W-1:0]     bits_remaining_d, bits_remaining_q;
 logic [BIT_OUT_W-1:0]           output_d, output_q;
 logic                           valid_d, valid_q;
 
-always_domb begin
+always_comb begin
     remainder_d      = '0;
     bits_remaining_d = '0;
     output_d         = '0;
