@@ -1,47 +1,61 @@
 import cocotb
-
+from cocotb.triggers import RisingEdge, Timer
 from tb_utils.tb_common import initialize_tb
-from alignment_finder.tb.alignment_finder_test_base import AlignmentFinderTestBase
 
-# CHANGE THE TESTBASE TO INCLUDE THE REGULAR MODEL INSTEAD OF BAD INPUT
-# @cocotb.test()
-# async def sanity_test(dut):
-#     await initialize_tb(dut, clk_period_ns=10)
 
-#     DATA_W = int(getattr(dut, "DATA_WIDTH", 66)) if hasattr(dut, "DATA_WIDTH") else 66
-#     GOOD   = 32
-#     BAD    = 8
+def make_66b_block(header2: int, payload64: int = 0) -> int:
+    header2 &= 0b11
+    payload64 &= (1 << 64) - 1
+    return (header2 << 64) | payload64
 
-#     testbase = AlignmentFinderTestBase(
-#         dut,
-#         data_width=DATA_W,
-#         good_count=GOOD,
-#         bad_count=BAD,
-#     )
 
-#     await testbase.sequence.add_bubble(4)
-#     await testbase.sequence.add_control_idle_stream(GOOD + 20, valid=True)
-#     await testbase.sequence.add_control_idle_stream(GOOD + 20, valid=True)
+async def drive_word(dut, word: int, valid: int = 1):
+    dut.data_valid_i.value = valid
+    dut.data_i.value = word
+    await RisingEdge(dut.clk)
 
-#     await testbase.wait_for_driver_done()
 
-#     await testbase.scoreboard.check()
+async def drive_bubbles(dut, cycles: int):
+    for _ in range(cycles):
+        dut.data_valid_i.value = 0
+        dut.data_i.value = 0
+        await RisingEdge(dut.clk)
+
 
 @cocotb.test()
-async def bad_header_test(dut):
+async def lock_eventually_goes_high(dut):
     await initialize_tb(dut, clk_period_ns=10)
 
-    DATA_W = int(getattr(dut, "DATA_WIDTH", 66)) if hasattr(dut, "DATA_WIDTH") else 66
+    good_count = int(getattr(dut, "GOOD_COUNT", 32))
 
-    testbase = AlignmentFinderTestBase(
-        dut,
-        data_width=DATA_W,
-        good_count=32,
-        bad_count=8,
+    # Start clean
+    dut.data_valid_i.value = 0
+    dut.data_i.value = 0
+    await Timer(1, units="ns")
+    await drive_bubbles(dut, 2)
+
+    bad0 = make_66b_block(0b00, 0)
+    bad1 = make_66b_block(0b11, 0)
+    await drive_word(dut, bad0, 1)
+    await drive_word(dut, bad1, 1)
+
+    good_word = make_66b_block(0b10, 0)
+
+    saw_lock = False
+
+    for i in range(good_count + 10):
+        await drive_word(dut, good_word, 1)
+
+        if int(dut.locked_o.value) == 1:
+            dut._log.info(f"locked_o went high after {i+1} good words")
+            saw_lock = True
+            break
+
+    assert saw_lock, (
+        f"locked_o never went high after feeding {good_count + 10} "
+        f"valid good-header blocks"
     )
 
-    await testbase.sequence.add_bubble(1)
-    await testbase.sequence.add_bad_header_stream(200, valid=True)
-
-    await testbase.wait_for_driver_done()
-    await testbase.scoreboard.check()
+    for _ in range(5):
+        await drive_word(dut, good_word, 1)
+        assert int(dut.locked_o.value) == 1, "locked_o dropped unexpectedly after lock"
