@@ -16,7 +16,6 @@
 //     - We need a variale to track wether we are inside of a frame, that gets set/changed
 // - else If those bits are == 01 this is a data frame, and if we are inside a frame, then we can set all of the data_valid signals to high
 
-
 module ethernet_assembler #(
     parameter  int DATA_IN_W   = 66,
     parameter  int DATA_OUT_W  = 64,
