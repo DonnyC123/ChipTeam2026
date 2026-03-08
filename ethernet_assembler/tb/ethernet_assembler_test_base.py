@@ -4,7 +4,7 @@ from ethernet_assembler.tb.ethernet_assembler_sequence_item import (
     EthernetAssemblerSequenceItem,
 )
 
-from ethernet_assembler.tb.ethernet_assembler_out_transaction import (
+from ethernet_assembler.tb.ethernet_assembler_transaction import (
     EthernetAssemblerTransaction,
 )
 

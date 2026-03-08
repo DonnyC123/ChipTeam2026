@@ -114,7 +114,12 @@ class EthernetAssemblerModel(GenericModel):
         if not in_valid or not locked:
             return {"out_valid": False, "out_data": out_data, "data_valid": data_valid}
 
-        sync_header = (input_data >> 64) & 0b11
+        network_sync_header = (input_data >> 64) & 0b11
+        # Sequence item sends 66b input in network bit order; convert header
+        # back to internal order before block-type classification.
+        sync_header = ((network_sync_header & 0b01) << 1) | (
+            (network_sync_header >> 1) & 0b01
+        )
 
         if sync_header == self.DATA_SYNC_HEADER:
             if self.in_frame:
@@ -164,4 +169,5 @@ class EthernetAssemblerModel(GenericModel):
         )
 
         expected = self._decode_block(input_data=input_data, in_valid=in_valid, locked=locked)
-        await self.expected_queue.put(expected)
+        if expected["out_valid"]:
+            await self.expected_queue.put(expected)
