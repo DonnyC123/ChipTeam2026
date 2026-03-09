@@ -9,7 +9,7 @@ sources = [
     "tx_fifo/rtl/tx_fifo.sv",
 ] + rtl_utils
 
-DEPTH = 16
+DEPTH = 64
 
 
 def test_tx_fifo():

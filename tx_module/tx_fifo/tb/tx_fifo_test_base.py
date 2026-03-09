@@ -1,3 +1,5 @@
+from functools import partial
+
 from tx_fifo.tb.tx_fifo_model import TxFifoModel
 from tx_fifo.tb.tx_fifo_sequence import TxFifoSequence
 from tx_fifo.tb.tx_fifo_sequence_item import TxFifoSequenceItem
@@ -23,6 +25,17 @@ class TxFifoTestBase(GenericTestBase):
         model=TxFifoModel,
         checker=GenericChecker,
     ):
+        depth = 32
+        if hasattr(dut, "DEPTH"):
+            try:
+                depth = int(dut.DEPTH.value)
+            except Exception:
+                try:
+                    depth = int(dut.DEPTH)
+                except Exception:
+                    depth = 32
+
+        model_factory = partial(model, depth=depth)
         super().__init__(
             dut,
             driver,
@@ -31,7 +44,7 @@ class TxFifoTestBase(GenericTestBase):
             monitor,
             output_transaction,
             scoreboard,
-            model,
+            model_factory,
             checker,
         )
         self.sequence.add_subscriber(self.scoreboard)

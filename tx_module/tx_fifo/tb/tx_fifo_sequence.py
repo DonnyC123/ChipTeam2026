@@ -11,7 +11,13 @@ class TxFifoSequence(GenericSequence):
 
     async def add_write(self, data: int, valid_mask: int = 0xFFFF_FFFF):
         """Write one 256-bit word into the FIFO and notify model."""
-        await self.notify_subscribers({"data": data, "valid": valid_mask})
+        await self.notify_subscribers(
+            {
+                "op": "write",
+                "data": data,
+                "valid": valid_mask,
+            }
+        )
         await self.add_transaction(
             TxFifoSequenceItem(
                 dma_data_i=LogicArray.from_unsigned(data, DMA_DATA_W),
@@ -23,7 +29,8 @@ class TxFifoSequence(GenericSequence):
         )
 
     async def add_read(self):
-        """Read one 64-bit beat from the FIFO (no model notification)."""
+        """Read one 64-bit beat from the FIFO and notify model."""
+        await self.notify_subscribers({"op": "read"})
         await self.add_transaction(
             TxFifoSequenceItem(
                 dma_data_i=LogicArray(0, DMA_DATA_W),

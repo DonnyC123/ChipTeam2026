@@ -71,13 +71,58 @@ async def tx_fifo_interleaved_test(dut):
 
 @cocotb.test()
 async def tx_fifo_burst_depth_test(dut):
-    """Burst-write 8 words (half of DEPTH=16), then read all 32 beats."""
+    """Burst-write 8 words, then read all 32 beats."""
     await initialize_tb(dut, clk_period_ns=10)
     testbase = TxFifoTestBase(dut)
 
-    words = [0x_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000 + i
-             for i in range(8)]
+    words = [
+        0x_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000
+        + i
+        for i in range(8)
+    ]
     await testbase.sequence.add_burst_write_then_read(words)
 
     await testbase.wait_for_driver_done()
     await testbase.scoreboard.check()
+
+
+@cocotb.test()
+async def tx_fifo_write_when_full_drop_test(dut):
+    """Write DEPTH+1 words without reads; the extra write should be dropped."""
+    await initialize_tb(dut, clk_period_ns=10)
+    testbase = TxFifoTestBase(dut)
+
+    depth = 64
+    if hasattr(dut, "DEPTH"):
+        try:
+            depth = int(dut.DEPTH.value)
+        except Exception:
+            pass
+
+    words = [
+        0x_1000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000
+        + i
+        for i in range(depth + 1)
+    ]
+    await testbase.sequence.add_burst_write_then_read(words)
+
+    await testbase.wait_for_driver_done()
+    await testbase.scoreboard.check()
+
+
+@cocotb.test()
+async def tx_fifo_empty_read_outputs_zero_valid_test(dut):
+    """Read while empty should keep valid mask at zero."""
+    await initialize_tb(dut, clk_period_ns=10)
+
+    dut.dma_data_i.value = 0
+    dut.dma_valid_i.value = 0
+    dut.dma_wr_en_i.value = 0
+    dut.sched_req_i.value = 0
+    dut.pcs_read_i.value = 1
+
+    await RisingEdge(dut.clk)
+    await Timer(1, unit="ns")
+
+    assert int(dut.empty_o.value) == 1, "FIFO should stay empty"
+    assert int(dut.pcs_valid_o.value) == 0, "pcs_valid_o must be 0 when FIFO is empty"

@@ -1,0 +1,71 @@
+m255
+K4
+z2
+!s11f vlog 2020.1 2020.01, Jan 28 2020
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 d/home/esf2634/IEEE/NIC/tx_fifo/sim_build
+T_opt
+!s110 1773019914
+VYX[XM`NGeO]dnUOOIH:f^0
+04 7 4 work tx_fifo fast 0
+=1-b49691574b56-69ae230a-21529-252fbf
+o-quiet +acc -auto_acc_if_foreign -work top -g DEPTH=64 +acc
+Z1 tCvgOpt 0
+n@_opt
+OL;O;2020.1;71
+vtx_fifo
+Z2 DXx6 sv_std 3 std 0 22 9oUSJO;AeEaW`l:M@^WG92
+DXx4 work 11 tx_fifo_pkg 0 22 Jn6DfISd6AT<;MERC69ic1
+Z3 !s110 1773019913
+!i10b 1
+!s100 1Z:2@?G2>Ja7OkGX9G9^]2
+Z4 !s11b Dg1SIo80bB@j0V0VzS_@n1
+I=L=A[b>8mg>idkZKhLn<i2
+VDg1SIo80bB@j0V0VzS_@n1
+S1
+R0
+Z5 w1773010104
+8/home/esf2634/IEEE/NIC/tx_fifo/rtl/tx_fifo.sv
+F/home/esf2634/IEEE/NIC/tx_fifo/rtl/tx_fifo.sv
+!i122 1
+L0 1 122
+Z6 OL;L;2020.1;71
+r1
+!s85 0
+31
+Z7 !s108 1773019913.000000
+!s107 /home/esf2634/IEEE/NIC/tx_fifo/rtl/tx_fifo.sv|
+!s90 -work|top|-sv|/home/esf2634/IEEE/NIC/tx_fifo/rtl/tx_fifo.sv|
+!i113 0
+Z8 o-work top -sv -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+R1
+Xtx_fifo_pkg
+R2
+R3
+!i10b 1
+!s100 QUViLmS7Dc6JI3a;F]I>90
+R4
+IJn6DfISd6AT<;MERC69ic1
+VJn6DfISd6AT<;MERC69ic1
+S1
+R0
+R5
+8/home/esf2634/IEEE/NIC/tx_fifo/rtl/tx_fifo_pkg.sv
+F/home/esf2634/IEEE/NIC/tx_fifo/rtl/tx_fifo_pkg.sv
+!i122 0
+L0 1 0
+R6
+r1
+!s85 0
+31
+R7
+!s107 /home/esf2634/IEEE/NIC/tx_fifo/rtl/tx_fifo_pkg.sv|
+!s90 -work|top|-sv|/home/esf2634/IEEE/NIC/tx_fifo/rtl/tx_fifo_pkg.sv|
+!i113 0
+R8
+R1

@@ -21,30 +21,46 @@ module tx_fifo #(
 
   import tx_fifo_pkg::*;
 
-  localparam int PTR_W          = $clog2(DEPTH);
-  localparam int BEATS_PER_WORD = DMA_DATA_W / PCS_DATA_W;
-  localparam int BEAT_CNT_W     = $clog2(BEATS_PER_WORD);
+  localparam int PTR_W                = $clog2(DEPTH);
+  localparam int BEATS_PER_WORD       = DMA_DATA_W / PCS_DATA_W;
+  localparam int VALID_BEATS_PER_WORD = DMA_VALID_W / PCS_VALID_W;
+  localparam int BEAT_CNT_W           = (BEATS_PER_WORD > 1) ? $clog2(BEATS_PER_WORD) : 1;
 
   typedef struct packed {
-    logic              tag;
-    logic [PTR_W-1:0]  addr;
+    logic             tag;
+    logic [PTR_W-1:0] addr;
   } tagged_addr_t;
 
-  fifo_entry_t       mem [DEPTH];
-  
-  tagged_addr_t      wr_ptr_d, wr_ptr_q;
-  tagged_addr_t      rd_ptr_d, rd_ptr_q;
-  
-  logic              full, empty;
-  logic              wr_en;
-  
-  fifo_entry_t       rd_entry;
+  fifo_entry_t         mem [DEPTH];
+
+  tagged_addr_t        wr_ptr_d, wr_ptr_q;
+  tagged_addr_t        rd_ptr_d, rd_ptr_q;
+
+  logic                full, empty;
+  logic                wr_en;
+
+  fifo_entry_t         rd_entry;
   logic [BEAT_CNT_W-1:0] beat_cnt_d, beat_cnt_q;
-  logic              fetch_next;
+  logic                fetch_next;
+
+  initial begin
+    if ((DMA_DATA_W % PCS_DATA_W) != 0) begin
+      $fatal(1, "tx_fifo: DMA_DATA_W must be an integer multiple of PCS_DATA_W");
+    end
+    if ((DMA_VALID_W % PCS_VALID_W) != 0) begin
+      $fatal(1, "tx_fifo: DMA_VALID_W must be an integer multiple of PCS_VALID_W");
+    end
+    if (BEATS_PER_WORD != VALID_BEATS_PER_WORD) begin
+      $fatal(1, "tx_fifo: data/valid beat ratios must match");
+    end
+    if ((DEPTH < 2) || ((DEPTH & (DEPTH - 1)) != 0)) begin
+      $fatal(1, "tx_fifo: DEPTH must be a power of 2 and >= 2");
+    end
+  end
 
   always_comb begin
     empty = (wr_ptr_q == rd_ptr_q);
-    full  = (wr_ptr_q.addr == rd_ptr_q.addr) && 
+    full  = (wr_ptr_q.addr == rd_ptr_q.addr) &&
             (wr_ptr_q.tag != rd_ptr_q.tag);
 
     empty_o = empty;
@@ -75,28 +91,12 @@ module tx_fifo #(
 
     rd_entry = mem[rd_ptr_q.addr];
 
-    case (beat_cnt_q)
-      2'd0: begin
-        pcs_data_o  = rd_entry.data[63:0];
-        pcs_valid_o = rd_entry.valid[7:0];
-      end
-      2'd1: begin
-        pcs_data_o  = rd_entry.data[127:64];
-        pcs_valid_o = rd_entry.valid[15:8];
-      end
-      2'd2: begin
-        pcs_data_o  = rd_entry.data[191:128];
-        pcs_valid_o = rd_entry.valid[23:16];
-      end
-      2'd3: begin
-        pcs_data_o  = rd_entry.data[255:192];
-        pcs_valid_o = rd_entry.valid[31:24];
-      end
-      default: begin
-        pcs_data_o  = rd_entry.data[63:0];
-        pcs_valid_o = rd_entry.valid[7:0];
-      end
-    endcase
+    pcs_data_o  = '0;
+    pcs_valid_o = '0;
+    if (!empty) begin
+      pcs_data_o  = rd_entry.data[beat_cnt_q * PCS_DATA_W +: PCS_DATA_W];
+      pcs_valid_o = rd_entry.valid[beat_cnt_q * PCS_VALID_W +: PCS_VALID_W];
+    end
 
     sched_grant_o = sched_req_i && !full;
   end

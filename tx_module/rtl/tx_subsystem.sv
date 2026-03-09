@@ -1,10 +1,11 @@
 module tx_subsystem #(
-    parameter int DMA_DATA_W  = 256,
-    parameter int DMA_VALID_W = 32,
-    parameter int PCS_DATA_W  = 64,
-    parameter int PCS_VALID_W = 8,
-    parameter int FIFO_DEPTH  = 32,
-    parameter int NUM_QUEUES  = 2
+    parameter int DMA_DATA_W       = 256,
+    parameter int DMA_VALID_W      = 32,
+    parameter int PCS_DATA_W       = 64,
+    parameter int PCS_VALID_W      = 8,
+    parameter int FIFO_DEPTH       = 32,
+    parameter int NUM_QUEUES       = 2,
+    parameter int DMA_RSP_LATENCY  = 0
 ) (
     input  logic                              clk,
     input  logic                              rst,
@@ -24,9 +25,36 @@ module tx_subsystem #(
   logic fifo_req;
   logic fifo_grant;
   logic dma_wr_en;
+  logic dma_req_dly_q;
+  logic sched_fifo_full_i;
 
-  assign dma_wr_en  = dma_read_en_o;
-  assign fifo_grant = fifo_req && !fifo_full;
+  // Optional alignment for DMA data/valid return path:
+  // 0 = data returns same cycle as dma_read_en_o.
+  // 1 = data returns one cycle later.
+  always_ff @(posedge clk) begin
+    if (rst) begin
+      dma_req_dly_q <= 1'b0;
+    end else begin
+      dma_req_dly_q <= dma_read_en_o;
+    end
+  end
+
+  generate
+    if (DMA_RSP_LATENCY == 0) begin : gen_dma_rsp_lat0
+      assign dma_wr_en         = dma_read_en_o;
+      assign sched_fifo_full_i = fifo_full;
+    end else if (DMA_RSP_LATENCY == 1) begin : gen_dma_rsp_lat1
+      assign dma_wr_en         = dma_req_dly_q;
+      // Conservative backpressure: treat one in-flight DMA response as full.
+      assign sched_fifo_full_i = fifo_full || dma_req_dly_q;
+    end else begin : gen_dma_rsp_lat_invalid
+      initial begin
+        $fatal(1, "tx_subsystem: DMA_RSP_LATENCY must be 0 or 1");
+      end
+      assign dma_wr_en         = dma_read_en_o;
+      assign sched_fifo_full_i = fifo_full;
+    end
+  endgenerate
 
   tx_fifo #(
       .DMA_DATA_W  (DMA_DATA_W),
@@ -56,7 +84,7 @@ module tx_subsystem #(
       .rst            (rst),
       .q_valid_i      (q_valid_i),
       .q_last_i       (q_last_i),
-      .fifo_full_i    (fifo_full),
+      .fifo_full_i    (sched_fifo_full_i),
       .fifo_grant_i   (fifo_grant),
       .dma_read_en_o  (dma_read_en_o),
       .dma_queue_sel_o(dma_queue_sel_o),

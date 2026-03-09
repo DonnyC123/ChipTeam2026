@@ -21,17 +21,22 @@ class TxSchedulingOutTransaction(AbstractTransaction):
     @property
     def valid(self) -> bool:
         try:
-            return bool(self.dma_read_en_o)
+            return bool(self.fifo_req_o)
         except (ValueError, TypeError):
             return False
 
     @property
     def to_data(self):
         try:
-            return self.dma_queue_sel_o.to_unsigned()
+            queue_sel = self.dma_queue_sel_o.to_unsigned()
         except (ValueError, TypeError):
-            return 0
+            queue_sel = 0
+        try:
+            read_en = 1 if bool(self.dma_read_en_o) else 0
+        except (ValueError, TypeError):
+            read_en = 0
+        return (queue_sel, read_en)
 
     @valid.setter
     def valid(self, value: bool):
-        self.dma_read_en_o = Logic(value)
+        self.fifo_req_o = Logic(value)

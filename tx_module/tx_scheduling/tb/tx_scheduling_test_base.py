@@ -16,7 +16,7 @@ class TxSchedulingTestBase(GenericTestBase):
     def __init__(
         self,
         dut,
-        num_queues=2,
+        num_queues=None,
         driver=GenericDriver,
         sequence_item=TxSchedulingSequenceItem,
         sequence=TxSchedulingSequence,
@@ -26,6 +26,14 @@ class TxSchedulingTestBase(GenericTestBase):
         model=TxSchedulingModel,
         checker=GenericChecker,
     ):
+        if num_queues is None:
+            num_queues = len(dut.q_valid_i)
+
+        qid_w = max(1, (num_queues - 1).bit_length())
+        sequence_item.NUM_QUEUES = num_queues
+        sequence_item.QID_W = qid_w
+        output_transaction.QID_W = qid_w
+
         model_factory = partial(model, num_queues=num_queues)
         super().__init__(
             dut,

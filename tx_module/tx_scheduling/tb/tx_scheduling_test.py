@@ -1,8 +1,11 @@
 import cocotb
-from cocotb.triggers import RisingEdge, Timer
 
 from tx_scheduling.tb.tx_scheduling_test_base import TxSchedulingTestBase
 from tb_utils.tb_common import initialize_tb
+
+
+def _num_queues(dut) -> int:
+    return len(dut.q_valid_i)
 
 
 @cocotb.test()
@@ -20,6 +23,9 @@ async def tx_scheduling_q0_only_test(dut):
 @cocotb.test()
 async def tx_scheduling_q1_only_test(dut):
     """Single 2-beat frame on Q1, Q0 idle. All reads should select Q1."""
+    if _num_queues(dut) < 2:
+        return
+
     await initialize_tb(dut, clk_period_ns=10)
     testbase = TxSchedulingTestBase(dut)
 
@@ -32,6 +38,9 @@ async def tx_scheduling_q1_only_test(dut):
 @cocotb.test()
 async def tx_scheduling_sequential_test(dut):
     """Q0 frame then Q1 frame sequentially. Verify both pass through."""
+    if _num_queues(dut) < 2:
+        return
+
     await initialize_tb(dut, clk_period_ns=10)
     testbase = TxSchedulingTestBase(dut)
 
@@ -51,6 +60,9 @@ async def tx_scheduling_round_robin_test(dut):
     then switches to Q1 (total 5 cycles).
     Expected output: [Q0, Q0, Q0, Q1, Q1].
     """
+    if _num_queues(dut) < 2:
+        return
+
     await initialize_tb(dut, clk_period_ns=10)
     testbase = TxSchedulingTestBase(dut)
 
@@ -63,6 +75,9 @@ async def tx_scheduling_round_robin_test(dut):
 @cocotb.test()
 async def tx_scheduling_single_beat_frames_test(dut):
     """Single-beat frames (last=1 immediately) to test fast IDLE transitions."""
+    if _num_queues(dut) < 2:
+        return
+
     await initialize_tb(dut, clk_period_ns=10)
     testbase = TxSchedulingTestBase(dut)
 
@@ -80,10 +95,58 @@ async def tx_scheduling_backpressure_test(dut):
     await initialize_tb(dut, clk_period_ns=10)
     testbase = TxSchedulingTestBase(dut)
 
-    Q0 = 1 << 0
-    await testbase.sequence.add_beat(q_valid=Q0, fifo_full=True)
-    await testbase.sequence.add_beat(q_valid=Q0)
-    await testbase.sequence.add_beat(q_valid=Q0, q_last=Q0)
+    q0 = 1 << 0
+    await testbase.sequence.add_beat(q_valid=q0, fifo_full=True)
+    await testbase.sequence.add_beat(q_valid=q0)
+    await testbase.sequence.add_beat(q_valid=q0, q_last=q0)
+
+    await testbase.wait_for_driver_done()
+    await testbase.scoreboard.check()
+
+
+@cocotb.test()
+async def tx_scheduling_req_without_grant_test(dut):
+    """Request should assert even when grant is temporarily withheld."""
+    await initialize_tb(dut, clk_period_ns=10)
+    testbase = TxSchedulingTestBase(dut)
+
+    q0 = 1 << 0
+    await testbase.sequence.add_beat(q_valid=q0, fifo_grant=False)
+    await testbase.sequence.add_beat(q_valid=q0, q_last=q0, fifo_grant=True)
+
+    await testbase.wait_for_driver_done()
+    await testbase.scoreboard.check()
+
+
+@cocotb.test()
+async def tx_scheduling_round_robin_4q_smoke_test(dut):
+    """For NUM_QUEUES>=4, verify one full RR round over Q0..Q3 single-beat frames."""
+    if _num_queues(dut) < 4:
+        return
+
+    await initialize_tb(dut, clk_period_ns=10)
+    testbase = TxSchedulingTestBase(dut)
+
+    mask4 = (1 << 4) - 1
+    for _ in range(4):
+        await testbase.sequence.add_beat(q_valid=mask4, q_last=mask4)
+
+    await testbase.wait_for_driver_done()
+    await testbase.scoreboard.check()
+
+
+@cocotb.test()
+async def tx_scheduling_round_robin_8q_smoke_test(dut):
+    """For NUM_QUEUES>=8, verify one full RR round over Q0..Q7 single-beat frames."""
+    if _num_queues(dut) < 8:
+        return
+
+    await initialize_tb(dut, clk_period_ns=10)
+    testbase = TxSchedulingTestBase(dut)
+
+    mask8 = (1 << 8) - 1
+    for _ in range(8):
+        await testbase.sequence.add_beat(q_valid=mask8, q_last=mask8)
 
     await testbase.wait_for_driver_done()
     await testbase.scoreboard.check()

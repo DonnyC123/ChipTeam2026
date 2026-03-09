@@ -5,7 +5,8 @@ class TxSchedulingModel(GenericModel):
     """N-queue round-robin scheduler reference model.
 
     Mirrors the RTL FSM with parameterized round-robin arbitration.
-    Predicts dma_queue_sel_o whenever dma_read_en_o is asserted.
+    Emits expected tuples: (queue_sel, dma_read_en).
+    Each expected item corresponds to a cycle where fifo_req_o should be high.
     """
 
     def __init__(self, num_queues: int = 2):
@@ -33,8 +34,10 @@ class TxSchedulingModel(GenericModel):
             if not fifo_full:
                 found, nxt = self._rr_next(q_valid)
                 if found:
+                    read_en = 1 if fifo_grant else 0
+                    await self.expected_queue.put((nxt, read_en))
+
                     if fifo_grant:
-                        await self.expected_queue.put(nxt)
                         is_last = bool(q_last & (1 << nxt))
                         if is_last:
                             self.last_served = nxt
@@ -44,8 +47,10 @@ class TxSchedulingModel(GenericModel):
 
         elif self.state == "SERVING":
             q = self.queue_sel
-            if not fifo_full and (q_valid & (1 << q)) and fifo_grant:
-                await self.expected_queue.put(q)
-                if q_last & (1 << q):
+            if not fifo_full and (q_valid & (1 << q)):
+                read_en = 1 if fifo_grant else 0
+                await self.expected_queue.put((q, read_en))
+
+                if fifo_grant and (q_last & (1 << q)):
                     self.state = "IDLE"
                     self.last_served = q

@@ -1,5 +1,5 @@
 from cocotb import start_soon
-from cocotb.triggers import RisingEdge, ReadOnly
+from cocotb.triggers import RisingEdge, FallingEdge, ReadOnly
 from cocotb.queue import Queue
 from dataclasses import fields, is_dataclass
 from typing import Generic, TypeVar, Type
@@ -76,7 +76,7 @@ OutputValidTransaction = TypeVar(
 class GenericValidMonitor(GenericMonitor[OutputValidTransaction]):
     async def receive_transaction(self) -> OutputValidTransaction:
         while True:
-            await RisingEdge(self.dut.clk)
+            await FallingEdge(self.dut.clk)
             await ReadOnly()
 
             output_transaction = self.output_transaction()
