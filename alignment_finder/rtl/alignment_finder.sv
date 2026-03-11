@@ -50,7 +50,7 @@ module alignment_finder #(
     state_d      = state_q;
     good_count_d = good_count_q;
     bad_count_d  = bad_count_q;
-    bsw_count_d    = bsw_count_q;
+    bsw_count_d  = bsw_count_q;
 
     locked_d     = locked_o;
     bitslip_d    = 1'b0;
@@ -70,7 +70,7 @@ module alignment_finder #(
 
         if (data_valid_i) begin
           if (hdr_valid) begin
-            if (good_count_q >= GOOD_COUNT-1) begin
+            if (good_count_q == GOOD_COUNT-1) begin
               state_d      = LOCKED;
               locked_d     = 1'b1;
               good_count_d = '0;
@@ -95,11 +95,11 @@ module alignment_finder #(
         bad_count_d  = '0;
 
         if (data_valid_i) begin
-          if (bsw_count_q <= 1) begin
+          if (bsw_count_q == 1) begin
             state_d = SEARCH;
             bsw_count_d = '0;
           end else begin
-            bsw_count_d = bsw_count_q - 1'b1;
+            bsw_count_d = bsw_count_q - 1;
           end
         end
       end
@@ -112,24 +112,15 @@ module alignment_finder #(
           if (hdr_valid) begin
             bad_count_d = '0;
           end else begin
-            if (bad_count_q >= BAD_COUNT-1) begin
+            if (bad_count_q == BAD_COUNT-1) begin
               state_d     = SEARCH;
               locked_d    = 1'b0;
               bad_count_d = '0;
             end else begin
-              bad_count_d = bad_count_q + 1'b1;
+              bad_count_d = bad_count_q + 1;
             end
           end
         end
-      end
-
-      default: begin
-        state_d      = RESET;
-        locked_d     = 1'b0;
-        bitslip_d    = 1'b0;
-        good_count_d = '0;
-        bad_count_d  = '0;
-        bsw_count_d  = '0;
       end
     endcase
   end
