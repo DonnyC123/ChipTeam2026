@@ -23,6 +23,7 @@ jobs:
 
       - name: Run pytest
         run: |
-          source /home/dcc3637/miniconda3/etc/profile.d/conda.sh
+          export PATH=/home/dcc3637/altera/25.1std/questa_fse/bin:$PATH  
+          export SALT_LICENSE_SERVER=/home/dcc3637/LR-154571_License.dat 
           conda activate ieee_chip_team
           pytest
