@@ -1,0 +1,25 @@
+name: Test
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: self-hosted
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update Env and Run Pytest
+        run: |
+          source /home/dcc3637/miniconda3/etc/profile.d/conda.sh
+          conda env update -f conda_set_up/environment.yml --prune
+          conda activate ieee_chip_team
+
+          export PATH=/home/dcc3637/altera/25.1std/questa_fse/bin:$PATH
+          export SALT_LICENSE_SERVER=/home/dcc3637/LR-154571_License.dat
+          pytest
