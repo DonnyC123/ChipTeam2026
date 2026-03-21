@@ -19,6 +19,7 @@ jobs:
         run: |
           source /home/dcc3637/miniconda3/etc/profile.d/conda.sh
           conda env update -f conda_set_up/environment.yml --prune
+          conda activate ieee_chip_team
 
       - name: Run pytest
         run: |
