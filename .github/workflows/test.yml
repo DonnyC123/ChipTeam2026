@@ -1,11 +1,24 @@
 name: Test
 
 on:
+  push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
     runs-on: self-hosted
+    defaults:
+      run:
+        shell: bash -el {0}
     steps:
-      - name: Echo test
-        run: echo "test"
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update conda environment
+        run: conda env update -f conda_set_up/environment.yml --prune
+
+      - name: Run pytest
+        run: |
+          conda activate ieee_chip_team
+          pytest
