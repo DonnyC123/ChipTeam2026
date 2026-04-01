@@ -2,7 +2,6 @@ from tb_utils.generic_sequence import GenericSequence
 from rx_tb.tb.rx_sequence_item import RxSequenceItem
 import random
 
-
 class BitStream:
     def __init__(self):
         self._bits: int = 0  

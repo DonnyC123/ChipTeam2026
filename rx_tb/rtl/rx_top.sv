@@ -2,7 +2,7 @@ module rx_top #(
     parameter int DATA_64_W    = 64,
     parameter int DATA_66_W    = 66,
     parameter int DATA_OUT_W   = 64,
-    parameter int GOOD_COUNT   = 32,
+    parameter int GOOD_COUNT   = 1,
     parameter int BAD_COUNT    = 8,
     parameter int BITSLIP_WAIT = 3
 )(
@@ -23,8 +23,21 @@ module rx_top #(
     logic [DATA_66_W-1:0] bubbler_data_66;
     logic                 bubbler_valid_66;
 
-logic [DATA_64_W-1:0] scrambled_data_64;
-logic                 scrambled_valid;
+    logic [DATA_64_W-1:0] scrambled_data_64;
+    logic                 scrambled_valid;
+
+    logic [1:0] header_pipe [0:1];
+
+    // double check how many stages this should be pipelined
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            header_pipe[0] <= '0;
+            header_pipe[1] <= '0;
+        end else begin
+            header_pipe[0] <= bubbler_data_66[DATA_66_W-1:DATA_66_W-2]; 
+            header_pipe[1] <= header_pipe[0];
+        end
+    end
 
     bubbler #(
         .BIT_IN_W  (DATA_64_W),
@@ -38,7 +51,7 @@ logic                 scrambled_valid;
         .valid_o  (bubbler_valid_66)
     );
 
-    scrambler #(
+    descrambler #(
         .BIT_W   (DATA_64_W),
         .STATE_W (58)
     ) u_scrambler (
@@ -46,8 +59,8 @@ logic                 scrambled_valid;
         .rst      (rst),
         ._64b_i   (bubbler_data_66[DATA_64_W-1:0]),    
         .valid_i  (bubbler_valid_66),    
-        ._64b_o   (scrambled_data_64),
-        .valid_o  (scrambled_valid)   
+        ._64b_o   (descrambled_data_64),
+        .valid_o  (descrambled_valid)   
     );
 
     alignment_finder #(
@@ -70,9 +83,9 @@ logic                 scrambled_valid;
     ) u_ethernet_assembler (
         .clk          (clk),
         .rst          (rst),
-        .in_valid_i   (scrambled_valid),
+        .in_valid_i   (descrambled_valid),
         .locked_i     (locked_o),
-        .input_data_i ({2'b01, scrambled_data_64}),
+        .input_data_i ({header_pipe[1], descrambled_data_64}),
         .out_valid_o  (out_valid_o),
         .out_data_o   (out_data_o),
         .bytes_valid_o(bytes_valid_o)

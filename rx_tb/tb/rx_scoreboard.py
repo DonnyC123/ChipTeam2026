@@ -1,10 +1,8 @@
 import cocotb
-# from cocotb.log import SimLog
 from rx_tb.tb.rx_transaction import RxTransaction
 
 class RxScoreboard:
     def __init__(self, name: str = "RxScoreboard"):
-        # self.log            = SimLog(name)
         self.expected_queue: list[list[int]] = []
         self.match_count    = 0
         self.error_count    = 0
