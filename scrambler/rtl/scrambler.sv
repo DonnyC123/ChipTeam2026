@@ -22,7 +22,7 @@ always_comb begin
     scrambled_d          = '0;
     state_d              = '0;
     valid_o_d            = 1'b0;
-    valid_o_state_d      = 1'b0;
+    valid_state_d      = 1'b0;
     if (valid_i && valid_state_q) begin
         for (int i = 0; i < BIT_W; i++) begin
             scrambled_d[i] = _64b_i[i] ^ state_q[TAP_1] ^ state_q[TAP_2];
@@ -43,7 +43,7 @@ always_ff @(posedge clk) begin
     if (rst == 1'b1) begin
         scrambled_q        <= '0;
         state_q            <= '0;
-        valid_o_state_q    <= '0;
+        valid_state_q    <= '0;
         valid_o_q          <= '0;
     end else begin
         scrambled_q        <= scrambled_d;
