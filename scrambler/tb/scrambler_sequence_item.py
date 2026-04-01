@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Self
 from cocotb.types import Logic
 from tb_utils.abstract_transactions import AbstractTransaction
-from .pixel_interface_transaction import PixelInterfaceTransaction
+#from .pixel_interface_transaction import PixelInterfaceTransaction
 
 
 @dataclass

@@ -1,10 +1,10 @@
-from median_filter.tb.median_filter_model import MedianFilterModel
-from median_filter.tb.median_filter_sequence import MedianFilterSequence
-from median_filter.tb.median_filter_sequence_item import (
+from scrambler.tb.scrambler_model import MedianFilterModel
+from scrambler.tb.scrambler_sequence import MedianFilterSequence
+from scrambler.tb.scrambler_sequence_item import (
     MedianFilterSequenceItem,
 )
 
-from median_filter.tb.median_filter_out_transaction import (
+from scrambler.tb.scrambler_out_transaction import (
     MedianFilterOutTransaction,
 )
 

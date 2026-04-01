@@ -1,17 +1,15 @@
 import os
 import glob
 from cocotb_tools.runner import get_runner
-from median_filter.tb.median_filter_sequence_item import MedianFilterSequenceItem
-from median_filter.tb.median_filter_out_transaction import (
+from scrambler.tb.scrambler_sequence_item import MedianFilterSequenceItem
+from scrambler.tb.scrambler_out_transaction import (
     MedianFilterOutTransaction,
 )
 
 rtl_utils = glob.glob("rtl_utils/*.sv")
 
 sources = [
-    "median_filter/rtl/median_filter_pkg.sv",
-    "median_filter/rtl/median_filter.sv",
-    "median_filter/rtl/pixel_valid_if.sv",
+    "scrambler/rtl/scrambler.sv",
 ] + rtl_utils
 
 
@@ -34,7 +32,7 @@ def test_resize_module():
 
     sim.build(
         sources=sources,
-        hdl_toplevel="median_filter",
+        hdl_toplevel="scrambler",
         build_dir="sim_build",
         parameters=rtl_parameters,
         always=True,
@@ -42,8 +40,8 @@ def test_resize_module():
     )
 
     sim.test(
-        hdl_toplevel="median_filter",
-        test_module="median_filter.tb.median_filter_test",
+        hdl_toplevel="scrambler",
+        test_module="scrambler.tb.scrambler_test",
         waves=True,
         test_args=modelsim_sim_args,
         extra_env={
