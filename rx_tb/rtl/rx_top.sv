@@ -23,21 +23,10 @@ module rx_top #(
     logic [DATA_66_W-1:0] bubbler_data_66;
     logic                 bubbler_valid_66;
 
-    logic [DATA_64_W-1:0] scrambled_data_64;
-    logic                 scrambled_valid;
+    logic [DATA_64_W-1:0] descrambled_data_64;
+    logic                 descrambled_valid;
 
-    logic [1:0] header_pipe [0:1];
-
-    // double check how many stages this should be pipelined
-    always_ff @(posedge clk) begin
-        if (rst) begin
-            header_pipe[0] <= '0;
-            header_pipe[1] <= '0;
-        end else begin
-            header_pipe[0] <= bubbler_data_66[DATA_66_W-1:DATA_66_W-2]; 
-            header_pipe[1] <= header_pipe[0];
-        end
-    end
+    logic drop_frame_o;
 
     bubbler #(
         .BIT_IN_W  (DATA_64_W),
@@ -78,14 +67,17 @@ module rx_top #(
     );
 
     ethernet_assembler #(
-        .DATA_IN_W  (DATA_66_W),
+        .DATA_IN_W  (DATA_64_W),
         .DATA_OUT_W (DATA_OUT_W)
     ) u_ethernet_assembler (
         .clk          (clk),
         .rst          (rst),
         .in_valid_i   (descrambled_valid),
         .locked_i     (locked_o),
-        .input_data_i ({header_pipe[1], descrambled_data_64}),
+        .cancel_frame_i (1'b0),
+        .input_data_i (descrambled_data_64),
+        .header_bits_i (bubbler_data_66[65:64]),
+        .drop_frame_o (drop_frame_o),
         .out_valid_o  (out_valid_o),
         .out_data_o   (out_data_o),
         .bytes_valid_o(bytes_valid_o)

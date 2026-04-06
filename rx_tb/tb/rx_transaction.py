@@ -9,8 +9,6 @@ class RxTransaction(AbstractTransaction):
     out_data_o:    LogicArray = field(default_factory=lambda: LogicArray("0" * 64))
     bytes_valid_o: LogicArray = field(default_factory=lambda: LogicArray("0" * 8))
     out_valid_o:   Logic      = field(default_factory=lambda: Logic("0"))
-    locked_o:      Logic      = field(default_factory=lambda: Logic("0"))
-    bitslip_o:     Logic      = field(default_factory=lambda: Logic("0"))
 
     @property
     def valid(self) -> bool:
@@ -34,6 +32,4 @@ class RxTransaction(AbstractTransaction):
     def invalid_seq_item(cls) -> Self:
         item = cls()
         item.out_valid_o = Logic(0)
-        item.locked_o = Logic(0)
-        item.bitslip_o = Logic(0)
         return item

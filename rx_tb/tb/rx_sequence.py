@@ -38,7 +38,7 @@ class RxSequence(GenericSequence):
     SOF_L4   = 0x33
     TERM_CODES = [
         0x87,  # TERM_L0: 0 valid data bytes
-        0x99,  # TERM_L1: 1 valid data byte
+        0x99,  # TERM_L1: 1 valid data bytes
         0xAA,  # TERM_L2: 2 valid data bytes
         0xB4,  # TERM_L3: 3 valid data bytes
         0xCC,  # TERM_L4: 4 valid data bytes

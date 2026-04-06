@@ -54,7 +54,7 @@ async def collect_transactions(monitor, scoreboard):
 async def test_lock_and_single_frame(dut):
     seq, monitor, scoreboard = await init_dut(dut)
 
-    seq.scrambler_state = 0
+    seq.scrambler_state = 1
     gold = [0xAA, 0xBB, 0xCC, 0xDD] * 16 
 
     scoreboard.add_expected(gold)
@@ -69,7 +69,7 @@ async def test_lock_and_single_frame(dut):
 async def test_back_to_back_frames(dut):
     seq, monitor, scoreboard = await init_dut(dut)
 
-    seq.scrambler_state = 0
+    seq.scrambler_state = 1
     frames = [
         list(range(64)),
         [0xDE, 0xAD, 0xBE, 0xEF] * 18,

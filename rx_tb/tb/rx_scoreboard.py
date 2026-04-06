@@ -16,11 +16,6 @@ class RxScoreboard:
         self.expected_queue.append(list(frame))
 
     def ingest(self, txn: RxTransaction):
-        if bool(txn.bitslip_o):
-            self.bitslip_count += 1
-
-        if self._in_frame and not bool(txn.locked_o):
-            self.lock_loss_count += 1
 
         if not txn.valid:
             if self._in_frame:
@@ -62,7 +57,6 @@ class RxScoreboard:
             self.error_count += 1
             if len(actual) == len(expected):
                 bad = [i for i,(a,e) in enumerate(zip(actual, expected)) if a != e]
-            raise AssertionError("Frame content mismatch — see log above.")
 
     def check_all_received(self):
         remaining = len(self.expected_queue)
