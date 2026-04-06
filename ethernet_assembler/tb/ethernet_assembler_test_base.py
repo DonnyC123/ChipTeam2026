@@ -12,7 +12,7 @@ from ethernet_assembler.tb.ethernet_assembler_transaction import (
 from tb_utils.generic_checker import GenericChecker
 from tb_utils.generic_drivers import GenericDriver
 from tb_utils.generic_test_base import GenericTestBase
-from tb_utils.generic_monitor import GenericValidMonitor
+from tb_utils.generic_monitor import GenericMonitor, GenericValidMonitor
 from tb_utils.generic_scoreboard import GenericScoreboard
 
 
@@ -28,7 +28,11 @@ class EthernetAssemblerTestBase(GenericTestBase):
         scoreboard=GenericScoreboard,
         model=EthernetAssemblerModel,
         checker=GenericChecker,
+        cycle_accurate_monitor: bool = False,
     ):
+        if cycle_accurate_monitor and monitor is GenericValidMonitor:
+            monitor = GenericMonitor
+
         super().__init__(
             dut,
             driver,

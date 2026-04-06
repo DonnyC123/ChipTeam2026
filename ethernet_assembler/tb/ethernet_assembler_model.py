@@ -31,6 +31,7 @@ class EthernetAssemblerModel(GenericModel):
     CONTROL_SYNC_HEADER = 0b10
     DATA_MASK_64        = (1 << 64) - 1
     BIT_REVERSE_TABLE   = tuple(int(f"{i:08b}"[::-1], 2) for i in range(256))
+    IDLE_BLOCK_TYPE     = 0x1E
 
     # Start blocks (64b/66b control block type in byte [63:56]).
     START_VALID_MASKS: Dict[int, Tuple[bool, ...]] = {
@@ -52,21 +53,23 @@ class EthernetAssemblerModel(GenericModel):
         0xFF: (False, True, True, True, True, True, True, True),         # T7
     }
 
-    # Common idle / non-payload control blocks.
-    IDLE_BLOCK_TYPES = {0x1E}
+    # Non-payload control blocks that still carry data bytes.
     NON_PAYLOAD_CONTROL_TYPES: Dict[int, Tuple[bool, ...]] = {
         0x66: (False, True, True, True, False, True, True, True),  
         0x55: (False, True, True, True, False, True, True, True),   
         0x4B: (False, True, True, True, False, False, False, False),
         0x2D: (False, False, False, False, False, True, True, True),    
     }
+    VALID_SYNC_HEADERS = {DATA_SYNC_HEADER, CONTROL_SYNC_HEADER}
 
     def __init__(self):
         super().__init__()
         self.in_frame = False
+        self.drop_mode = False
 
     def _reset(self):
         self.in_frame = False
+        self.drop_mode = False
 
     @staticmethod
     def _to_int(value: Any, default: int = 0) -> int:
@@ -105,14 +108,31 @@ class EthernetAssemblerModel(GenericModel):
 
         return reversed_value
 
-    def _decode_block(self, input_data: int, in_valid: bool, locked: bool) -> Dict[str, Any]:
+    @classmethod
+    def _classify_block(cls, sync_header: int, block_type: int) -> str:
+        if sync_header == cls.DATA_SYNC_HEADER:
+            return "data"
+
+        if sync_header != cls.CONTROL_SYNC_HEADER:
+            return "bad_header"
+
+        if block_type in cls.START_VALID_MASKS:
+            return "start"
+        if block_type in cls.END_VALID_MASKS:
+            return "term"
+        if block_type in cls.NON_PAYLOAD_CONTROL_TYPES:
+            return "ordered_set"
+        if block_type == cls.IDLE_BLOCK_TYPE:
+            return "idle"
+        return "unknown_control"
+
+    def _decode_block(
+        self, input_data: int, in_valid: bool, locked: bool, cancel_frame: bool
+    ) -> Dict[str, Any]:
         raw_payload = input_data & self.DATA_MASK_64
         # Input payload is network-order (LSB-first on the wire). Convert back to regular bit order.
         out_data = self._reverse_bits(raw_payload, 64)
         data_valid = [False] * 8
-
-        if not in_valid or not locked:
-            return {"out_valid": False, "out_data": out_data, "data_valid": data_valid}
 
         network_sync_header = (input_data >> 64) & 0b11
         # Sequence item sends 66b input in network bit order; convert header
@@ -120,28 +140,86 @@ class EthernetAssemblerModel(GenericModel):
         sync_header = ((network_sync_header & 0b01) << 1) | (
             (network_sync_header >> 1) & 0b01
         )
+        block_type = (out_data >> 56) & 0xFF
+        block_class = self._classify_block(sync_header=sync_header, block_type=block_type)
 
-        if sync_header == self.DATA_SYNC_HEADER:
-            if self.in_frame:
-                data_valid = [True] * 8
-        elif sync_header == self.CONTROL_SYNC_HEADER:
-            block_type = (out_data >> 56) & 0xFF
+        # Cancel seen while frame is active: flush current frame and enter drop mode.
+        if self.in_frame and cancel_frame:
+            self.in_frame = False
+            self.drop_mode = True
+            return {"out_valid": False, "out_data": out_data, "data_valid": data_valid}
 
-            if block_type in self.START_VALID_MASKS:
+        # Drop mode suppresses all blocks until cancel is low and a fresh SOF arrives.
+        if self.drop_mode:
+            self.in_frame = False
+            if (
+                (not cancel_frame)
+                and in_valid
+                and locked
+                and block_class == "start"
+            ):
                 data_valid = list(self.START_VALID_MASKS[block_type])
                 self.in_frame = True
-            elif block_type in self.END_VALID_MASKS:
-                if self.in_frame:
-                    data_valid = list(self.END_VALID_MASKS[block_type])
+                self.drop_mode = False
+
+            out_valid = any(data_valid)
+            return {"out_valid": out_valid, "out_data": out_data, "data_valid": data_valid}
+
+        # Cancel asserted while idle: suppress output until cancel deasserts.
+        if cancel_frame:
+            self.in_frame = False
+            return {"out_valid": False, "out_data": out_data, "data_valid": data_valid}
+
+        # Match RTL ordering: while in-frame, bad sync header or lock loss drops
+        # even if in_valid is low.
+        if self.in_frame and (
+            (not locked)
+            or (sync_header not in self.VALID_SYNC_HEADERS)
+        ):
+            self.in_frame = False
+            return {"out_valid": False, "out_data": out_data, "data_valid": data_valid}
+
+        if not in_valid or not locked:
+            return {"out_valid": False, "out_data": out_data, "data_valid": data_valid}
+
+        if block_class == "bad_header":
+            if self.in_frame:
                 self.in_frame = False
-            elif block_type in self.IDLE_BLOCK_TYPES:
+            return {"out_valid": False, "out_data": out_data, "data_valid": data_valid}
+
+        if block_class == "data":
+            if self.in_frame:
+                data_valid = [True] * 8
+            out_valid = any(data_valid)
+            return {"out_valid": out_valid, "out_data": out_data, "data_valid": data_valid}
+
+        if block_class == "start":
+            if self.in_frame:
+                # Nested start is treated as corruption: abort and wait for fresh SOF.
                 self.in_frame = False
-            elif block_type in self.NON_PAYLOAD_CONTROL_TYPES:
-                if self.in_frame:
-                    data_valid = list(self.NON_PAYLOAD_CONTROL_TYPES[block_type])
             else:
-                # Unknown control block: emit no payload and preserve frame state.
-                pass
+                data_valid = list(self.START_VALID_MASKS[block_type])
+                self.in_frame = True
+
+            out_valid = any(data_valid)
+            return {"out_valid": out_valid, "out_data": out_data, "data_valid": data_valid}
+
+        if block_class == "term":
+            if self.in_frame:
+                data_valid = list(self.END_VALID_MASKS[block_type])
+            self.in_frame = False
+            out_valid = any(data_valid)
+            return {"out_valid": out_valid, "out_data": out_data, "data_valid": data_valid}
+
+        if block_class == "ordered_set":
+            if self.in_frame:
+                data_valid = list(self.NON_PAYLOAD_CONTROL_TYPES[block_type])
+            out_valid = any(data_valid)
+            return {"out_valid": out_valid, "out_data": out_data, "data_valid": data_valid}
+
+        # IDLE or unknown control: ignore out-of-frame, abort in-frame.
+        if self.in_frame:
+            self.in_frame = False
 
         out_valid = any(data_valid)
         return {"out_valid": out_valid, "out_data": out_data, "data_valid": data_valid}
@@ -167,7 +245,16 @@ class EthernetAssemblerModel(GenericModel):
         locked = self._to_bool(
             notification.get("locked", notification.get("locked_i")), default=True
         )
+        cancel_frame = self._to_bool(
+            notification.get("cancel_frame", notification.get("cancel_frame_i")),
+            default=False,
+        )
 
-        expected = self._decode_block(input_data=input_data, in_valid=in_valid, locked=locked)
+        expected = self._decode_block(
+            input_data=input_data,
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=cancel_frame,
+        )
         if expected["out_valid"]:
             await self.expected_queue.put(expected)
