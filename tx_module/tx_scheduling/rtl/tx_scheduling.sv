@@ -20,7 +20,7 @@ module tx_scheduling #(
   logic [QID_W-1:0] last_served_d, last_served_q;
   logic             dma_read_en_d, dma_read_en_q;
   logic [QID_W-1:0] queue_sel_d, queue_sel_q;
-  logic             fifo_req_d;
+  logic             fifo_req_next;
 
   logic [QID_W-1:0] next_queue;
   logic              next_found;
@@ -47,13 +47,13 @@ module tx_scheduling #(
     last_served_d = last_served_q;
     dma_read_en_d = 1'b0;
     queue_sel_d   = queue_sel_q;
-    fifo_req_d    = 1'b0;
+    fifo_req_next = 1'b0;
 
     case (state_q)
 
       IDLE: begin
         if (!fifo_full_i && next_found) begin
-          fifo_req_d  = 1'b1;
+          fifo_req_next = 1'b1;
           queue_sel_d = next_queue;
           if (fifo_grant_i) begin
             dma_read_en_d = 1'b1;
@@ -68,7 +68,7 @@ module tx_scheduling #(
 
       SERVING: begin
         if (!fifo_full_i && q_valid_i[queue_sel_q]) begin
-          fifo_req_d  = 1'b1;
+          fifo_req_next = 1'b1;
           queue_sel_d = queue_sel_q;
           if (fifo_grant_i) begin
             dma_read_en_d = 1'b1;
@@ -86,7 +86,7 @@ module tx_scheduling #(
 
     dma_read_en_o   = dma_read_en_d;
     dma_queue_sel_o = queue_sel_d;
-    fifo_req_o      = fifo_req_d;
+    fifo_req_o      = fifo_req_next;
   end
 
   always_ff @(posedge clk) begin

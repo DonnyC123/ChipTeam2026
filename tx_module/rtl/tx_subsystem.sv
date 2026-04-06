@@ -13,11 +13,11 @@ module tx_subsystem #(
     input  logic [DMA_VALID_W-1:0]            dma_valid_i,
     input  logic [NUM_QUEUES-1:0]             q_valid_i,
     input  logic [NUM_QUEUES-1:0]             q_last_i,
+    input  logic                              pcs_read_i,
     output logic                              dma_read_en_o,
     output logic [$clog2(NUM_QUEUES)-1:0]     dma_queue_sel_o,
     output logic [PCS_DATA_W-1:0]             pcs_data_o,
-    output logic [PCS_VALID_W-1:0]            pcs_valid_o,
-    input  logic                              pcs_read_i
+    output logic [PCS_VALID_W-1:0]            pcs_valid_o
 );
 
   logic fifo_empty;
@@ -57,11 +57,7 @@ module tx_subsystem #(
   endgenerate
 
   tx_fifo #(
-      .DMA_DATA_W  (DMA_DATA_W),
-      .DMA_VALID_W (DMA_VALID_W),
-      .PCS_DATA_W  (PCS_DATA_W),
-      .PCS_VALID_W (PCS_VALID_W),
-      .DEPTH       (FIFO_DEPTH)
+      .DEPTH (FIFO_DEPTH)
   ) tx_fifo_inst (
       .clk          (clk),
       .rst          (rst),
