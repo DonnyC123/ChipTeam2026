@@ -16,30 +16,35 @@
 //     - We need a variale to track wether we are inside of a frame, that gets set/changed
 // - else If those bits are == 01 this is a data frame, and if we are inside a frame, then we can set all of the data_valid signals to high
 
-module ethernet_assembler #(
-    parameter  int DATA_IN_W   = 66,
-    parameter  int DATA_OUT_W  = 64,
-    localparam int BYTES_OUT   = DATA_OUT_W / 8
-)(
+import nic_global_pkg::*;
 
-    input logic                   clk,
-    input logic                   rst,
-    input logic                   in_valid_i,
-    input logic                   locked_i,
-    input logic  [DATA_IN_W-1:0]  input_data_i,
- 
+module ethernet_assembler #(
+    parameter  int DATA_IN_W  = 64,
+    parameter  int DATA_OUT_W = 64,
+    localparam int BYTES_OUT  = DATA_OUT_W / SIZE_BYTE
+)(
+    input  logic                  clk,
+    input  logic                  rst,
+    input  logic                  in_valid_i,
+    input  logic                  locked_i,
+    input  logic                  cancel_frame_i, //from fifo, tells us to stop untill we see a start
+    input  logic [DATA_IN_W-1:0]  input_data_i,
+    input  logic [1:0]            header_bits_i, // network order header bits are seperate
+
+    output logic                  drop_frame_o,
     output logic                  out_valid_o,
     output logic [DATA_OUT_W-1:0] out_data_o,
     output logic [BYTES_OUT-1:0]  bytes_valid_o
 );
-import nic_global_pkg::*;
 
 logic [1:0]            header_bits;
 logic [BYTES_OUT-1:0]  bytes_valid_o_d;
 logic [DATA_OUT_W-1:0] out_data_o_d;
-logic [7:0]            control_byte;
+logic [SIZE_BYTE-1:0]  control_byte;
 logic                  out_valid_o_d;
+logic                  drop_frame_o_d;
 logic                  can_read;
+logic                  drop_mode_d, drop_mode_q;
 logic                  in_frame_d, in_frame_q;
 
 // Flip the BIT order within the BYTES (get rid of network order)
@@ -55,30 +60,73 @@ function automatic logic [DATA_OUT_W-1:0] bit_reverse(input logic [DATA_OUT_W-1:
     end
 endfunction
 
-assign out_data_o_d = bit_reverse(input_data_i[DATA_OUT_W-1:0]);
-assign can_read     = in_valid_i && locked_i;
 // Our team belives the sync/control bit are in network order
-assign header_bits  = {input_data_i[DATA_IN_W-2], input_data_i[DATA_IN_W-1]}; // Filp sync/control bits from network -> regular order
-assign control_byte = out_data_o_d[DATA_OUT_W-1 -: 8];
+assign header_bits  = {header_bits_i[0], header_bits_i[1]}; // Filp sync/control bits from network -> regular order
+assign out_data_o_d = bit_reverse(input_data_i[DATA_OUT_W-1:0]);
+assign can_read     = in_valid_i && locked_i && !cancel_frame_i;
+assign control_byte = out_data_o_d[DATA_OUT_W-1 -: SIZE_BYTE];
 
 always_comb begin
     // defaults
-    out_valid_o_d   = 1'b0;
+    out_valid_o_d   = '0;
     bytes_valid_o_d = '0;
+    drop_frame_o_d  = '0;
+    drop_mode_d     = drop_mode_q;
     in_frame_d      = in_frame_q;
 
-    if (can_read && !in_frame_q && (header_bits == CTRL_HDR)) begin
+    // If cancel is seen while collecting a frame, abort that frame and enter drop mode
+    if (in_frame_q && cancel_frame_i) begin
+        drop_frame_o_d  = 1'b1;
+        in_frame_d      = 1'b0;
+        bytes_valid_o_d = '0;
+        drop_mode_d     = 1'b1;
+
+    // Drop mode: ignore everything until cancel is low and a new start frame arrives
+    end else if (drop_mode_q) begin
+        in_frame_d      = 1'b0;
+        bytes_valid_o_d = '0;
+
+        // 
+        if (!cancel_frame_i && can_read && (header_bits == CTRL_HDR)) begin
+            unique case (control_byte)
+                SOF_L0: begin
+                    bytes_valid_o_d = 8'b0111_1111;
+                    in_frame_d      = 1'b1;
+                    drop_mode_d     = 1'b0;
+                end
+                SOF_L4: begin
+                    bytes_valid_o_d = 8'b0000_0111;
+                    in_frame_d      = 1'b1;
+                    drop_mode_d     = 1'b0;
+                end
+                default: begin
+                    bytes_valid_o_d = '0;
+                    in_frame_d      = 1'b0;
+                    drop_mode_d     = 1'b1;
+                end
+            endcase
+        end
+
+    // Invalid sync header or not locked while in frame.
+    end else if (in_frame_q && (!locked_i || (CTRL_HDR != header_bits && DATA_HDR != header_bits))) begin
+        drop_frame_o_d  = 1'b1;
+        in_frame_d      = 1'b0;
+        bytes_valid_o_d = '0;
+
+    end else if (can_read && !in_frame_q && (header_bits == CTRL_HDR)) begin
         unique case (control_byte)
             // Start Frame Headers
             SOF_L0: begin bytes_valid_o_d = 8'b0111_1111; in_frame_d = 1'b1; end
             SOF_L4: begin bytes_valid_o_d = 8'b0000_0111; in_frame_d = 1'b1; end
 
+            // Even if we see stuff like double ends, it dosen't matter because we are not in a frame
             default: begin bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; end
         endcase
 
     // Valid input, currently in-frame, and control header.
     end else if (can_read && in_frame_q && (header_bits == CTRL_HDR)) begin
         unique case (control_byte)
+        
             // End Frame Headers
             TERM_L0: begin bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; end
             TERM_L1: begin bytes_valid_o_d = 8'b0100_0000; in_frame_d = 1'b0; end
@@ -95,10 +143,10 @@ always_comb begin
             OS_D3T: bytes_valid_o_d = 8'b0111_0000;
             OS_D3B: bytes_valid_o_d = 8'b0000_0111;
 
-            default: bytes_valid_o_d = 8'b0000_0000;
+            default: begin bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; drop_frame_o_d = 1'b1; end
         endcase
 
-    // Valid input, currently in-frame, and data header.
+    // Valid input, currently in frame and its a data header.
     end else if (can_read && (header_bits == DATA_HDR) && in_frame_q) begin
         bytes_valid_o_d = 8'b1111_1111;
     end
@@ -106,17 +154,21 @@ always_comb begin
     out_valid_o_d = |bytes_valid_o_d;
 end
 
-// Clocked_i Outputs
+// Clocked Outputs
 always_ff @(posedge clk) begin
     if (rst) begin
-        in_frame_q    <= 1'b0;
-        bytes_valid_o <= 8'h00;
-        out_valid_o   <= 1'b0; 
+        drop_mode_q     <= 1'b0;
+        in_frame_q      <= 1'b0;
+        bytes_valid_o   <= 8'h00;
+        out_valid_o     <= 1'b0; 
+        drop_frame_o    <= 1'b0;
     end else begin
-        in_frame_q    <= in_frame_d;
-        bytes_valid_o <= bytes_valid_o_d;
-        out_data_o    <= out_data_o_d;
-        out_valid_o   <= out_valid_o_d;
+        drop_mode_q     <= drop_mode_d;
+        in_frame_q      <= in_frame_d;
+        bytes_valid_o   <= bytes_valid_o_d;
+        out_data_o      <= out_data_o_d;
+        out_valid_o     <= out_valid_o_d;
+        drop_frame_o    <= drop_frame_o_d;
     end
 end
 

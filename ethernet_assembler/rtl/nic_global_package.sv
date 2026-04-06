@@ -19,6 +19,8 @@ localparam logic [7:0] OS_D3B   = 8'h2D; // C0..C3 O4 D5..D7
 localparam logic [1:0] CTRL_HDR = 2'b10;
 localparam logic [1:0] DATA_HDR = 2'b01;
 
-  // Add more to package down here
+localparam int SIZE_BYTE = 8;
+
+// Add more to package down here
 
 endpackage

@@ -18,6 +18,7 @@ class EthernetAssemblerSequenceItem(AbstractTransaction):
     )
     in_valid_i: Logic = field(default_factory=lambda: Logic("0"))
     locked_i: Logic = field(default_factory=lambda: Logic("1"))
+    cancel_frame_i: Logic = field(default_factory=lambda: Logic("0"))
 
     @classmethod
     def _reverse_bits(cls, value: int, width: int) -> int:
@@ -80,6 +81,7 @@ class EthernetAssemblerSequenceItem(AbstractTransaction):
             input_data_i=LogicArray("0" * cls.DATA_IN_W),
             in_valid_i=Logic(0),
             locked_i=Logic(1),
+            cancel_frame_i=Logic(0),
         )
 
     @property
@@ -96,4 +98,5 @@ class EthernetAssemblerSequenceItem(AbstractTransaction):
             "input_data": self._to_int(self.input_data_i, 0),
             "in_valid": bool(self._to_int(self.in_valid_i, 0)),
             "locked": bool(self._to_int(self.locked_i, 1)),
+            "cancel_frame": bool(self._to_int(self.cancel_frame_i, 0)),
         }
