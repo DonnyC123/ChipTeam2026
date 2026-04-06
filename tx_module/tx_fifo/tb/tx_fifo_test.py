@@ -1,8 +1,18 @@
 import cocotb
+import random
 from cocotb.triggers import RisingEdge, Timer
 
 from tx_fifo.tb.tx_fifo_test_base import TxFifoTestBase
 from tb_utils.tb_common import initialize_tb
+
+
+def _get_depth(dut, default=64) -> int:
+    if hasattr(dut, "DEPTH"):
+        try:
+            return int(dut.DEPTH.value)
+        except Exception:
+            pass
+    return default
 
 
 @cocotb.test()
@@ -87,17 +97,34 @@ async def tx_fifo_burst_depth_test(dut):
 
 
 @cocotb.test()
+async def tx_fifo_long_random_values_test(dut):
+    """Long randomized stream with random data and valid masks."""
+    await initialize_tb(dut, clk_period_ns=10)
+    testbase = TxFifoTestBase(dut)
+
+    rng = random.Random(0xF1F0_2026)
+    depth = _get_depth(dut)
+    num_words = depth * 3
+
+    for _ in range(num_words):
+        data = rng.getrandbits(256)
+        valid_mask = rng.getrandbits(32)
+        await testbase.sequence.add_write(data=data, valid_mask=valid_mask)
+
+    for _ in range(num_words * 4):
+        await testbase.sequence.add_read()
+
+    await testbase.wait_for_driver_done()
+    await testbase.scoreboard.check()
+
+
+@cocotb.test()
 async def tx_fifo_write_when_full_drop_test(dut):
     """Write DEPTH+1 words without reads; the extra write should be dropped."""
     await initialize_tb(dut, clk_period_ns=10)
     testbase = TxFifoTestBase(dut)
 
-    depth = 64
-    if hasattr(dut, "DEPTH"):
-        try:
-            depth = int(dut.DEPTH.value)
-        except Exception:
-            pass
+    depth = _get_depth(dut)
 
     words = [
         0x_1000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000

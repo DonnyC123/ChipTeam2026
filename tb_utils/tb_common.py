@@ -2,10 +2,16 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 
+_CLOCK_TASK = None
+
 
 async def initialize_tb(dut, clk_period_ns=10):
+    global _CLOCK_TASK
+    if _CLOCK_TASK is not None and not _CLOCK_TASK.done():
+        _CLOCK_TASK.kill()
+
     clk_gen = Clock(dut.clk, clk_period_ns, unit="ns")
-    cocotb.start_soon(clk_gen.start())
+    _CLOCK_TASK = cocotb.start_soon(clk_gen.start())
 
     await reset_dut(dut, 2 * clk_period_ns)
 

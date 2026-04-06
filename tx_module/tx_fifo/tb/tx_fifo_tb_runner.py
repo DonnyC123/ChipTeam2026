@@ -1,21 +1,27 @@
 import os
-import glob
+from pathlib import Path
 from cocotb_tools.runner import get_runner
 
-rtl_utils = glob.glob("rtl_utils/*.sv")
+TB_DIR = Path(__file__).resolve().parent
+TX_FIFO_DIR = TB_DIR.parent
+TX_MODULE_DIR = TX_FIFO_DIR.parent
+REPO_ROOT = TX_MODULE_DIR.parent
 
 sources = [
-    "tx_fifo/rtl/tx_fifo_pkg.sv",
-    "tx_fifo/rtl/tx_fifo.sv",
-] + rtl_utils
+    str(TX_FIFO_DIR / "rtl" / "tx_fifo_pkg.sv"),
+    str(TX_FIFO_DIR / "rtl" / "tx_fifo.sv"),
+] + sorted(str(p) for p in (TX_MODULE_DIR / "rtl_utils").glob("*.sv"))
 
 DEPTH = 64
 
 
 def test_tx_fifo():
-    base_dir = os.getcwd()
     current_pythonpath = os.environ.get("PYTHONPATH", "")
-    new_pythonpath = base_dir + os.pathsep + current_pythonpath
+    path_parts = [str(TX_MODULE_DIR), str(REPO_ROOT), str(TB_DIR)]
+    if current_pythonpath:
+        path_parts.append(current_pythonpath)
+    new_pythonpath = os.pathsep.join(path_parts)
+    os.environ["PYTHONPATH"] = new_pythonpath
 
     sim = get_runner("questa")
 
@@ -24,13 +30,14 @@ def test_tx_fifo():
     }
 
     modelsim_sim_args = [
+        "-64",
         "-voptargs=+acc",
     ]
 
     sim.build(
         sources=sources,
         hdl_toplevel="tx_fifo",
-        build_dir="tx_fifo/sim_build",
+        build_dir=str(TX_FIFO_DIR / "sim_build"),
         parameters=rtl_parameters,
         always=True,
         clean=True,
