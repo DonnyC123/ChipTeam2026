@@ -19,7 +19,7 @@
 import nic_global_pkg::*;
 
 module ethernet_assembler #(
-    parameter  int DATA_IN_W  = 66,
+    parameter  int DATA_IN_W  = 64,
     parameter  int DATA_OUT_W = 64,
     localparam int BYTES_OUT  = DATA_OUT_W / SIZE_BYTE
 )(
@@ -29,7 +29,8 @@ module ethernet_assembler #(
     input  logic                  locked_i,
     input  logic                  cancel_frame_i, //from fifo, tells us to stop untill we see a start
     input  logic [DATA_IN_W-1:0]  input_data_i,
- 
+    input  logic [1:0]            header_bits_i, // network order header bits are seperate
+
     output logic                  drop_frame_o,
     output logic                  out_valid_o,
     output logic [DATA_OUT_W-1:0] out_data_o,
@@ -60,7 +61,7 @@ function automatic logic [DATA_OUT_W-1:0] bit_reverse(input logic [DATA_OUT_W-1:
 endfunction
 
 // Our team belives the sync/control bit are in network order
-assign header_bits  = {input_data_i[DATA_IN_W-2], input_data_i[DATA_IN_W-1]}; // Filp sync/control bits from network -> regular order
+assign header_bits  = {header_bits_i[0], header_bits_i[1]}; // Filp sync/control bits from network -> regular order
 assign out_data_o_d = bit_reverse(input_data_i[DATA_OUT_W-1:0]);
 assign can_read     = in_valid_i && locked_i && !cancel_frame_i;
 assign control_byte = out_data_o_d[DATA_OUT_W-1 -: SIZE_BYTE];
