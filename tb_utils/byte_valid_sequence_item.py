@@ -7,7 +7,7 @@ from typing import Self
 @dataclass
 class ByteValidSequenceItem(AbstractTransaction):
     byte_data: LogicArray = field(default_factory=lambda: LogicArray("X" * 8))
-    byte_valid: Logic = field(default_factory=lambda: Logic("X"))
+    byte_valid: Logic = field(default_factory=lambda: Logic("0"))
 
     @classmethod
     def invalid_seq_item(cls) -> Self:
