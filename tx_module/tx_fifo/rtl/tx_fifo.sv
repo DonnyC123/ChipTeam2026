@@ -1,25 +1,21 @@
+import tx_fifo_pkg::*;
+
 module tx_fifo #(
-    parameter int DMA_DATA_W  = tx_fifo_pkg::DMA_DATA_W,
-    parameter int DMA_VALID_W = tx_fifo_pkg::DMA_VALID_W,
-    parameter int PCS_DATA_W  = tx_fifo_pkg::PCS_DATA_W,
-    parameter int PCS_VALID_W = tx_fifo_pkg::PCS_VALID_W,
-    parameter int DEPTH       = tx_fifo_pkg::DEPTH
+    parameter int DEPTH = 64
 ) (
     input  logic                   clk,
     input  logic                   rst,
     input  logic [DMA_DATA_W-1:0]  dma_data_i,
     input  logic [DMA_VALID_W-1:0] dma_valid_i,
     input  logic                   dma_wr_en_i,
+    input  logic                   pcs_read_i,
+    input  logic                   sched_req_i,
     output logic [PCS_DATA_W-1:0]  pcs_data_o,
     output logic [PCS_VALID_W-1:0] pcs_valid_o,
-    input  logic                   pcs_read_i,
     output logic                   empty_o,
     output logic                   full_o,
-    input  logic                   sched_req_i,
     output logic                   sched_grant_o
 );
-
-  import tx_fifo_pkg::*;
 
   localparam int PTR_W                = $clog2(DEPTH);
   localparam int BEATS_PER_WORD       = DMA_DATA_W / PCS_DATA_W;
