@@ -7,13 +7,15 @@ from ethernet_assembler.tb.ethernet_assembler_sequence_item import (
 from ethernet_assembler.tb.ethernet_assembler_transaction import (
     EthernetAssemblerTransaction,
 )
+from ethernet_assembler.tb.ethernet_assembler_scoreboard import (
+    EthernetAssemblerScoreboard,
+)
 
 
 from tb_utils.generic_checker import GenericChecker
 from tb_utils.generic_drivers import GenericDriver
 from tb_utils.generic_test_base import GenericTestBase
 from tb_utils.generic_monitor import GenericMonitor, GenericValidMonitor
-from tb_utils.generic_scoreboard import GenericScoreboard
 
 
 class EthernetAssemblerTestBase(GenericTestBase):
@@ -25,7 +27,7 @@ class EthernetAssemblerTestBase(GenericTestBase):
         sequence=EthernetAssemblerSequence,
         monitor=GenericValidMonitor,
         output_transaction=EthernetAssemblerTransaction,
-        scoreboard=GenericScoreboard,
+        scoreboard=EthernetAssemblerScoreboard,
         model=EthernetAssemblerModel,
         checker=GenericChecker,
         cycle_accurate_monitor: bool = False,

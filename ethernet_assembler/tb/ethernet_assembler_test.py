@@ -7,8 +7,8 @@ from cocotb.triggers import RisingEdge, Timer
 
 from ethernet_assembler.tb.ethernet_assembler_sequence import EthernetAssemblerSequence
 from ethernet_assembler.tb.ethernet_assembler_sequence_item import EthernetAssemblerSequenceItem
+from ethernet_assembler.tb.ethernet_assembler_tb_common import initialize_tb, reset_dut
 from ethernet_assembler.tb.ethernet_assembler_test_base import EthernetAssemblerTestBase
-from tb_utils.tb_common import initialize_tb, reset_dut
 
 HEADER_W = EthernetAssemblerSequence.HEADER_W
 PAYLOAD_W = EthernetAssemblerSequence.PAYLOAD_W
