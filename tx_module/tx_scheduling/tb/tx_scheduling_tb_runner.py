@@ -1,13 +1,16 @@
 import os
-import glob
+from pathlib import Path
 from cocotb_tools.runner import get_runner
 
-rtl_utils = glob.glob("rtl_utils/*.sv")
+TB_DIR = Path(__file__).resolve().parent
+TX_SCHED_DIR = TB_DIR.parent
+TX_MODULE_DIR = TX_SCHED_DIR.parent
+REPO_ROOT = TX_MODULE_DIR.parent
 
 sources = [
-    "tx_scheduling/rtl/tx_scheduling_pkg.sv",
-    "tx_scheduling/rtl/tx_scheduling.sv",
-] + rtl_utils
+    str(TX_SCHED_DIR / "rtl" / "tx_scheduling_pkg.sv"),
+    str(TX_SCHED_DIR / "rtl" / "tx_scheduling.sv"),
+] + sorted(str(p) for p in (TX_MODULE_DIR / "rtl_utils").glob("*.sv"))
 
 
 def _queue_configs_from_env() -> list[int]:
@@ -31,13 +34,17 @@ def _queue_configs_from_env() -> list[int]:
 
 
 def test_tx_scheduling():
-    base_dir = os.getcwd()
     current_pythonpath = os.environ.get("PYTHONPATH", "")
-    new_pythonpath = base_dir + os.pathsep + current_pythonpath
+    path_parts = [str(TX_MODULE_DIR), str(REPO_ROOT), str(TB_DIR)]
+    if current_pythonpath:
+        path_parts.append(current_pythonpath)
+    new_pythonpath = os.pathsep.join(path_parts)
+    os.environ["PYTHONPATH"] = new_pythonpath
 
     sim = get_runner("questa")
 
     modelsim_sim_args = [
+        "-64",
         "-voptargs=+acc",
     ]
 
@@ -52,7 +59,7 @@ def test_tx_scheduling():
         sim.build(
             sources=sources,
             hdl_toplevel="tx_scheduling",
-            build_dir=f"tx_scheduling/sim_build_q{num_queues}",
+            build_dir=str(TX_SCHED_DIR / f"sim_build_q{num_queues}"),
             parameters=rtl_parameters,
             always=True,
             clean=True,

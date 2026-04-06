@@ -1,4 +1,5 @@
 import cocotb
+import random
 
 from tx_scheduling.tb.tx_scheduling_test_base import TxSchedulingTestBase
 from tb_utils.tb_common import initialize_tb
@@ -147,6 +148,33 @@ async def tx_scheduling_round_robin_8q_smoke_test(dut):
     mask8 = (1 << 8) - 1
     for _ in range(8):
         await testbase.sequence.add_beat(q_valid=mask8, q_last=mask8)
+
+    await testbase.wait_for_driver_done()
+    await testbase.scoreboard.check()
+
+
+@cocotb.test()
+async def tx_scheduling_long_random_test(dut):
+    """Long randomized scheduler traffic across q_valid/q_last/backpressure/grant."""
+    await initialize_tb(dut, clk_period_ns=10)
+    testbase = TxSchedulingTestBase(dut)
+
+    num_queues = _num_queues(dut)
+    mask_all = (1 << num_queues) - 1
+    rng = random.Random(0x5CED_2026)
+    num_cycles = max(500, num_queues * 200)
+
+    for _ in range(num_cycles):
+        q_valid = rng.getrandbits(num_queues) & mask_all
+        q_last = rng.getrandbits(num_queues) & q_valid
+        fifo_full = rng.random() < 0.10
+        fifo_grant = rng.random() < 0.90
+        await testbase.sequence.add_beat(
+            q_valid=q_valid,
+            q_last=q_last,
+            fifo_full=fifo_full,
+            fifo_grant=fifo_grant,
+        )
 
     await testbase.wait_for_driver_done()
     await testbase.scoreboard.check()

@@ -1,5 +1,7 @@
 from functools import partial
 
+from cocotb.triggers import FallingEdge, ReadOnly
+
 from tx_scheduling.tb.tx_scheduling_model import TxSchedulingModel
 from tx_scheduling.tb.tx_scheduling_sequence import TxSchedulingSequence
 from tx_scheduling.tb.tx_scheduling_sequence_item import TxSchedulingSequenceItem
@@ -7,9 +9,47 @@ from tx_scheduling.tb.tx_scheduling_out_transaction import TxSchedulingOutTransa
 
 from tb_utils.generic_checker import GenericChecker
 from tb_utils.generic_drivers import GenericDriver
-from tb_utils.generic_test_base import GenericTestBase
 from tb_utils.generic_monitor import GenericValidMonitor
+from tb_utils.generic_test_base import GenericTestBase
 from tb_utils.generic_scoreboard import GenericScoreboard
+
+
+class TxSchedulingDriver(GenericDriver):
+    """Drive inputs on falling edge so DUT sees stable values at next rising edge."""
+
+    async def driver_loop(self):
+        # Force benign defaults before the first sampled clock edge.
+        await self.drive_transaction(self.seq_item_type.invalid_seq_item())
+
+        while True:
+            await FallingEdge(self.dut.clk)
+
+            if not self.seq_item_queue.empty():
+                seq_item = await self.seq_item_queue.get()
+            else:
+                seq_item = self.seq_item_type.invalid_seq_item()
+
+            await self.drive_transaction(seq_item)
+
+
+class TxSchedulingMonitor(GenericValidMonitor):
+    """Sample combinational scheduler outputs on falling edge.
+
+    The DUT updates internal state on rising edge and drives outputs
+    combinationally. Sampling on falling edge captures the stable values
+    associated with the in-flight cycle, avoiding post-edge next-cycle values.
+    """
+
+    async def receive_transaction(self):
+        while True:
+            await FallingEdge(self.dut.clk)
+            await ReadOnly()
+
+            output_transaction = self.output_transaction()
+            await self.recursive_receive(self.dut, output_transaction)
+
+            if output_transaction.valid:
+                return output_transaction
 
 
 class TxSchedulingTestBase(GenericTestBase):
@@ -17,10 +57,10 @@ class TxSchedulingTestBase(GenericTestBase):
         self,
         dut,
         num_queues=None,
-        driver=GenericDriver,
+        driver=TxSchedulingDriver,
         sequence_item=TxSchedulingSequenceItem,
         sequence=TxSchedulingSequence,
-        monitor=GenericValidMonitor,
+        monitor=TxSchedulingMonitor,
         output_transaction=TxSchedulingOutTransaction,
         scoreboard=GenericScoreboard,
         model=TxSchedulingModel,
