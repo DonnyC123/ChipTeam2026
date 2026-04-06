@@ -141,16 +141,17 @@ def _compose_control_payload(block_type: int, payload_low: int = 0) -> int:
     return ((block_type & 0xFF) << CONTROL_DATA_W) | (payload_low & payload_low_mask)
 
 
-def _compose_raw_block(sync_header: int, payload: int) -> int:
-    return ((sync_header & ((1 << HEADER_W) - 1)) << PAYLOAD_W) | (payload & PAYLOAD_MASK)
+def _to_network_payload(payload: int) -> int:
+    return EthernetAssemblerSequenceItem._to_network_payload(payload & PAYLOAD_MASK)
 
 
-def _to_network_input(raw_input_data: int) -> int:
-    return EthernetAssemblerSequenceItem._to_network_order(raw_input_data)
+def _to_network_header(sync_header: int) -> int:
+    return EthernetAssemblerSequenceItem._to_network_header(sync_header & ((1 << HEADER_W) - 1))
 
 
 async def _prime_inputs(dut):
     dut.input_data_i.value = 0
+    dut.header_bits_i.value = 0
     dut.in_valid_i.value = 0
     dut.locked_i.value = 1
     dut.cancel_frame_i.value = 0
@@ -167,8 +168,8 @@ async def _drive_block(
     locked: bool = True,
     cancel_frame: bool = False,
 ):
-    raw_input_data = _compose_raw_block(sync_header=sync_header, payload=payload)
-    dut.input_data_i.value = _to_network_input(raw_input_data)
+    dut.input_data_i.value = _to_network_payload(payload)
+    dut.header_bits_i.value = _to_network_header(sync_header)
     dut.in_valid_i.value = int(in_valid)
     dut.locked_i.value = int(locked)
     dut.cancel_frame_i.value = int(cancel_frame)

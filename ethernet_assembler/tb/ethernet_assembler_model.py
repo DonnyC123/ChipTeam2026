@@ -6,17 +6,18 @@ from tb_utils.generic_model import GenericModel
 # NOTE: The sequence item/transaction files dont exist yet.
 
 # Inputs:
-# - 66 bits of input_data (the MSB and MSB-1 are control signals, rest is data)
+# - 64 bits of input_data payload
+# - 2 bits of header_bits carrying the 64b/66b sync header
 # - an bool in_valid signal which indicates if input_data is valid
 # - a 'locked' bool signals which indicates that we are able to process our data
 
 # Outputs: 
 # - A bool out_valid signal that indicates if any of the output bytes are valid
-# - 64 bits called out_data (which is the input 66 minus the 2 control bits)
+# - 64 bits called out_data (payload transformed back from network bit order)
 # - an array of 8 data_valid signals (bools) which indicate which bytes of out_data are valid
 
 # Functionaility:
-# - We need to parse the control bits (the MSB and MSB-1) from input_data
+# - We need to parse the control bits from header_bits
 # - If those bits are equal to 10 this is a control payload, and we need to check the first byte of the data (bits 63:56) to decide what to do
 #     - We reference the 64/66b chart to decide if this is a start/end/idle frame
 #     - We set the data_valid array based on that
@@ -127,19 +128,21 @@ class EthernetAssemblerModel(GenericModel):
         return "unknown_control"
 
     def _decode_block(
-        self, input_data: int, in_valid: bool, locked: bool, cancel_frame: bool
+        self,
+        input_data: int,
+        header_bits: int,
+        in_valid: bool,
+        locked: bool,
+        cancel_frame: bool,
     ) -> Dict[str, Any]:
         raw_payload = input_data & self.DATA_MASK_64
         # Input payload is network-order (LSB-first on the wire). Convert back to regular bit order.
         out_data = self._reverse_bits(raw_payload, 64)
         data_valid = [False] * 8
 
-        network_sync_header = (input_data >> 64) & 0b11
-        # Sequence item sends 66b input in network bit order; convert header
-        # back to internal order before block-type classification.
-        sync_header = ((network_sync_header & 0b01) << 1) | (
-            (network_sync_header >> 1) & 0b01
-        )
+        # header_bits arrives in network order at the DUT interface; convert to
+        # internal order before block-type classification.
+        sync_header = ((header_bits & 0b01) << 1) | ((header_bits >> 1) & 0b01)
         block_type = (out_data >> 56) & 0xFF
         block_class = self._classify_block(sync_header=sync_header, block_type=block_type)
 
@@ -239,6 +242,10 @@ class EthernetAssemblerModel(GenericModel):
                 notification.get("in_data", notification.get("data_i", notification.get("data"))),
             )
         )
+        header_bits = self._to_int(
+            notification.get("header_bits", notification.get("header_bits_i")),
+            default=(input_data >> 64) & 0b11,
+        )
         in_valid = self._to_bool(
             notification.get("in_valid", notification.get("valid")), default=True
         )
@@ -252,6 +259,7 @@ class EthernetAssemblerModel(GenericModel):
 
         expected = self._decode_block(
             input_data=input_data,
+            header_bits=header_bits,
             in_valid=in_valid,
             locked=locked,
             cancel_frame=cancel_frame,

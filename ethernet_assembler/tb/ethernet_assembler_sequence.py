@@ -418,13 +418,21 @@ class EthernetAssemblerSequence(GenericSequence):
     async def add_input(
         self,
         input_data: int,
+        header_bits: int | None = None,
         in_valid: bool = True,
         locked: bool = True,
         cancel_frame: bool = False,
     ):
+        # Backward compatible fallback: if header_bits is omitted, allow callers
+        # to pass legacy packed input_data[65:64|63:0].
+        if header_bits is None:
+            header_bits = (input_data >> self.DATA_IN_W) & ((1 << self.HEADER_W) - 1)
+
         input_data &= (1 << self.DATA_IN_W) - 1
+        header_bits &= (1 << self.HEADER_W) - 1
         seq_item = EthernetAssemblerSequenceItem(
             input_data_i=LogicArray.from_unsigned(input_data, self.DATA_IN_W),
+            header_bits_i=LogicArray.from_unsigned(header_bits, self.HEADER_W),
             in_valid_i=self._to_logic(in_valid),
             locked_i=self._to_logic(locked),
             cancel_frame_i=self._to_logic(cancel_frame),
@@ -440,11 +448,9 @@ class EthernetAssemblerSequence(GenericSequence):
         locked: bool = True,
         cancel_frame: bool = False,
     ):
-        input_data = ((sync_header & 0b11) << self.PAYLOAD_W) | (
-            payload & ((1 << self.PAYLOAD_W) - 1)
-        )
         await self.add_input(
-            input_data=input_data,
+            input_data=payload,
+            header_bits=sync_header,
             in_valid=in_valid,
             locked=locked,
             cancel_frame=cancel_frame,
