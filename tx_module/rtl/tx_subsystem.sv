@@ -18,7 +18,6 @@ module tx_subsystem #(
     input  logic [DMA_VALID_W-1:0]            s_axis_dma_tkeep_i,
     input  logic                              s_axis_dma_tvalid_i,
     input  logic                              s_axis_dma_tlast_i,
-    output logic                              s_axis_dma_tready_o,
 
     // Legacy DMA ingress (fallback when USE_DMA_AXIS_INPUT=0)
     input  logic [DMA_DATA_W-1:0]             dma_data_i,
@@ -30,6 +29,9 @@ module tx_subsystem #(
 
     // AXI-Stream egress to PCS
     input  logic                              m_axis_tready_i,
+
+    // Outputs
+    output logic                              s_axis_dma_tready_o,
     output logic                              dma_read_en_o,
     output logic [$clog2(NUM_QUEUES)-1:0]     dma_queue_sel_o,
     output logic [PCS_DATA_W-1:0]             m_axis_tdata_o,
