@@ -57,6 +57,7 @@ class TxSchedulingTestBase(GenericTestBase):
         self,
         dut,
         num_queues=None,
+        max_burst_beats=None,
         driver=TxSchedulingDriver,
         sequence_item=TxSchedulingSequenceItem,
         sequence=TxSchedulingSequence,
@@ -68,13 +69,19 @@ class TxSchedulingTestBase(GenericTestBase):
     ):
         if num_queues is None:
             num_queues = len(dut.q_valid_i)
+        if max_burst_beats is None:
+            max_burst_beats = _read_param_or_default(dut, "MAX_BURST_BEATS", 256)
 
         qid_w = max(1, (num_queues - 1).bit_length())
         sequence_item.NUM_QUEUES = num_queues
         sequence_item.QID_W = qid_w
         output_transaction.QID_W = qid_w
 
-        model_factory = partial(model, num_queues=num_queues)
+        model_factory = partial(
+            model,
+            num_queues=num_queues,
+            max_burst_beats=max_burst_beats,
+        )
         super().__init__(
             dut,
             driver,
@@ -87,3 +94,25 @@ class TxSchedulingTestBase(GenericTestBase):
             checker,
         )
         self.sequence.add_subscriber(self.scoreboard)
+
+
+def _read_param_or_default(dut, name: str, default: int) -> int:
+    """Read a Verilog parameter from DUT if visible in sim; else return default."""
+    try:
+        obj = getattr(dut, name)
+    except AttributeError:
+        return default
+
+    for attr in ("value",):
+        try:
+            val = getattr(obj, attr)
+            if hasattr(val, "to_unsigned"):
+                return int(val.to_unsigned())
+            return int(val)
+        except (AttributeError, TypeError, ValueError):
+            continue
+
+    try:
+        return int(obj)
+    except (TypeError, ValueError):
+        return default

@@ -9,6 +9,13 @@ def _num_queues(dut) -> int:
     return len(dut.q_valid_i)
 
 
+def _max_burst_beats(dut) -> int:
+    try:
+        return int(dut.MAX_BURST_BEATS.value)
+    except (AttributeError, TypeError, ValueError):
+        return 256
+
+
 @cocotb.test()
 async def tx_scheduling_q0_only_test(dut):
     """Single 3-beat frame on Q0, Q1 idle. All reads should select Q0."""
@@ -175,6 +182,28 @@ async def tx_scheduling_long_random_test(dut):
             fifo_full=fifo_full,
             fifo_grant=fifo_grant,
         )
+
+    await testbase.wait_for_driver_done()
+    await testbase.scoreboard.check()
+
+
+@cocotb.test()
+async def tx_scheduling_max_burst_rotation_test(dut):
+    """When q_last is missing, watchdog must force rotation after MAX_BURST_BEATS."""
+    if _num_queues(dut) < 2:
+        return
+
+    await initialize_tb(dut, clk_period_ns=10)
+    testbase = TxSchedulingTestBase(dut)
+
+    max_burst = _max_burst_beats(dut)
+    q0 = 1 << 0
+    q1 = 1 << 1
+
+    # Keep Q0 + Q1 valid. Q0 never asserts last; Q1 is always single-beat.
+    # Scheduler should serve Q0 for max_burst beats, then force a Q1 turn.
+    for _ in range(max_burst + 2):
+        await testbase.sequence.add_beat(q_valid=(q0 | q1), q_last=q1)
 
     await testbase.wait_for_driver_done()
     await testbase.scoreboard.check()

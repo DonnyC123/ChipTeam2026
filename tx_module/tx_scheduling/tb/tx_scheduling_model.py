@@ -9,12 +9,16 @@ class TxSchedulingModel(GenericModel):
     Each expected item corresponds to a cycle where fifo_req_o should be high.
     """
 
-    def __init__(self, num_queues: int = 2):
+    def __init__(self, num_queues: int = 2, max_burst_beats: int = 256):
         super().__init__()
+        if max_burst_beats < 1:
+            raise ValueError("max_burst_beats must be >= 1")
         self.num_queues = num_queues
+        self.max_burst_beats = max_burst_beats
         self.state = "IDLE"
         self.last_served = num_queues - 1
         self.queue_sel = 0
+        self.burst_cnt = 0
 
     def _rr_next(self, q_valid: int):
         """Round-robin scan from last_served+1, return (found, queue_id)."""
@@ -41,9 +45,11 @@ class TxSchedulingModel(GenericModel):
                         is_last = bool(q_last & (1 << nxt))
                         if is_last:
                             self.last_served = nxt
+                            self.burst_cnt = 0
                         else:
                             self.queue_sel = nxt
                             self.state = "SERVING"
+                            self.burst_cnt = 1
 
         elif self.state == "SERVING":
             q = self.queue_sel
@@ -51,6 +57,14 @@ class TxSchedulingModel(GenericModel):
                 read_en = 1 if fifo_grant else 0
                 await self.expected_queue.put((q, read_en))
 
-                if fifo_grant and (q_last & (1 << q)):
-                    self.state = "IDLE"
-                    self.last_served = q
+                if fifo_grant:
+                    if q_last & (1 << q):
+                        self.state = "IDLE"
+                        self.last_served = q
+                        self.burst_cnt = 0
+                    elif self.burst_cnt == (self.max_burst_beats - 1):
+                        self.state = "IDLE"
+                        self.last_served = q
+                        self.burst_cnt = 0
+                    else:
+                        self.burst_cnt += 1

@@ -1,5 +1,6 @@
 module tx_scheduling #(
-    parameter int NUM_QUEUES = tx_scheduling_pkg::NUM_QUEUES
+    parameter int NUM_QUEUES = tx_scheduling_pkg::NUM_QUEUES,
+    parameter int MAX_BURST_BEATS = 256
 ) (
     input  logic                          clk,
     input  logic                          rst,
@@ -15,15 +16,23 @@ module tx_scheduling #(
   import tx_scheduling_pkg::*;
 
   localparam int QID_W = $clog2(NUM_QUEUES);
+  localparam int BURST_CNT_W = (MAX_BURST_BEATS > 1) ? $clog2(MAX_BURST_BEATS) : 1;
 
   state_t           state_d, state_q;
   logic [QID_W-1:0] last_served_d, last_served_q;
   logic             dma_read_en_d, dma_read_en_q;
   logic [QID_W-1:0] queue_sel_d, queue_sel_q;
   logic             fifo_req_next;
+  logic [BURST_CNT_W-1:0] burst_cnt_d, burst_cnt_q;
 
   logic [QID_W-1:0] next_queue;
   logic              next_found;
+
+  initial begin
+    if (MAX_BURST_BEATS < 1) begin
+      $fatal(1, "tx_scheduling: MAX_BURST_BEATS must be >= 1");
+    end
+  end
 
   // Round-robin priority scan starting from last_served + 1
   always_comb begin : rr_arbiter
@@ -48,10 +57,12 @@ module tx_scheduling #(
     dma_read_en_d = 1'b0;
     queue_sel_d   = queue_sel_q;
     fifo_req_next = 1'b0;
+    burst_cnt_d   = burst_cnt_q;
 
     case (state_q)
 
       IDLE: begin
+        burst_cnt_d = '0;
         if (!fifo_full_i && next_found) begin
           fifo_req_next = 1'b1;
           queue_sel_d = next_queue;
@@ -59,8 +70,10 @@ module tx_scheduling #(
             dma_read_en_d = 1'b1;
             if (q_last_i[next_queue]) begin
               last_served_d = next_queue;
+              burst_cnt_d   = '0;
             end else begin
-              state_d = SERVING;
+              state_d     = SERVING;
+              burst_cnt_d = 1;
             end
           end
         end
@@ -75,6 +88,14 @@ module tx_scheduling #(
             if (q_last_i[queue_sel_q]) begin
               state_d       = IDLE;
               last_served_d = queue_sel_q;
+              burst_cnt_d   = '0;
+            end else if (burst_cnt_q == (MAX_BURST_BEATS - 1)) begin
+              // Safety valve: force queue rotation when q_last is missing.
+              state_d       = IDLE;
+              last_served_d = queue_sel_q;
+              burst_cnt_d   = '0;
+            end else begin
+              burst_cnt_d = burst_cnt_q + 1'b1;
             end
           end
         end
@@ -95,11 +116,13 @@ module tx_scheduling #(
       last_served_q <= QID_W'(NUM_QUEUES - 1);
       dma_read_en_q <= 1'b0;
       queue_sel_q   <= '0;
+      burst_cnt_q   <= '0;
     end else begin
       state_q       <= state_d;
       last_served_q <= last_served_d;
       dma_read_en_q <= dma_read_en_d;
       queue_sel_q   <= queue_sel_d;
+      burst_cnt_q   <= burst_cnt_d;
     end
   end
 
