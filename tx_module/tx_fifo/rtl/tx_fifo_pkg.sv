@@ -10,6 +10,7 @@ package tx_fifo_pkg;
   typedef struct packed {
     logic [DMA_DATA_W-1:0]  data;
     logic [DMA_VALID_W-1:0] valid;
+    logic                   last;
   } fifo_entry_t;
   
   localparam int FIFO_ENTRY_W = $bits(fifo_entry_t);

@@ -7,11 +7,13 @@ module tx_fifo #(
     input  logic                   rst,
     input  logic [DMA_DATA_W-1:0]  dma_data_i,
     input  logic [DMA_VALID_W-1:0] dma_valid_i,
+    input  logic                   dma_last_i,
     input  logic                   dma_wr_en_i,
     input  logic                   pcs_read_i,
     input  logic                   sched_req_i,
     output logic [PCS_DATA_W-1:0]  pcs_data_o,
     output logic [PCS_VALID_W-1:0] pcs_valid_o,
+    output logic                   pcs_last_o,
     output logic                   empty_o,
     output logic                   full_o,
     output logic                   sched_grant_o
@@ -89,9 +91,11 @@ module tx_fifo #(
 
     pcs_data_o  = '0;
     pcs_valid_o = '0;
+    pcs_last_o  = 1'b0;
     if (!empty) begin
       pcs_data_o  = rd_entry.data[beat_cnt_q * PCS_DATA_W +: PCS_DATA_W];
       pcs_valid_o = rd_entry.valid[beat_cnt_q * PCS_VALID_W +: PCS_VALID_W];
+      pcs_last_o  = rd_entry.last && (beat_cnt_q == (BEATS_PER_WORD - 1));
     end
 
     sched_grant_o = sched_req_i && !full;
@@ -111,7 +115,7 @@ module tx_fifo #(
 
   always_ff @(posedge clk) begin
     if (wr_en) begin
-      mem[wr_ptr_q.addr] <= '{data: dma_data_i, valid: dma_valid_i};
+      mem[wr_ptr_q.addr] <= '{data: dma_data_i, valid: dma_valid_i, last: dma_last_i};
     end
   end
 

@@ -15,6 +15,7 @@ class TxFifoSequenceItem(AbstractTransaction):
     dma_valid_i: LogicArray = field(
         default_factory=lambda: LogicArray("X" * TxFifoSequenceItem.DMA_VALID_W)
     )
+    dma_last_i: Logic = field(default_factory=lambda: Logic("0"))
     dma_wr_en_i: Logic = field(default_factory=lambda: Logic("0"))
     pcs_read_i: Logic = field(default_factory=lambda: Logic("0"))
     sched_req_i: Logic = field(default_factory=lambda: Logic("0"))
@@ -24,6 +25,7 @@ class TxFifoSequenceItem(AbstractTransaction):
         return cls(
             dma_data_i=LogicArray(0, cls.DMA_DATA_W),
             dma_valid_i=LogicArray(0, cls.DMA_VALID_W),
+            dma_last_i=Logic(0),
             dma_wr_en_i=Logic(0),
             pcs_read_i=Logic(0),
             sched_req_i=Logic(0),

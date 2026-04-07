@@ -144,6 +144,7 @@ async def tx_fifo_empty_read_outputs_zero_valid_test(dut):
 
     dut.dma_data_i.value = 0
     dut.dma_valid_i.value = 0
+    dut.dma_last_i.value = 0
     dut.dma_wr_en_i.value = 0
     dut.sched_req_i.value = 0
     dut.pcs_read_i.value = 1
