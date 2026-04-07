@@ -63,8 +63,11 @@ module tx_subsystem #(
     output logic [$clog2(NUM_QUEUES)-1:0]     dma_queue_sel_o
 );
 
+  import tx_fifo_pkg::*;
+
   logic fifo_empty;
   logic fifo_full;
+  logic fifo_overflow;
   logic fifo_req;
   logic fifo_grant;
   logic [PCS_DATA_W-1:0] pcs_data;
@@ -102,6 +105,18 @@ module tx_subsystem #(
 
   // Interface width contract (checked at elaboration).
   initial begin
+    if (DMA_DATA_W != tx_fifo_pkg::DMA_DATA_W) begin
+      $fatal(1, "tx_subsystem: DMA_DATA_W must match tx_fifo_pkg::DMA_DATA_W");
+    end
+    if (DMA_VALID_W != tx_fifo_pkg::DMA_VALID_W) begin
+      $fatal(1, "tx_subsystem: DMA_VALID_W must match tx_fifo_pkg::DMA_VALID_W");
+    end
+    if (PCS_DATA_W != tx_fifo_pkg::PCS_DATA_W) begin
+      $fatal(1, "tx_subsystem: PCS_DATA_W must match tx_fifo_pkg::PCS_DATA_W");
+    end
+    if (PCS_VALID_W != tx_fifo_pkg::PCS_VALID_W) begin
+      $fatal(1, "tx_subsystem: PCS_VALID_W must match tx_fifo_pkg::PCS_VALID_W");
+    end
     if ($bits(m_axis_pcs_if.tdata) != PCS_DATA_W) begin
       $fatal(1, "tx_subsystem: m_axis_pcs_if.tdata width mismatch with PCS_DATA_W");
     end
@@ -168,6 +183,7 @@ module tx_subsystem #(
       .pcs_read_i   (pcs_read),
       .empty_o      (fifo_empty),
       .full_o       (fifo_full),
+      .overflow_o   (fifo_overflow),
       .sched_req_i  (fifo_req),
       .sched_grant_o(fifo_grant)
   );
