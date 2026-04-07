@@ -89,6 +89,13 @@ module tx_subsystem #(
   logic sched_grant_i;
   logic sched_fifo_full_i;
 
+  // Request/grant contract:
+  // 1) tx_scheduling asserts fifo_req_o when it wants one DMA word.
+  // 2) fifo_grant indicates FIFO can accept a word this cycle.
+  // 3) dma_req_ready_i indicates DMA request path can accept a request this cycle.
+  // 4) A request is "accepted" only when both are high in the same cycle.
+  //    Accepted request drives dma_read_en_o and queue_sel in the same cycle.
+  // 5) If dma_req_ready_i is low, requests can stall; scheduler will retry later.
   assign sched_grant_i = fifo_grant && dma_req_ready_i;
 
   // Optional alignment for DMA data/valid/last return path:

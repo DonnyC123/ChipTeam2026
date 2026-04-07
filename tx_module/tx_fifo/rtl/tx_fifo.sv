@@ -19,6 +19,10 @@ module tx_fifo #(
     output logic                   overflow_o,
     output logic                   sched_grant_o
 );
+  // Write policy:
+  // - A write is accepted only when dma_wr_en_i && !full.
+  // - If dma_wr_en_i while full, data is dropped and overflow_o pulses.
+  // - Upstream should use full/sched_grant_o (or subsystem tready) to backpressure.
 
   localparam int PTR_W                = $clog2(DEPTH);
   localparam int BEATS_PER_WORD       = DMA_DATA_W / PCS_DATA_W;
@@ -120,5 +124,35 @@ module tx_fifo #(
       mem[wr_ptr_q.addr] <= '{data: dma_data_i, valid: dma_valid_i, last: dma_last_i};
     end
   end
+
+`ifndef SYNTHESIS
+  property p_overflow_flag_exact;
+    @(posedge clk) disable iff (rst)
+      overflow_o <-> (dma_wr_en_i && full);
+  endproperty
+  a_overflow_flag_exact: assert property (p_overflow_flag_exact);
+
+  property p_last_only_on_final_beat;
+    @(posedge clk) disable iff (rst)
+      pcs_last_o |-> (!empty && rd_entry.last && (beat_cnt_q == (BEATS_PER_WORD - 1)));
+  endproperty
+  a_last_only_on_final_beat: assert property (p_last_only_on_final_beat);
+
+  property p_no_last_on_nonfinal_beat;
+    @(posedge clk) disable iff (rst)
+      (!empty && rd_entry.last && (beat_cnt_q != (BEATS_PER_WORD - 1))) |-> !pcs_last_o;
+  endproperty
+  a_no_last_on_nonfinal_beat: assert property (p_no_last_on_nonfinal_beat);
+
+  property p_empty_read_does_not_advance;
+    @(posedge clk) disable iff (rst)
+      (empty && pcs_read_i) |=> $stable(rd_ptr_q) && $stable(beat_cnt_q);
+  endproperty
+  a_empty_read_does_not_advance: assert property (p_empty_read_does_not_advance);
+
+  // Coverage: overflow and last-beat events observed.
+  c_overflow_seen: cover property (@(posedge clk) overflow_o);
+  c_last_seen: cover property (@(posedge clk) pcs_last_o);
+`endif
 
 endmodule

@@ -15,6 +15,7 @@ class TxFifoOutTransaction(AbstractTransaction):
     pcs_valid_o: LogicArray = field(
         default_factory=lambda: LogicArray("0" * TxFifoOutTransaction.PCS_VALID_W)
     )
+    pcs_last_o: Logic = field(default_factory=lambda: Logic("0"))
     pcs_read_i: Logic = field(default_factory=lambda: Logic("0"))
     empty_o: Logic = field(default_factory=lambda: Logic("1"))
 
@@ -39,7 +40,11 @@ class TxFifoOutTransaction(AbstractTransaction):
             v = self.pcs_valid_o.to_unsigned()
         except (ValueError, TypeError):
             v = 0
-        return (d, v)
+        try:
+            l = 1 if bool(self.pcs_last_o) else 0
+        except (ValueError, TypeError):
+            l = 0
+        return (d, v, l)
 
     @valid.setter
     def valid(self, value: bool):

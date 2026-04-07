@@ -12,6 +12,13 @@ module tx_scheduling #(
     output logic [$clog2(NUM_QUEUES)-1:0] dma_queue_sel_o,
     output logic                          fifo_req_o
 );
+  // Handshake contract for this module:
+  // - fifo_req_o and dma_queue_sel_o are combinational for the current cycle.
+  // - If fifo_req_o && fifo_grant_i && !fifo_full_i in the same cycle,
+  //   dma_read_en_o pulses in that same cycle (request accepted).
+  // - If grant is withheld, fifo_req_o may stay asserted while read_en stays low.
+  // - q_last_i marks the last DMA word for a queue; MAX_BURST_BEATS bounds
+  //   service length even if q_last_i is missing.
 
   import tx_scheduling_pkg::*;
 
@@ -125,5 +132,36 @@ module tx_scheduling #(
       burst_cnt_q   <= burst_cnt_d;
     end
   end
+
+`ifndef SYNTHESIS
+  property p_read_requires_req_and_grant;
+    @(posedge clk) disable iff (rst)
+      dma_read_en_o |-> (fifo_req_o && fifo_grant_i && !fifo_full_i);
+  endproperty
+  a_read_requires_req_and_grant: assert property (p_read_requires_req_and_grant);
+
+  property p_watchdog_forces_idle_after_max_burst;
+    @(posedge clk) disable iff (rst)
+      (state_q == SERVING &&
+       !fifo_full_i &&
+       fifo_grant_i &&
+       q_valid_i[queue_sel_q] &&
+       !q_last_i[queue_sel_q] &&
+       (burst_cnt_q == (MAX_BURST_BEATS - 1)))
+      |=> (state_q == IDLE);
+  endproperty
+  a_watchdog_forces_idle_after_max_burst: assert property (p_watchdog_forces_idle_after_max_burst);
+
+  // Coverage: watchdog-driven queue rotation has occurred.
+  c_watchdog_rotation: cover property (
+      @(posedge clk) disable iff (rst)
+      (state_q == SERVING &&
+       !fifo_full_i &&
+       fifo_grant_i &&
+       q_valid_i[queue_sel_q] &&
+       !q_last_i[queue_sel_q] &&
+       (burst_cnt_q == (MAX_BURST_BEATS - 1)))
+  );
+`endif
 
 endmodule

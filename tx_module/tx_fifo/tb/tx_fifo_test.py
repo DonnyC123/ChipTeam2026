@@ -106,13 +106,72 @@ async def tx_fifo_long_random_values_test(dut):
     depth = _get_depth(dut)
     num_words = depth * 3
 
-    for _ in range(num_words):
+    for i in range(num_words):
         data = rng.getrandbits(256)
         valid_mask = rng.getrandbits(32)
-        await testbase.sequence.add_write(data=data, valid_mask=valid_mask)
+        # Random packet boundaries: only the last word of a random packet has last=1.
+        last = 1 if (i % rng.randint(3, 9) == 0) else 0
+        await testbase.sequence.add_write(data=data, valid_mask=valid_mask, last=last)
 
     for _ in range(num_words * 4):
         await testbase.sequence.add_read()
+
+    await testbase.wait_for_driver_done()
+    await testbase.scoreboard.check()
+
+
+@cocotb.test()
+async def tx_fifo_random_rw_jitter_keep_last_long_test(dut):
+    """Stress: random read jitter + random tkeep/tlast over long mixed traffic."""
+    await initialize_tb(dut, clk_period_ns=10)
+    testbase = TxFifoTestBase(dut)
+
+    rng = random.Random(0xF17E_2026)
+    depth = _get_depth(dut)
+
+    # Build long randomized packetized stream.
+    total_words = depth * 10
+    words = []
+    remaining = total_words
+    while remaining > 0:
+        pkt_len = min(remaining, rng.randint(1, 7))
+        for idx in range(pkt_len):
+            words.append(
+                (
+                    rng.getrandbits(256),
+                    rng.getrandbits(32),
+                    1 if idx == (pkt_len - 1) else 0,
+                )
+            )
+        remaining -= pkt_len
+
+    write_idx = 0
+    phase_cycles = total_words * 12
+    for _ in range(phase_cycles):
+        do_write = (write_idx < total_words) and (rng.random() < 0.55)
+        do_read = rng.random() < 0.65
+
+        if do_write:
+            data, keep, last = words[write_idx]
+            write_idx += 1
+        else:
+            data, keep, last = 0, 0, 0
+
+        await testbase.sequence.add_cycle(
+            write_en=do_write,
+            data=data,
+            valid_mask=keep,
+            last=last,
+            read_en=do_read,
+            sched_req=do_write,
+        )
+
+        if write_idx >= total_words and rng.random() < 0.90:
+            break
+
+    # Drain phase.
+    for _ in range(total_words * 8):
+        await testbase.sequence.add_cycle(write_en=False, read_en=True, sched_req=False)
 
     await testbase.wait_for_driver_done()
     await testbase.scoreboard.check()
