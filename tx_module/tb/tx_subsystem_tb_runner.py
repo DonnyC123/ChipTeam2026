@@ -45,11 +45,20 @@ def test_tx_subsystem():
             },
         },
         {
-            "name": "legacy",
-            "mode": "legacy",
+            "name": "legacy_lat0",
+            "mode": "legacy_lat0",
             "parameters": {
                 "USE_DMA_AXIS_INPUT": 0,
                 "DMA_RSP_LATENCY": 0,
+                "MAX_BURST_BEATS": 8,
+            },
+        },
+        {
+            "name": "legacy_lat1",
+            "mode": "legacy_lat1",
+            "parameters": {
+                "USE_DMA_AXIS_INPUT": 0,
+                "DMA_RSP_LATENCY": 1,
                 "MAX_BURST_BEATS": 8,
             },
         },
