@@ -19,10 +19,16 @@ module tx_fifo #(
     output logic                   overflow_o,
     output logic                   sched_grant_o
 );
-  // Write policy:
-  // - A write is accepted only when dma_wr_en_i && !full.
-  // - If dma_wr_en_i while full, data is dropped and overflow_o pulses.
-  // - Upstream should use full/sched_grant_o (or subsystem tready) to backpressure.
+  // FIFO interface contract:
+  // Ingress:
+  // - dma_data_i/dma_valid_i/dma_last_i are sampled only when dma_wr_en_i && !full.
+  // - If dma_wr_en_i when full, word is dropped and overflow_o pulses for observability.
+  // Egress:
+  // - pcs_data_o/pcs_valid_o/pcs_last_o present the current 64b beat of head word.
+  // - Head advances only when pcs_read_i && !empty.
+  // - pcs_last_o can assert only on final beat of a stored word marked dma_last_i=1.
+  // Scheduler sideband:
+  // - sched_grant_o indicates FIFO can accept a new word this cycle (not a pop grant).
 
   localparam int PTR_W                = $clog2(DEPTH);
   localparam int BEATS_PER_WORD       = DMA_DATA_W / PCS_DATA_W;

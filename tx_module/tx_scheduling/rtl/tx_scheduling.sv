@@ -12,13 +12,14 @@ module tx_scheduling #(
     output logic [$clog2(NUM_QUEUES)-1:0] dma_queue_sel_o,
     output logic                          fifo_req_o
 );
-  // Handshake contract for this module:
-  // - fifo_req_o and dma_queue_sel_o are combinational for the current cycle.
-  // - If fifo_req_o && fifo_grant_i && !fifo_full_i in the same cycle,
-  //   dma_read_en_o pulses in that same cycle (request accepted).
-  // - If grant is withheld, fifo_req_o may stay asserted while read_en stays low.
-  // - q_last_i marks the last DMA word for a queue; MAX_BURST_BEATS bounds
-  //   service length even if q_last_i is missing.
+  // Scheduler contract:
+  // - q_valid_i[n]=1: queue n currently has a DMA word ready.
+  // - q_last_i[n]=1: that offered word is the final word of the frame.
+  // - fifo_req_o + dma_queue_sel_o are combinational for the current cycle.
+  // - A read is issued only on (fifo_req_o && fifo_grant_i && !fifo_full_i).
+  // - If grant/space is missing, fifo_req_o may stay high while dma_read_en_o=0.
+  // - Fairness guard: if q_last_i is never observed for a served queue,
+  //   MAX_BURST_BEATS forces rotation back to IDLE.
 
   import tx_scheduling_pkg::*;
 

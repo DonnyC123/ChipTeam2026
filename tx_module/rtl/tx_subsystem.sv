@@ -78,13 +78,13 @@ module tx_subsystem #(
   logic sched_grant_i;
   logic sched_fifo_full_i;
 
-  // Request/grant contract:
-  // 1) tx_scheduling asserts fifo_req_o when it wants one DMA word.
-  // 2) fifo_grant indicates FIFO can accept a word this cycle.
-  // 3) dma_req_ready_i indicates DMA request path can accept a request this cycle.
-  // 4) A request is "accepted" only when both are high in the same cycle.
-  //    Accepted request drives dma_read_en_o and queue_sel in the same cycle.
-  // 5) If dma_req_ready_i is low, requests can stall; scheduler will retry later.
+  // Scheduler/DMA request contract:
+  // 1) q_valid_i[n]=1 means queue n has a DMA word available to be requested now.
+  // 2) q_last_i[n]=1 marks the FINAL DMA word of queue n.
+  // 3) tx_scheduling drives fifo_req and queue_sel combinationally.
+  // 4) A DMA request is accepted iff (fifo_grant && dma_req_ready_i) in the same cycle.
+  // 5) Accepted request pulses dma_read_en_o with the matching dma_queue_sel_o that cycle.
+  // 6) If dma_req_ready_i=0, requests may stall; no dma_read_en_o pulse is allowed.
   assign sched_grant_i = fifo_grant && dma_req_ready_i;
 
   // Interface width contract (checked at elaboration).
@@ -115,7 +115,13 @@ module tx_subsystem #(
   assign m_axis_pcs_if.tlast  = pcs_last;
   assign pcs_read             = m_axis_pcs_if.tvalid && m_axis_pcs_if.tready;
 
-  // AXIS ingress only.
+  // AXIS ingress contract:
+  // - DMA/MM2S must hold tdata/tkeep/tlast stable while tvalid=1 and tready=0.
+  // - Word is accepted only on tvalid&&tready; each accepted 256b word enters tx_fifo.
+  // - tlast tags that accepted DMA word; tx_fifo translates it to beat-level last.
+  // AXIS egress contract:
+  // - m_axis_pcs_if.tvalid is high whenever FIFO is non-empty.
+  // - Beat is consumed on tvalid&&tready; ordering is strictly FIFO.
   assign s_axis_dma_tready_o = !fifo_full;
   assign fifo_dma_wr_en      = s_axis_dma_tvalid_i && s_axis_dma_tready_o;
   assign fifo_dma_data       = s_axis_dma_tdata_i;
