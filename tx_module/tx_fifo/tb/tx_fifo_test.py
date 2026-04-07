@@ -154,3 +154,34 @@ async def tx_fifo_empty_read_outputs_zero_valid_test(dut):
 
     assert int(dut.empty_o.value) == 1, "FIFO should stay empty"
     assert int(dut.pcs_valid_o.value) == 0, "pcs_valid_o must be 0 when FIFO is empty"
+
+
+@cocotb.test()
+async def tx_fifo_overflow_flag_test(dut):
+    """Write while full should raise overflow_o."""
+    await initialize_tb(dut, clk_period_ns=10)
+
+    depth = _get_depth(dut)
+
+    dut.pcs_read_i.value = 0
+    dut.sched_req_i.value = 1
+    dut.dma_valid_i.value = 0xFFFF_FFFF
+    dut.dma_last_i.value = 0
+
+    # Fill the FIFO.
+    for i in range(depth):
+        dut.dma_data_i.value = i
+        dut.dma_wr_en_i.value = 1
+        await RisingEdge(dut.clk)
+
+    # One extra write should trigger overflow.
+    dut.dma_data_i.value = 0xDEAD_BEEF
+    dut.dma_wr_en_i.value = 1
+    await RisingEdge(dut.clk)
+    assert int(dut.full_o.value) == 1, "FIFO should be full"
+    assert int(dut.overflow_o.value) == 1, "overflow_o should assert on write-while-full"
+
+    # Stop writing; overflow flag should drop.
+    dut.dma_wr_en_i.value = 0
+    await RisingEdge(dut.clk)
+    assert int(dut.overflow_o.value) == 0, "overflow_o should deassert when not overflowing"

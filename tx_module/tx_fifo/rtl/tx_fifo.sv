@@ -16,6 +16,7 @@ module tx_fifo #(
     output logic                   pcs_last_o,
     output logic                   empty_o,
     output logic                   full_o,
+    output logic                   overflow_o,
     output logic                   sched_grant_o
 );
 
@@ -65,6 +66,7 @@ module tx_fifo #(
     full_o  = full;
 
     wr_en = dma_wr_en_i && !full;
+    overflow_o = dma_wr_en_i && full;
 
     wr_ptr_d = wr_ptr_q;
     if (wr_en) begin
