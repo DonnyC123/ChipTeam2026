@@ -1,4 +1,8 @@
-module tx_subsystem_tb_top;
+module tx_subsystem_tb_top #(
+    parameter bit USE_DMA_AXIS_INPUT = 1'b1,
+    parameter int DMA_RSP_LATENCY    = 0,
+    parameter int MAX_BURST_BEATS    = 256
+);
 
   localparam int DMA_DATA_W  = 256;
   localparam int DMA_VALID_W = 32;
@@ -49,8 +53,9 @@ module tx_subsystem_tb_top;
       .PCS_VALID_W       (PCS_VALID_W),
       .FIFO_DEPTH        (FIFO_DEPTH),
       .NUM_QUEUES        (NUM_QUEUES),
-      .USE_DMA_AXIS_INPUT(1'b1),
-      .DMA_RSP_LATENCY   (0)
+      .MAX_BURST_BEATS   (MAX_BURST_BEATS),
+      .USE_DMA_AXIS_INPUT(USE_DMA_AXIS_INPUT),
+      .DMA_RSP_LATENCY   (DMA_RSP_LATENCY)
   ) dut (
       .clk             (clk),
       .rst             (rst),

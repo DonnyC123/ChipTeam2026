@@ -1,14 +1,37 @@
 import random
+import os
 
 import cocotb
-from cocotb.triggers import RisingEdge, Timer
+from cocotb.triggers import FallingEdge, RisingEdge, Timer
 
 from tb.tx_subsystem_test_base import TxSubsystemTestBase
 from tb_utils.tb_common import initialize_tb
 
 
+def _tb_input_mode() -> str:
+    return os.environ.get("TX_SUBSYSTEM_INPUT_MODE", "axis").strip().lower()
+
+
+def _is_axis_mode() -> bool:
+    return _tb_input_mode() == "axis"
+
+
+def _is_legacy_mode() -> bool:
+    return _tb_input_mode() == "legacy"
+
+
+def _max_burst_beats() -> int:
+    try:
+        return int(os.environ.get("TX_SUBSYSTEM_MAX_BURST_BEATS", "256"))
+    except ValueError:
+        return 256
+
+
 @cocotb.test()
 async def tx_subsystem_axis_basic_test(dut):
+    if not _is_axis_mode():
+        return
+
     await initialize_tb(dut, clk_period_ns=10)
     testbase = TxSubsystemTestBase(dut)
 
@@ -49,6 +72,9 @@ async def tx_subsystem_axis_basic_test(dut):
 
 @cocotb.test()
 async def tx_subsystem_axis_long_random_test(dut):
+    if not _is_axis_mode():
+        return
+
     await initialize_tb(dut, clk_period_ns=10)
     testbase = TxSubsystemTestBase(dut)
 
@@ -111,6 +137,9 @@ async def tx_subsystem_dma_req_ready_gating_test(dut):
 @cocotb.test()
 async def tx_subsystem_axis_random_ready_test(dut):
     """Randomized downstream backpressure; verify no beat loss/reorder."""
+    if not _is_axis_mode():
+        return
+
     await initialize_tb(dut, clk_period_ns=10)
 
     rng = random.Random(0x25AA_2026)
@@ -179,3 +208,51 @@ async def tx_subsystem_axis_random_ready_test(dut):
     assert cycles < max_cycles, "Random ready test timed out"
     assert len(recv) == len(expected), f"Beat count mismatch: recv={len(recv)}, expected={len(expected)}"
     assert recv == expected, "Data/keep/last stream mismatch under randomized ready"
+
+
+@cocotb.test()
+async def tx_subsystem_legacy_max_burst_rotation_test(dut):
+    """Legacy DMA mode: missing q_last on Q0 must force RR handoff to Q1."""
+    if not _is_legacy_mode():
+        return
+
+    await initialize_tb(dut, clk_period_ns=10)
+
+    # Keep AXIS ingress idle in legacy mode.
+    dut.s_axis_dma_tdata_i.value = 0
+    dut.s_axis_dma_tkeep_i.value = 0
+    dut.s_axis_dma_tvalid_i.value = 0
+    dut.s_axis_dma_tlast_i.value = 0
+
+    dut.dma_req_ready_i.value = 1
+    dut.m_axis_tready_i.value = 1
+
+    max_burst = _max_burst_beats()
+    q0_bit = 0b01
+    q1_bit = 0b10
+    target_reads = max_burst + 4
+    max_cycles = 2000
+
+    selections = []
+    cycles = 0
+    while len(selections) < target_reads and cycles < max_cycles:
+        await FallingEdge(dut.clk)
+
+        # Q0 is always non-last, Q1 is always single-beat last.
+        dut.q_valid_i.value = q0_bit | q1_bit
+        dut.q_last_i.value = q1_bit
+
+        dut.dma_data_i.value = (0x1000_0000_0000_0000_0000_0000_0000_0000 + cycles)
+        dut.dma_valid_i.value = 0xFFFF_FFFF
+
+        await Timer(1, unit="ns")
+        if int(dut.dma_read_en_o.value):
+            selections.append(int(dut.dma_queue_sel_o.value))
+
+        await RisingEdge(dut.clk)
+        cycles += 1
+
+    assert cycles < max_cycles, "Legacy max-burst rotation test timed out"
+    assert len(selections) >= (max_burst + 1), "Not enough DMA reads observed to validate burst rotation"
+    assert all(sel == 0 for sel in selections[:max_burst]), "Q0 should be served for the first max_burst beats"
+    assert selections[max_burst] == 1, "Scheduler should rotate to Q1 right after max_burst beats on Q0"

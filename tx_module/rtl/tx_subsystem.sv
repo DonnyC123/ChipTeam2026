@@ -32,6 +32,7 @@ module tx_subsystem #(
     parameter int PCS_VALID_W      = 8,
     parameter int FIFO_DEPTH       = 32,
     parameter int NUM_QUEUES       = 2,
+    parameter int MAX_BURST_BEATS  = 256,
     parameter bit USE_DMA_AXIS_INPUT = 1'b1,
     parameter int DMA_RSP_LATENCY  = 0
 ) (
@@ -189,7 +190,8 @@ module tx_subsystem #(
   );
 
   tx_scheduling #(
-      .NUM_QUEUES (NUM_QUEUES)
+      .NUM_QUEUES     (NUM_QUEUES),
+      .MAX_BURST_BEATS(MAX_BURST_BEATS)
   ) tx_scheduling_inst (
       .clk            (clk),
       .rst            (rst),
