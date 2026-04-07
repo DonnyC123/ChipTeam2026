@@ -1,3 +1,30 @@
+interface tx_axis_if #(
+    parameter int DATA_W = 64,
+    parameter int KEEP_W = DATA_W / 8
+);
+  logic [DATA_W-1:0] tdata;
+  logic [KEEP_W-1:0] tkeep;
+  logic              tvalid;
+  logic              tready;
+  logic              tlast;
+
+  modport source (
+      output tdata,
+      output tkeep,
+      output tvalid,
+      output tlast,
+      input  tready
+  );
+
+  modport sink (
+      input  tdata,
+      input  tkeep,
+      input  tvalid,
+      input  tlast,
+      output tready
+  );
+endinterface
+
 module tx_subsystem #(
     parameter int DMA_DATA_W       = 256,
     parameter int DMA_VALID_W      = 32,
@@ -28,16 +55,12 @@ module tx_subsystem #(
     input  logic                              dma_req_ready_i,
 
     // AXI-Stream egress to PCS
-    input  logic                              m_axis_tready_i,
+    tx_axis_if.source                         m_axis_pcs_if,
 
     // Outputs
     output logic                              s_axis_dma_tready_o,
     output logic                              dma_read_en_o,
-    output logic [$clog2(NUM_QUEUES)-1:0]     dma_queue_sel_o,
-    output logic [PCS_DATA_W-1:0]             m_axis_tdata_o,
-    output logic [PCS_VALID_W-1:0]            m_axis_tkeep_o,
-    output logic                              m_axis_tvalid_o,
-    output logic                              m_axis_tlast_o
+    output logic [$clog2(NUM_QUEUES)-1:0]     dma_queue_sel_o
 );
 
   logic fifo_empty;
@@ -77,12 +100,22 @@ module tx_subsystem #(
     end
   end
 
+  // Interface width contract (checked at elaboration).
+  initial begin
+    if ($bits(m_axis_pcs_if.tdata) != PCS_DATA_W) begin
+      $fatal(1, "tx_subsystem: m_axis_pcs_if.tdata width mismatch with PCS_DATA_W");
+    end
+    if ($bits(m_axis_pcs_if.tkeep) != PCS_VALID_W) begin
+      $fatal(1, "tx_subsystem: m_axis_pcs_if.tkeep width mismatch with PCS_VALID_W");
+    end
+  end
+
   assign dma_last      = dma_read_en_o ? q_last_i[dma_queue_sel_o] : 1'b0;
-  assign m_axis_tdata_o  = pcs_data;
-  assign m_axis_tkeep_o  = pcs_valid;
-  assign m_axis_tvalid_o = !fifo_empty;
-  assign m_axis_tlast_o  = pcs_last;
-  assign pcs_read        = m_axis_tvalid_o && m_axis_tready_i;
+  assign m_axis_pcs_if.tdata  = pcs_data;
+  assign m_axis_pcs_if.tkeep  = pcs_valid;
+  assign m_axis_pcs_if.tvalid = !fifo_empty;
+  assign m_axis_pcs_if.tlast  = pcs_last;
+  assign pcs_read             = m_axis_pcs_if.tvalid && m_axis_pcs_if.tready;
 
   generate
     if (USE_DMA_AXIS_INPUT) begin : gen_dma_axis_ingress
