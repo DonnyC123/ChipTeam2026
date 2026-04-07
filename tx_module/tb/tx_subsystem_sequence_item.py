@@ -27,12 +27,6 @@ class TxSubsystemSequenceItem(AbstractTransaction):
     s_axis_dma_tvalid_i: Logic = field(default_factory=lambda: Logic("0"))
     s_axis_dma_tlast_i: Logic = field(default_factory=lambda: Logic("0"))
 
-    dma_data_i: LogicArray = field(
-        default_factory=lambda: LogicArray("0" * TxSubsystemSequenceItem.DMA_DATA_W)
-    )
-    dma_valid_i: LogicArray = field(
-        default_factory=lambda: LogicArray("0" * TxSubsystemSequenceItem.DMA_VALID_W)
-    )
     dma_req_ready_i: Logic = field(default_factory=lambda: Logic("1"))
     m_axis_tready_i: Logic = field(default_factory=lambda: Logic("1"))
 
@@ -45,8 +39,6 @@ class TxSubsystemSequenceItem(AbstractTransaction):
             s_axis_dma_tkeep_i=LogicArray(0, cls.DMA_VALID_W),
             s_axis_dma_tvalid_i=Logic(0),
             s_axis_dma_tlast_i=Logic(0),
-            dma_data_i=LogicArray(0, cls.DMA_DATA_W),
-            dma_valid_i=LogicArray(0, cls.DMA_VALID_W),
             dma_req_ready_i=Logic(1),
             m_axis_tready_i=Logic(1),
         )

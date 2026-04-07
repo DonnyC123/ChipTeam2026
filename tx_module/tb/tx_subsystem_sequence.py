@@ -35,8 +35,6 @@ class TxSubsystemSequence(GenericSequence):
                 s_axis_dma_tkeep_i=LogicArray.from_unsigned(keep, self.DMA_VALID_W),
                 s_axis_dma_tvalid_i=Logic("1"),
                 s_axis_dma_tlast_i=Logic("1" if last else "0"),
-                dma_data_i=LogicArray(0, self.DMA_DATA_W),
-                dma_valid_i=LogicArray(0, self.DMA_VALID_W),
                 dma_req_ready_i=Logic("1" if dma_req_ready else "0"),
                 m_axis_tready_i=Logic("1" if m_axis_tready else "0"),
             )
@@ -59,8 +57,6 @@ class TxSubsystemSequence(GenericSequence):
                     s_axis_dma_tkeep_i=LogicArray(0, self.DMA_VALID_W),
                     s_axis_dma_tvalid_i=Logic("0"),
                     s_axis_dma_tlast_i=Logic("0"),
-                    dma_data_i=LogicArray(0, self.DMA_DATA_W),
-                    dma_valid_i=LogicArray(0, self.DMA_VALID_W),
                     dma_req_ready_i=Logic("1" if dma_req_ready else "0"),
                     m_axis_tready_i=Logic("1" if m_axis_tready else "0"),
                 )

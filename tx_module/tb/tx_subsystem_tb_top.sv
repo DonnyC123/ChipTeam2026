@@ -1,6 +1,4 @@
 module tx_subsystem_tb_top #(
-    parameter bit USE_DMA_AXIS_INPUT = 1'b1,
-    parameter int DMA_RSP_LATENCY    = 0,
     parameter int MAX_BURST_BEATS    = 256
 );
 
@@ -22,8 +20,6 @@ module tx_subsystem_tb_top #(
   logic                              s_axis_dma_tlast_i;
   logic                              s_axis_dma_tready_o;
 
-  logic [DMA_DATA_W-1:0]             dma_data_i;
-  logic [DMA_VALID_W-1:0]            dma_valid_i;
   logic                              dma_req_ready_i;
 
   logic                              dma_read_en_o;
@@ -53,9 +49,7 @@ module tx_subsystem_tb_top #(
       .PCS_VALID_W       (PCS_VALID_W),
       .FIFO_DEPTH        (FIFO_DEPTH),
       .NUM_QUEUES        (NUM_QUEUES),
-      .MAX_BURST_BEATS   (MAX_BURST_BEATS),
-      .USE_DMA_AXIS_INPUT(USE_DMA_AXIS_INPUT),
-      .DMA_RSP_LATENCY   (DMA_RSP_LATENCY)
+      .MAX_BURST_BEATS   (MAX_BURST_BEATS)
   ) dut (
       .clk             (clk),
       .rst             (rst),
@@ -66,8 +60,6 @@ module tx_subsystem_tb_top #(
       .s_axis_dma_tvalid_i(s_axis_dma_tvalid_i),
       .s_axis_dma_tlast_i (s_axis_dma_tlast_i),
       .s_axis_dma_tready_o(s_axis_dma_tready_o),
-      .dma_data_i      (dma_data_i),
-      .dma_valid_i     (dma_valid_i),
       .dma_req_ready_i (dma_req_ready_i),
       .m_axis_pcs_if   (m_axis_pcs_if),
       .dma_read_en_o   (dma_read_en_o),
