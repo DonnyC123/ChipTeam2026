@@ -9,7 +9,7 @@ module descrambler #(
     output logic [BIT_W-1:0]         _64b_o,
     output logic                     valid_o,
 );
-
+//minor change
 localparam TAP_1 = 19;
 localparam TAP_2 = 0;
 
