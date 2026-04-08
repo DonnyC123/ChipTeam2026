@@ -1,6 +1,6 @@
 import cocotb
 import random
-from cocotb.triggers import RisingEdge, Timer
+from cocotb.triggers import RisingEdge
 
 from tx_fifo.tb.tx_fifo_test_base import TxFifoTestBase
 from tb_utils.tb_common import initialize_tb
@@ -198,49 +198,58 @@ async def tx_fifo_write_when_full_drop_test(dut):
 
 @cocotb.test()
 async def tx_fifo_empty_read_outputs_zero_valid_test(dut):
-    """Read while empty should keep valid mask at zero."""
+    """Read while empty should keep valid mask at zero (sequence-driven)."""
     await initialize_tb(dut, clk_period_ns=10)
+    testbase = TxFifoTestBase(dut)
 
-    dut.dma_data_i.value = 0
-    dut.dma_valid_i.value = 0
-    dut.dma_last_i.value = 0
-    dut.dma_wr_en_i.value = 0
-    dut.sched_req_i.value = 0
-    dut.pcs_read_i.value = 1
-
+    await testbase.sequence.add_read()
     await RisingEdge(dut.clk)
-    await Timer(1, unit="ns")
 
     assert int(dut.empty_o.value) == 1, "FIFO should stay empty"
     assert int(dut.pcs_valid_o.value) == 0, "pcs_valid_o must be 0 when FIFO is empty"
 
+    await testbase.wait_for_driver_done()
+    await testbase.scoreboard.check()
+
 
 @cocotb.test()
 async def tx_fifo_overflow_flag_test(dut):
-    """Write while full should raise overflow_o."""
+    """Write while full should raise overflow_o (sequence-driven)."""
     await initialize_tb(dut, clk_period_ns=10)
+    testbase = TxFifoTestBase(dut)
 
     depth = _get_depth(dut)
+    overflow_seen = False
 
-    dut.pcs_read_i.value = 0
-    dut.sched_req_i.value = 1
-    dut.dma_valid_i.value = 0xFFFF_FFFF
-    dut.dma_last_i.value = 0
-
-    # Fill the FIFO.
     for i in range(depth):
-        dut.dma_data_i.value = i
-        dut.dma_wr_en_i.value = 1
+        await testbase.sequence.add_cycle(
+            write_en=True,
+            data=i,
+            valid_mask=0xFFFF_FFFF,
+            last=0,
+            read_en=False,
+            sched_req=True,
+        )
         await RisingEdge(dut.clk)
+        overflow_seen = overflow_seen or bool(int(dut.overflow_o.value))
 
-    # One extra write should trigger overflow.
-    dut.dma_data_i.value = 0xDEAD_BEEF
-    dut.dma_wr_en_i.value = 1
+    await testbase.sequence.add_cycle(
+        write_en=True,
+        data=0xDEAD_BEEF,
+        valid_mask=0xFFFF_FFFF,
+        last=0,
+        read_en=False,
+        sched_req=True,
+    )
     await RisingEdge(dut.clk)
-    assert int(dut.full_o.value) == 1, "FIFO should be full"
-    assert int(dut.overflow_o.value) == 1, "overflow_o should assert on write-while-full"
+    overflow_seen = overflow_seen or bool(int(dut.overflow_o.value))
 
-    # Stop writing; overflow flag should drop.
-    dut.dma_wr_en_i.value = 0
+    assert int(dut.full_o.value) == 1, "FIFO should be full"
+    assert overflow_seen, "overflow_o should assert on write-while-full"
+
+    await testbase.sequence.add_idle()
     await RisingEdge(dut.clk)
     assert int(dut.overflow_o.value) == 0, "overflow_o should deassert when not overflowing"
+
+    await testbase.wait_for_driver_done()
+    await testbase.scoreboard.check()
