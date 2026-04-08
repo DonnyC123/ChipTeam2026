@@ -26,10 +26,6 @@ interface tx_axis_if #(
 endinterface
 
 module tx_subsystem #(
-    parameter int DMA_DATA_W       = 256,
-    parameter int DMA_VALID_W      = 32,
-    parameter int PCS_DATA_W       = 64,
-    parameter int PCS_VALID_W      = 8,
     parameter int FIFO_DEPTH       = 32,
     parameter int NUM_QUEUES       = 2,
     parameter int MAX_BURST_BEATS  = 256
@@ -40,8 +36,8 @@ module tx_subsystem #(
     input  logic [NUM_QUEUES-1:0]             q_last_i,
 
     // DMA data ingress: AXI-Stream from DMA/MM2S
-    input  logic [DMA_DATA_W-1:0]             s_axis_dma_tdata_i,
-    input  logic [DMA_VALID_W-1:0]            s_axis_dma_tkeep_i,
+    input  logic [tx_fifo_pkg::DMA_DATA_W-1:0] s_axis_dma_tdata_i,
+    input  logic [tx_fifo_pkg::DMA_VALID_W-1:0] s_axis_dma_tkeep_i,
     input  logic                              s_axis_dma_tvalid_i,
     input  logic                              s_axis_dma_tlast_i,
 
@@ -59,6 +55,11 @@ module tx_subsystem #(
 );
 
   import tx_fifo_pkg::*;
+
+  localparam int DMA_DATA_W  = tx_fifo_pkg::DMA_DATA_W;
+  localparam int DMA_VALID_W = tx_fifo_pkg::DMA_VALID_W;
+  localparam int PCS_DATA_W  = tx_fifo_pkg::PCS_DATA_W;
+  localparam int PCS_VALID_W = tx_fifo_pkg::PCS_VALID_W;
 
   logic fifo_empty;
   logic fifo_full;
@@ -89,23 +90,17 @@ module tx_subsystem #(
 
   // Interface width contract (checked at elaboration).
   initial begin
-    if (DMA_DATA_W != tx_fifo_pkg::DMA_DATA_W) begin
-      $fatal(1, "tx_subsystem: DMA_DATA_W must match tx_fifo_pkg::DMA_DATA_W");
+    if ($bits(s_axis_dma_tdata_i) != tx_fifo_pkg::DMA_DATA_W) begin
+      $fatal(1, "tx_subsystem: s_axis_dma_tdata_i width mismatch with tx_fifo_pkg::DMA_DATA_W");
     end
-    if (DMA_VALID_W != tx_fifo_pkg::DMA_VALID_W) begin
-      $fatal(1, "tx_subsystem: DMA_VALID_W must match tx_fifo_pkg::DMA_VALID_W");
+    if ($bits(s_axis_dma_tkeep_i) != tx_fifo_pkg::DMA_VALID_W) begin
+      $fatal(1, "tx_subsystem: s_axis_dma_tkeep_i width mismatch with tx_fifo_pkg::DMA_VALID_W");
     end
-    if (PCS_DATA_W != tx_fifo_pkg::PCS_DATA_W) begin
-      $fatal(1, "tx_subsystem: PCS_DATA_W must match tx_fifo_pkg::PCS_DATA_W");
+    if ($bits(m_axis_pcs_if.tdata) != tx_fifo_pkg::PCS_DATA_W) begin
+      $fatal(1, "tx_subsystem: m_axis_pcs_if.tdata width mismatch with tx_fifo_pkg::PCS_DATA_W");
     end
-    if (PCS_VALID_W != tx_fifo_pkg::PCS_VALID_W) begin
-      $fatal(1, "tx_subsystem: PCS_VALID_W must match tx_fifo_pkg::PCS_VALID_W");
-    end
-    if ($bits(m_axis_pcs_if.tdata) != PCS_DATA_W) begin
-      $fatal(1, "tx_subsystem: m_axis_pcs_if.tdata width mismatch with PCS_DATA_W");
-    end
-    if ($bits(m_axis_pcs_if.tkeep) != PCS_VALID_W) begin
-      $fatal(1, "tx_subsystem: m_axis_pcs_if.tkeep width mismatch with PCS_VALID_W");
+    if ($bits(m_axis_pcs_if.tkeep) != tx_fifo_pkg::PCS_VALID_W) begin
+      $fatal(1, "tx_subsystem: m_axis_pcs_if.tkeep width mismatch with tx_fifo_pkg::PCS_VALID_W");
     end
   end
 

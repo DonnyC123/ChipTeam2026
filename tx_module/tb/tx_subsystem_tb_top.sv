@@ -43,10 +43,6 @@ module tx_subsystem_tb_top #(
   assign m_axis_tlast_o       = m_axis_pcs_if.tlast;
 
   tx_subsystem #(
-      .DMA_DATA_W        (DMA_DATA_W),
-      .DMA_VALID_W       (DMA_VALID_W),
-      .PCS_DATA_W        (PCS_DATA_W),
-      .PCS_VALID_W       (PCS_VALID_W),
       .FIFO_DEPTH        (FIFO_DEPTH),
       .NUM_QUEUES        (NUM_QUEUES),
       .MAX_BURST_BEATS   (MAX_BURST_BEATS)
