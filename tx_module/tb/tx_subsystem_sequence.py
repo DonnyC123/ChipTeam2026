@@ -21,7 +21,6 @@ class TxSubsystemSequence(GenericSequence):
     ):
         await self.notify_subscribers(
             {
-                "op": "axis_write",
                 "data": data,
                 "keep": keep,
                 "last": last,

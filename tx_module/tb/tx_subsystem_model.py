@@ -7,9 +7,6 @@ class TxSubsystemModel(GenericModel):
     BEATS_PER_WORD = 4
 
     async def process_notification(self, notification):
-        if notification.get("op") != "axis_write":
-            return
-
         data = int(notification.get("data", 0))
         keep = int(notification.get("keep", 0))
         last = int(notification.get("last", 0))
