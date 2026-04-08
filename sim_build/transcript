@@ -1,0 +1,655 @@
+# vsim -c -onfinish exit -pli "/home/lvr4818/miniconda3/envs/ieee_chip_team/lib/python3.11/site-packages/cocotb/libs/libcocotbvpi_modelsim.so" -voptargs="+acc" top.rx_top -do "log -recursive /*;run -all; quit" 
+# Start time: 21:13:23 on Apr 07,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# ** Warning: (vsim-3865) Due to PLI being present, global +acc is being enabled automatically. This will cause your simulation to run very slowly. Please use vsim -no_autoacc to disable this feature. This feature is now deprecated and will be removed from future releases.
+# ** Note: (vopt-143) Recognized 1 FSM in module "alignment_finder(fast)".
+# //  ModelSim SE-64 2020.1 Jan 28 2020 Linux 4.18.0-553.115.1.el8_10.x86_64
+# //
+# //  Copyright 1991-2020 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  ModelSim SE-64 and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.rx_top(fast)
+# Loading work.bubbler(fast)
+# Loading work.descrambler(fast)
+# Loading work.alignment_finder(fast)
+# Loading work.nic_global_pkg(fast)
+# Loading work.ethernet_assembler_sv_unit(fast)
+# Loading work.ethernet_assembler(fast)
+# Loading /home/lvr4818/miniconda3/envs/ieee_chip_team/lib/python3.11/site-packages/cocotb/libs/libcocotbvpi_modelsim.so
+#      -.--ns INFO     gpi                                ..mbed/gpi_embed.cpp:93   in _embed_init_python              Using Python 3.11.9 interpreter at /home/lvr4818/miniconda3/envs/ieee_chip_team/bin/python
+#      -.--ns INFO     gpi                                ../gpi/GpiCommon.cpp:79   in gpi_print_registered_impl       VPI registered
+#      -.--ns INFO     gpi                                ../gpi/GpiCommon.cpp:79   in gpi_print_registered_impl       FLI registered
+# log -recursive /*
+# run -all
+#      0.00ns INFO     cocotb                             Running on ModelSim SE-64 version 2020.1 2020.01
+#      0.00ns INFO     cocotb                             Seeding Python random module with 1775614404
+#      0.00ns INFO     cocotb                             Initialized cocotb v2.0.1 from /home/lvr4818/miniconda3/envs/ieee_chip_team/lib/python3.11/site-packages/cocotb
+#      0.00ns INFO     cocotb                             Running tests
+#      0.00ns INFO     cocotb.regression                  running rx_tb.tb.rx_test.test_lock_and_single_frame (1/5)
+# time=80 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=62
+# time=90 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=60
+# time=100 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3cddddc
+# time=100 | DESCRAMBLER OUT | data=c3c3c3c3c3cddddc
+# time=100 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=58
+# time=110 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=56
+# time=110 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=110 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=120 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=120 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=120 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=54
+# time=130 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=52
+# time=130 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=130 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=140 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=140 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=140 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=50
+# time=150 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=48
+# time=150 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=150 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=160 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=160 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=160 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=46
+# time=170 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=44
+# time=170 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=170 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=180 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=180 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=180 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=42
+# time=190 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=40
+# time=190 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=190 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=200 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=200 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=200 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=38
+# time=210 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=36
+# time=210 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=210 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=220 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=220 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=220 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=34
+# time=230 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=32
+# time=230 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=230 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=240 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=240 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=240 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=30
+# time=250 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=28
+# time=250 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=250 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=260 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=260 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=260 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=26
+# time=270 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=24
+# time=270 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=270 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=280 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=280 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=280 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=22
+# time=290 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=20
+# time=290 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=290 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=300 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=300 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=300 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=18
+# time=310 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=16
+# time=310 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=310 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=320 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=320 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=320 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=14
+# time=330 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=12
+# time=330 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=330 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=340 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=340 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=340 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=10
+# time=350 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=8
+# time=350 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=350 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=360 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=360 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=360 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=6
+# time=370 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=4
+# time=370 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=370 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=380 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=380 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=380 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=2
+# time=390 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=0
+# time=390 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=390 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=400 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=400 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=410 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=62
+# time=420 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=60
+# time=430 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3cddddc
+# time=430 | DESCRAMBLER OUT | data=c3c3c3c3c3cddddc
+# time=430 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=58
+# time=440 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=56
+# time=440 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=440 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=450 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=450 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=450 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=54
+#    460.00ns WARNING  ..frame.test_lock_and_single_frame 1 expected frame(s) never received by DUT.
+#                                                         Traceback (most recent call last):
+#                                                           File "/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_test.py", line 92, in test_lock_and_single_frame
+#                                                             await drain_and_check(dut, monitor, scoreboard)
+#                                                           File "/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_test.py", line 72, in drain_and_check
+#                                                             scoreboard.check_all_received()
+#                                                           File "/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_scoreboard.py", line 64, in check_all_received
+#                                                             raise AssertionError(
+#                                                         AssertionError: 1 expected frame(s) never received by DUT.
+#    460.00ns WARNING  cocotb.regression                  rx_tb.tb.rx_test.test_lock_and_single_frame failed
+#    460.00ns INFO     cocotb.regression                  running rx_tb.tb.rx_test.test_back_to_back_frames (2/5)
+# time=460 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=52
+# time=460 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=460 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=471 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=471 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=471 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=50
+# time=551 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=62
+# time=561 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=60
+# time=571 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3cddddc
+# time=571 | DESCRAMBLER OUT | data=c3c3c3c3c3cddddc
+# time=571 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=58
+# time=581 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=56
+# time=581 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=581 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=591 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=591 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=591 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=54
+# time=601 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=52
+# time=601 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=601 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=611 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=611 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=611 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=50
+# time=621 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=48
+# time=621 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=621 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=631 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=631 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=631 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=46
+# time=641 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=44
+# time=641 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=641 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=651 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=651 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=651 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=42
+# time=661 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=40
+# time=661 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=661 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=671 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=671 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=671 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=38
+# time=681 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=36
+# time=681 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=681 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=691 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=691 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=691 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=34
+# time=701 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=32
+# time=701 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=701 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=711 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=711 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=711 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=30
+# time=721 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=28
+# time=721 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=721 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=731 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=731 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=731 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=26
+# time=741 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=24
+# time=741 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=741 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=751 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=751 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=751 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=22
+# time=761 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=20
+# time=761 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=761 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=771 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=771 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=771 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=18
+# time=781 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=16
+# time=781 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=781 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=791 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=791 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=791 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=14
+# time=801 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=12
+# time=801 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=801 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=811 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=811 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=811 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=10
+# time=821 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=8
+# time=821 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=821 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=831 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=831 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=831 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=6
+# time=841 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=4
+# time=841 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=841 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=851 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=851 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=851 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=2
+# time=861 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=0
+# time=861 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=861 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=871 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=871 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=881 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=62
+# time=891 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=60
+# time=901 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3cddddc
+# time=901 | DESCRAMBLER OUT | data=c3c3c3c3c3cddddc
+# time=901 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=58
+# time=911 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=56
+# time=911 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=911 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=921 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=921 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=921 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=54
+#    931.00ns WARNING  .._frames.test_back_to_back_frames 3 expected frame(s) never received by DUT.
+#                                                         Traceback (most recent call last):
+#                                                           File "/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_test.py", line 112, in test_back_to_back_frames
+#                                                             await drain_and_check(dut, monitor, scoreboard)
+#                                                           File "/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_test.py", line 72, in drain_and_check
+#                                                             scoreboard.check_all_received()
+#                                                           File "/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_scoreboard.py", line 64, in check_all_received
+#                                                             raise AssertionError(
+#                                                         AssertionError: 3 expected frame(s) never received by DUT.
+#    931.00ns WARNING  cocotb.regression                  rx_tb.tb.rx_test.test_back_to_back_frames failed
+#    931.00ns INFO     cocotb.regression                  running rx_tb.tb.rx_test.test_frame_lengths (3/5)
+# time=931 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=52
+# time=931 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=931 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=942 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=942 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=942 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=50
+# time=1022 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=62
+# time=1032 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=60
+# time=1042 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3cddddc
+# time=1042 | DESCRAMBLER OUT | data=c3c3c3c3c3cddddc
+# time=1042 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=58
+# time=1052 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=56
+# time=1052 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1052 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1062 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1062 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1062 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=54
+# time=1072 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=52
+# time=1072 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1072 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1082 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1082 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1082 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=50
+# time=1092 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=48
+# time=1092 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1092 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1102 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1102 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1102 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=46
+# time=1112 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=44
+# time=1112 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1112 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1122 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1122 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1122 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=42
+# time=1132 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=40
+# time=1132 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1132 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1142 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1142 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1142 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=38
+# time=1152 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=36
+# time=1152 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1152 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1162 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1162 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1162 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=34
+# time=1172 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=32
+# time=1172 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1172 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1182 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1182 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1182 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=30
+# time=1192 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=28
+# time=1192 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1192 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1202 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1202 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1202 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=26
+# time=1212 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=24
+# time=1212 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1212 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1222 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1222 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1222 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=22
+# time=1232 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=20
+# time=1232 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1232 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1242 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1242 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1242 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=18
+# time=1252 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=16
+# time=1252 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1252 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1262 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1262 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1262 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=14
+# time=1272 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=12
+# time=1272 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1272 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1282 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1282 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1282 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=10
+# time=1292 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=8
+# time=1292 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1292 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1302 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1302 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1302 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=6
+# time=1312 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=4
+# time=1312 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1312 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1322 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1322 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1322 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=2
+# time=1332 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=0
+# time=1332 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1332 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1342 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1342 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1352 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=62
+# time=1362 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=60
+# time=1372 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3cddddc
+# time=1372 | DESCRAMBLER OUT | data=c3c3c3c3c3cddddc
+# time=1372 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=58
+# time=1382 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=56
+# time=1382 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1382 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1392 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1392 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1392 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=54
+#   1402.00ns WARNING  ..frame_lengths.test_frame_lengths 4 expected frame(s) never received by DUT.
+#                                                         Traceback (most recent call last):
+#                                                           File "/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_test.py", line 135, in test_frame_lengths
+#                                                             await drain_and_check(dut, monitor, scoreboard)
+#                                                           File "/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_test.py", line 72, in drain_and_check
+#                                                             scoreboard.check_all_received()
+#                                                           File "/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_scoreboard.py", line 64, in check_all_received
+#                                                             raise AssertionError(
+#                                                         AssertionError: 4 expected frame(s) never received by DUT.
+#   1402.00ns WARNING  cocotb.regression                  rx_tb.tb.rx_test.test_frame_lengths failed
+#   1402.00ns INFO     cocotb.regression                  running rx_tb.tb.rx_test.test_lock_loss_recovery (4/5)
+# time=1402 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=52
+# time=1402 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1402 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1413 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1413 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1413 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=50
+# time=1493 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=62
+# time=1503 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=60
+# time=1513 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3cddddc
+# time=1513 | DESCRAMBLER OUT | data=c3c3c3c3c3cddddc
+# time=1513 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=58
+# time=1523 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=56
+# time=1523 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1523 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1533 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1533 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1533 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=54
+# time=1543 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=52
+# time=1543 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1543 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1553 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1553 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1553 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=50
+# time=1563 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=48
+# time=1563 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1563 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1573 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1573 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1573 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=46
+# time=1583 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=44
+# time=1583 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1583 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1593 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1593 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1593 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=42
+# time=1603 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=40
+# time=1603 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1603 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1613 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1613 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1613 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=38
+# time=1623 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=36
+# time=1623 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1623 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1633 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1633 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1633 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=34
+# time=1643 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=32
+# time=1643 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1643 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1653 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1653 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1653 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=30
+# time=1663 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=28
+# time=1663 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1663 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1673 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1673 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1673 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=26
+# time=1683 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=24
+# time=1683 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1683 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1693 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1693 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1693 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=22
+# time=1703 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=20
+# time=1703 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1703 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1713 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1713 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1713 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=18
+# time=1723 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=16
+# time=1723 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1723 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1733 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1733 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1733 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=14
+# time=1743 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=12
+# time=1743 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1743 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1753 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1753 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1753 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=10
+# time=1763 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=8
+# time=1763 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1763 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1773 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1773 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1773 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=6
+# time=1783 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=4
+# time=1783 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1783 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1793 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1793 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1793 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=2
+# time=1803 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=0
+# time=1803 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1803 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1813 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1813 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1823 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=62
+# time=1833 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=60
+# time=1843 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3cddddc
+# time=1843 | DESCRAMBLER OUT | data=c3c3c3c3c3cddddc
+# time=1843 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=58
+# time=1853 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=56
+# time=1853 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1853 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1863 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1863 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1863 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=54
+#   1873.00ns WARNING  ..recovery.test_lock_loss_recovery 1 expected frame(s) never received by DUT.
+#                                                         Traceback (most recent call last):
+#                                                           File "/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_test.py", line 152, in test_lock_loss_recovery
+#                                                             await drain_and_check(dut, monitor, scoreboard)
+#                                                           File "/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_test.py", line 72, in drain_and_check
+#                                                             scoreboard.check_all_received()
+#                                                           File "/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_scoreboard.py", line 64, in check_all_received
+#                                                             raise AssertionError(
+#                                                         AssertionError: 1 expected frame(s) never received by DUT.
+#   1873.00ns WARNING  cocotb.regression                  rx_tb.tb.rx_test.test_lock_loss_recovery failed
+#   1873.00ns INFO     cocotb.regression                  running rx_tb.tb.rx_test.test_bubble_insertion (5/5)
+# time=1873 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=52
+# time=1873 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1873 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1884 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=1884 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1884 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=50
+# time=1964 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=62
+# time=1974 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=60
+# time=1984 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3cddddc
+# time=1984 | DESCRAMBLER OUT | data=c3c3c3c3c3cddddc
+# time=1984 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=58
+# time=1994 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=56
+# time=1994 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=1994 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2004 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2004 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2004 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=54
+# time=2014 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=52
+# time=2014 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2014 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2024 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2024 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2024 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=50
+# time=2034 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=48
+# time=2034 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2034 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2044 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2044 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2044 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=46
+# time=2054 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=44
+# time=2054 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2054 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2064 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2064 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2064 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=42
+# time=2074 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=40
+# time=2074 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2074 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2084 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2084 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2084 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=38
+# time=2094 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=36
+# time=2094 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2094 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2104 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2104 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2104 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=34
+# time=2114 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=32
+# time=2114 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2114 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2124 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2124 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2124 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=30
+# time=2134 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=28
+# time=2134 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2134 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2144 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2144 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2144 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=26
+# time=2154 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=24
+# time=2154 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2154 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2164 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2164 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2164 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=22
+# time=2174 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=20
+# time=2174 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2174 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2184 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2184 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2184 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=18
+# time=2194 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=16
+# time=2194 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2194 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2204 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2204 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2204 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=14
+# time=2214 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=12
+# time=2214 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2214 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2224 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2224 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2224 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=10
+# time=2234 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=8
+# time=2234 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2234 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2244 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2244 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2244 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=6
+# time=2254 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=4
+# time=2254 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2254 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2264 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2264 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2264 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=2
+# time=2274 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=0
+# time=2274 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2274 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2284 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2284 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2294 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=62
+# time=2304 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=60
+# time=2314 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3cddddc
+# time=2314 | DESCRAMBLER OUT | data=c3c3c3c3c3cddddc
+# time=2314 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=58
+# time=2324 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=56
+# time=2324 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2324 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2334 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=c3 | data=c3c3c3c3c3c3c3c3
+# time=2334 | DESCRAMBLER OUT | data=c3c3c3c3c3c3c3c3
+# time=2334 | BUBBLER OUT | 66b=21e1e1e1e1e1e1e1e | count=54
+#   2344.00ns WARNING  .._insertion.test_bubble_insertion 1 expected frame(s) never received by DUT.
+#                                                         Traceback (most recent call last):
+#                                                           File "/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_test.py", line 175, in test_bubble_insertion
+#                                                             await drain_and_check(dut, monitor, scoreboard)
+#                                                           File "/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_test.py", line 72, in drain_and_check
+#                                                             scoreboard.check_all_received()
+#                                                           File "/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_scoreboard.py", line 64, in check_all_received
+#                                                             raise AssertionError(
+#                                                         AssertionError: 1 expected frame(s) never received by DUT.
+#   2344.00ns WARNING  cocotb.regression                  rx_tb.tb.rx_test.test_bubble_insertion failed
+#   2344.00ns INFO     cocotb.regression                  *****************************************************************************************************
+#                                                         ** TEST                                         STATUS  SIM TIME (ns)  REAL TIME (s)  RATIO (ns/s) **
+#                                                         *****************************************************************************************************
+#                                                         ** rx_tb.tb.rx_test.test_lock_and_single_frame   FAIL         460.00           0.01      48546.41  **
+#                                                         ** rx_tb.tb.rx_test.test_back_to_back_frames     FAIL         470.00           0.01      46236.11  **
+#                                                         ** rx_tb.tb.rx_test.test_frame_lengths           FAIL         470.00           0.01      51070.54  **
+#                                                         ** rx_tb.tb.rx_test.test_lock_loss_recovery      FAIL         470.00           0.01      50279.87  **
+#                                                         ** rx_tb.tb.rx_test.test_bubble_insertion        FAIL         470.00           0.01      54169.13  **
+#                                                         *****************************************************************************************************
+#                                                         ** TESTS=5 PASS=0 FAIL=5 SKIP=0                              2344.00           0.06      41159.53  **
+#                                                         *****************************************************************************************************
+# ** Note: $finish    : /home/lvr4818/ieee/ChipTeam2026/bubbler/rtl/bubbler.sv(62)
+#    Time: 2344 ns  Iteration: 2  Instance: /rx_top File: /home/lvr4818/ieee/ChipTeam2026/rx_tb/rtl/rx_top.sv
+# End time: 21:13:24 on Apr 07,2026, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 1

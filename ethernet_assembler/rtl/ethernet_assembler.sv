@@ -61,7 +61,7 @@ function automatic logic [DATA_OUT_W-1:0] bit_reverse(input logic [DATA_OUT_W-1:
 endfunction
 
 // Our team belives the sync/control bit are in network order
-assign header_bits  = {header_bits_i[0], header_bits_i[1]}; // Filp sync/control bits from network -> regular order
+// assign header_bits  = {header_bits_i[0], header_bits_i[1]}; // Filp sync/control bits from network -> regular order
 assign out_data_o_d = bit_reverse(input_data_i[DATA_OUT_W-1:0]);
 assign can_read     = in_valid_i && locked_i && !cancel_frame_i;
 assign control_byte = out_data_o_d[DATA_OUT_W-1 -: SIZE_BYTE];
@@ -169,6 +169,18 @@ always_ff @(posedge clk) begin
         out_data_o      <= out_data_o_d;
         out_valid_o     <= out_valid_o_d;
         drop_frame_o    <= drop_frame_o_d;
+    end
+end
+
+always @(posedge clk) begin
+    if (in_valid_i && locked_i) begin
+        $display("time=%0t | ASSEMBLER IN | locked=%b | hdr=%02b | ctrl=%02h | data=%016h",
+                 $time, locked_i, header_bits_i, control_byte, input_data_i);
+    end
+
+    if (out_valid_o) begin
+        $display("time=%0t | ASSEMBLER OUT | valid=%b | data=%016h | bytes_valid=%08b",
+                 $time, out_valid_o, out_data_o, bytes_valid_o);
     end
 end
 

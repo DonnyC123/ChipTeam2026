@@ -1,0 +1,398 @@
+m255
+K4
+z2
+!s11f vlog 2020.1 2020.01, Jan 28 2020
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 d/home/lvr4818/ieee/ChipTeam2026/sim_build
+T_opt
+!s110 1775614403
+V[;FAB4XRZRh2VIb6JF;FM2
+04 6 4 work rx_top fast 0
+=1-b49691574b56-69d5b9c3-9faef-1bac6a
+o-quiet +acc -auto_acc_if_foreign -work top +acc
+Z1 tCvgOpt 0
+n@_opt
+OL;O;2020.1;71
+valignment_finder
+Z2 DXx6 sv_std 3 std 0 22 9oUSJO;AeEaW`l:M@^WG92
+Z3 !s110 1775614402
+!i10b 1
+!s100 GC:LH8XP1f2I1fNSdDmJZ3
+Z4 !s11b Dg1SIo80bB@j0V0VzS_@n1
+IlKP?0oJ8lRM8=SnRPiLl73
+Z5 VDg1SIo80bB@j0V0VzS_@n1
+S1
+R0
+w1774996367
+8/home/lvr4818/ieee/ChipTeam2026/alignment_finder/rtl/alignment_finder.sv
+F/home/lvr4818/ieee/ChipTeam2026/alignment_finder/rtl/alignment_finder.sv
+!i122 8
+L0 1 146
+Z6 OL;L;2020.1;71
+r1
+!s85 0
+31
+Z7 !s108 1775614402.000000
+!s107 /home/lvr4818/ieee/ChipTeam2026/alignment_finder/rtl/alignment_finder.sv|
+!s90 -work|top|-sv|/home/lvr4818/ieee/ChipTeam2026/alignment_finder/rtl/alignment_finder.sv|
+!i113 0
+Z8 o-work top -sv -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
+R1
+vbram
+R2
+R3
+!i10b 1
+!s100 M[aDk4J7J1U==fLLTjimN3
+R4
+IjAzRU8C=1>b4JC7]K42_z1
+R5
+S1
+R0
+Z9 w1770879805
+8/home/lvr4818/ieee/ChipTeam2026/rtl_utils/bram.sv
+F/home/lvr4818/ieee/ChipTeam2026/rtl_utils/bram.sv
+!i122 0
+L0 1 24
+R6
+r1
+!s85 0
+31
+!s108 1775614401.000000
+!s107 /home/lvr4818/ieee/ChipTeam2026/rtl_utils/bram.sv|
+!s90 -work|top|-sv|/home/lvr4818/ieee/ChipTeam2026/rtl_utils/bram.sv|
+!i113 0
+R8
+R1
+vbubbler
+R2
+R3
+!i10b 1
+!s100 AkH1R8@YT_P=`TRFF>]CU3
+R4
+Ib2M68c@F^6W1TbY`iSi2i1
+R5
+S1
+R0
+w1775583494
+8/home/lvr4818/ieee/ChipTeam2026/bubbler/rtl/bubbler.sv
+F/home/lvr4818/ieee/ChipTeam2026/bubbler/rtl/bubbler.sv
+!i122 11
+Z10 L0 1 67
+R6
+r1
+!s85 0
+31
+R7
+!s107 /home/lvr4818/ieee/ChipTeam2026/bubbler/rtl/bubbler.sv|
+!s90 -work|top|-sv|/home/lvr4818/ieee/ChipTeam2026/bubbler/rtl/bubbler.sv|
+!i113 0
+R8
+R1
+vdata_pipeline
+R2
+R3
+!i10b 1
+!s100 0ZJ<XX^[`VFYDlJd<Hf:12
+R4
+Ic86jC7b;8^O9JJF0@M_D:1
+R5
+S1
+R0
+R9
+8/home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_pipeline.sv
+F/home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_pipeline.sv
+!i122 1
+L0 1 38
+R6
+r1
+!s85 0
+31
+R7
+!s107 /home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_pipeline.sv|
+!s90 -work|top|-sv|/home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_pipeline.sv|
+!i113 0
+R8
+R1
+vdata_status_pipeline
+R2
+R3
+!i10b 1
+!s100 SS23]^^gQ[hb5ok1dEO@T2
+R4
+IC4C7PLN`KRO9KckZM3cDG2
+R5
+S1
+R0
+R9
+8/home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_status_pipeline.sv
+F/home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_status_pipeline.sv
+!i122 2
+L0 1 36
+R6
+r1
+!s85 0
+31
+R7
+!s107 /home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_status_pipeline.sv|
+!s90 -work|top|-sv|/home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_status_pipeline.sv|
+!i113 0
+R8
+R1
+vdata_status_shift_reg
+R2
+R3
+!i10b 1
+!s100 kdB7F`hna7nE2cMo;JeQP2
+R4
+I;nG<_>OiU;0<<fJLPeFmJ3
+R5
+S1
+R0
+R9
+8/home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_status_shift_reg.sv
+F/home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_status_shift_reg.sv
+!i122 3
+L0 1 40
+R6
+r1
+!s85 0
+31
+R7
+!s107 /home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_status_shift_reg.sv|
+!s90 -work|top|-sv|/home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_status_shift_reg.sv|
+!i113 0
+R8
+R1
+vdata_status_shift_reg_en
+R2
+R3
+!i10b 1
+!s100 F]Xn:6kH@BX4NFIBoUOGk3
+R4
+IBgN9<4_;OcTDYYj::jG9M1
+R5
+S1
+R0
+R9
+8/home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_status_shift_reg_en.sv
+F/home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_status_shift_reg_en.sv
+!i122 4
+L0 1 43
+R6
+r1
+!s85 0
+31
+R7
+!s107 /home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_status_shift_reg_en.sv|
+!s90 -work|top|-sv|/home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_status_shift_reg_en.sv|
+!i113 0
+R8
+R1
+vdescrambler
+R2
+R3
+!i10b 1
+!s100 Go^<I<Rh27Fb5bQlbPh^C2
+R4
+ISk?d3LZ[>6S[J4ba5VTcb2
+R5
+S1
+R0
+w1775440759
+8/home/lvr4818/ieee/ChipTeam2026/scrambler/rtl/descrambler.sv
+F/home/lvr4818/ieee/ChipTeam2026/scrambler/rtl/descrambler.sv
+!i122 12
+R10
+R6
+r1
+!s85 0
+31
+R7
+!s107 /home/lvr4818/ieee/ChipTeam2026/scrambler/rtl/descrambler.sv|
+!s90 -work|top|-sv|/home/lvr4818/ieee/ChipTeam2026/scrambler/rtl/descrambler.sv|
+!i113 0
+R8
+R1
+vethernet_assembler
+R2
+Z11 DXx4 work 14 nic_global_pkg 0 22 X3H65X`^l<XWiaG_L6=z:1
+DXx4 work 26 ethernet_assembler_sv_unit 0 22 37zg@9VaL`=KlZJ9Sm^JW2
+R3
+R5
+r1
+!s85 0
+!i10b 1
+!s100 jQBmP@UK8:aRKomOlA5bJ0
+I_8Al7h0gUCHHhWb3aY;NY1
+!s105 ethernet_assembler_sv_unit
+S1
+R0
+Z12 w1775442887
+Z13 8/home/lvr4818/ieee/ChipTeam2026/ethernet_assembler/rtl/ethernet_assembler.sv
+Z14 F/home/lvr4818/ieee/ChipTeam2026/ethernet_assembler/rtl/ethernet_assembler.sv
+!i122 10
+L0 21 167
+R6
+31
+R7
+Z15 !s107 /home/lvr4818/ieee/ChipTeam2026/ethernet_assembler/rtl/ethernet_assembler.sv|
+Z16 !s90 -work|top|-sv|/home/lvr4818/ieee/ChipTeam2026/ethernet_assembler/rtl/ethernet_assembler.sv|
+!i113 0
+R8
+R1
+Xethernet_assembler_sv_unit
+R2
+R11
+R3
+V37zg@9VaL`=KlZJ9Sm^JW2
+r1
+!s85 0
+!i10b 1
+!s100 zF1hj[3amFdcFjkMgo<j:0
+I37zg@9VaL`=KlZJ9Sm^JW2
+!i103 1
+S1
+R0
+R12
+R13
+R14
+!i122 10
+L0 19 0
+R6
+31
+R7
+R15
+R16
+!i113 0
+R8
+R1
+vfifo
+R2
+R3
+!i10b 1
+!s100 bSn?<Z;SnJCic0hbRm0gX1
+R4
+Ilz46efQXeMoideUk04QfL3
+R5
+S1
+R0
+R9
+8/home/lvr4818/ieee/ChipTeam2026/rtl_utils/fifo.sv
+F/home/lvr4818/ieee/ChipTeam2026/rtl_utils/fifo.sv
+!i122 5
+L0 1 71
+R6
+r1
+!s85 0
+31
+R7
+!s107 /home/lvr4818/ieee/ChipTeam2026/rtl_utils/fifo.sv|
+!s90 -work|top|-sv|/home/lvr4818/ieee/ChipTeam2026/rtl_utils/fifo.sv|
+!i113 0
+R8
+R1
+Xnic_global_pkg
+R2
+R3
+!i10b 1
+!s100 4?l>_Fgf[`VD=ZC[nEQ`c0
+R4
+IX3H65X`^l<XWiaG_L6=z:1
+VX3H65X`^l<XWiaG_L6=z:1
+S1
+R0
+w1775438796
+8/home/lvr4818/ieee/ChipTeam2026/ethernet_assembler/rtl/nic_global_package.sv
+F/home/lvr4818/ieee/ChipTeam2026/ethernet_assembler/rtl/nic_global_package.sv
+!i122 9
+L0 1 0
+R6
+r1
+!s85 0
+31
+R7
+!s107 /home/lvr4818/ieee/ChipTeam2026/ethernet_assembler/rtl/nic_global_package.sv|
+!s90 -work|top|-sv|/home/lvr4818/ieee/ChipTeam2026/ethernet_assembler/rtl/nic_global_package.sv|
+!i113 0
+R8
+R1
+vrx_top
+R2
+R3
+!i10b 1
+!s100 I@WZAf:eN_kiJ>ZZ939][1
+R4
+IJkh?^CK7FLA2L2VE:>nIS0
+R5
+S1
+R0
+w1775583078
+8/home/lvr4818/ieee/ChipTeam2026/rx_tb/rtl/rx_top.sv
+F/home/lvr4818/ieee/ChipTeam2026/rx_tb/rtl/rx_top.sv
+!i122 13
+L0 1 101
+R6
+r1
+!s85 0
+31
+R7
+!s107 /home/lvr4818/ieee/ChipTeam2026/rx_tb/rtl/rx_top.sv|
+!s90 -work|top|-sv|/home/lvr4818/ieee/ChipTeam2026/rx_tb/rtl/rx_top.sv|
+!i113 0
+R8
+R1
+vshift_reg
+R2
+R3
+!i10b 1
+!s100 nmGYi5S;7e]Fl`C:G<ofk1
+R4
+I3YWng_@S99e>WPAGCoKnQ0
+R5
+S1
+R0
+R9
+8/home/lvr4818/ieee/ChipTeam2026/rtl_utils/shift_reg.sv
+F/home/lvr4818/ieee/ChipTeam2026/rtl_utils/shift_reg.sv
+!i122 6
+L0 1 45
+R6
+r1
+!s85 0
+31
+R7
+!s107 /home/lvr4818/ieee/ChipTeam2026/rtl_utils/shift_reg.sv|
+!s90 -work|top|-sv|/home/lvr4818/ieee/ChipTeam2026/rtl_utils/shift_reg.sv|
+!i113 0
+R8
+R1
+vshift_reg_en
+R2
+R3
+!i10b 1
+!s100 oVXAc=M_oikZ4QmTR;4Ze3
+R4
+I;>?LNfMfUMOhFg:nfgadE2
+R5
+S1
+R0
+R9
+8/home/lvr4818/ieee/ChipTeam2026/rtl_utils/shift_reg_en.sv
+F/home/lvr4818/ieee/ChipTeam2026/rtl_utils/shift_reg_en.sv
+!i122 7
+L0 1 47
+R6
+r1
+!s85 0
+31
+R7
+!s107 /home/lvr4818/ieee/ChipTeam2026/rtl_utils/shift_reg_en.sv|
+!s90 -work|top|-sv|/home/lvr4818/ieee/ChipTeam2026/rtl_utils/shift_reg_en.sv|
+!i113 0
+R8
+R1

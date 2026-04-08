@@ -31,7 +31,7 @@ def test_alignment_finder():
     sim.build(
         sources=sources,
         hdl_toplevel="alignment_finder",    
-        build_dir="sim_build_alignment",
+        build_dir="sim_build",
         parameters=rtl_parameters,
         always=True,
         clean=True,

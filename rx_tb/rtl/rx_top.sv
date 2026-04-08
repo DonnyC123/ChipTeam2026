@@ -26,7 +26,12 @@ module rx_top #(
     logic [DATA_64_W-1:0] descrambled_data_64;
     logic                 descrambled_valid;
 
-    logic drop_frame_o;
+    logic                 drop_frame;
+
+    // Pipeline registers to realign header bits and locked signal
+    // with the descrambler's one-cycle latency
+    logic [1:0]           header_bits_q;
+    logic                 locked_q;
 
     bubbler #(
         .BIT_IN_W  (DATA_64_W),
@@ -46,10 +51,10 @@ module rx_top #(
     ) u_scrambler (
         .clk      (clk),
         .rst      (rst),
-        ._64b_i   (bubbler_data_66[DATA_64_W-1:0]),    
-        .valid_i  (bubbler_valid_66),    
+        ._64b_i   (bubbler_data_66[DATA_64_W-1:0]),
+        .valid_i  (bubbler_valid_66),
         ._64b_o   (descrambled_data_64),
-        .valid_o  (descrambled_valid)   
+        .valid_o  (descrambled_valid)
     );
 
     alignment_finder #(
@@ -65,21 +70,32 @@ module rx_top #(
         .locked_o     (locked_o),
         .bitslip_o    (bitslip_o)
     );
+    
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            header_bits_q <= '0;
+            locked_q      <= '0;
+        end else begin
+            header_bits_q <= bubbler_data_66[65:64];
+            locked_q      <= locked_o;
+        end
+    end
 
     ethernet_assembler #(
         .DATA_IN_W  (DATA_64_W),
         .DATA_OUT_W (DATA_OUT_W)
     ) u_ethernet_assembler (
-        .clk          (clk),
-        .rst          (rst),
-        .in_valid_i   (descrambled_valid),
-        .locked_i     (locked_o),
+        .clk            (clk),
+        .rst            (rst),
+        .in_valid_i     (descrambled_valid),
+        .locked_i       (locked_q),          
         .cancel_frame_i (1'b0),
-        .input_data_i (descrambled_data_64),
-        .header_bits_i (bubbler_data_66[65:64]),
-        .drop_frame_o (drop_frame_o),
-        .out_valid_o  (out_valid_o),
-        .out_data_o   (out_data_o),
-        .bytes_valid_o(bytes_valid_o)
+        .input_data_i   (descrambled_data_64),
+        .header_bits_i  (header_bits_q),     
+        .drop_frame_o   (drop_frame),
+        .out_valid_o    (out_valid_o),
+        .out_data_o     (out_data_o),
+        .bytes_valid_o  (bytes_valid_o)
     );
+
 endmodule
