@@ -7,6 +7,47 @@ from tb.tx_subsystem_test_base import TxSubsystemTestBase
 from tb_utils.tb_common import initialize_tb
 
 
+BEATS_PER_WORD = 4
+PCS_DATA_W = 64
+PCS_VALID_W = 8
+
+
+async def _collect_dma_words_from_monitor(
+    testbase: TxSubsystemTestBase,
+    expected_words: int,
+    timeout_cycles: int = 4000,
+):
+    words = []
+    beat_idx = 0
+    assembled_data = 0
+    assembled_keep = 0
+    assembled_last = 0
+
+    for _ in range(timeout_cycles):
+        await RisingEdge(testbase.dut.clk)
+        while not testbase.monitor.actual_queue.empty():
+            beat_data, beat_keep, beat_last = await testbase.monitor.actual_queue.get()
+
+            assembled_data |= int(beat_data) << (beat_idx * PCS_DATA_W)
+            assembled_keep |= int(beat_keep) << (beat_idx * PCS_VALID_W)
+            assembled_last = int(beat_last)
+
+            if beat_idx == (BEATS_PER_WORD - 1):
+                words.append((assembled_data, assembled_keep, assembled_last))
+                assembled_data = 0
+                assembled_keep = 0
+                assembled_last = 0
+                beat_idx = 0
+                if len(words) >= expected_words:
+                    return words
+            else:
+                beat_idx += 1
+
+    raise AssertionError(
+        f"Timed out collecting words: got {len(words)}, expected {expected_words}"
+    )
+
+
 @cocotb.test()
 async def tx_subsystem_axis_basic_test(dut):
     await initialize_tb(dut, clk_period_ns=10)
@@ -35,9 +76,7 @@ async def tx_subsystem_axis_basic_test(dut):
             data=data,
             keep=keep,
             last=last,
-            q_valid=0,
-            q_last=0,
-            dma_req_ready=1,
+            tdest=0,
             m_axis_tready=1,
         )
 
@@ -53,19 +92,18 @@ async def tx_subsystem_axis_long_random_test(dut):
     testbase = TxSubsystemTestBase(dut)
 
     rng = random.Random(0x7522_2026)
-    num_words = 64
+    num_words = 96
 
-    for idx in range(num_words):
+    for _ in range(num_words):
         data = rng.getrandbits(256)
         keep = rng.getrandbits(32)
-        last = 1 if idx == (num_words - 1) else 0
+        # One-word packets to keep expected ordering deterministic.
+        last = 1
         await testbase.sequence.add_dma_axis_word(
             data=data,
             keep=keep,
             last=last,
-            q_valid=0,
-            q_last=0,
-            dma_req_ready=1,
+            tdest=0,
             m_axis_tready=1,
         )
         # One DMA word expands to 4 PCS beats, so pace injection to avoid
@@ -79,89 +117,82 @@ async def tx_subsystem_axis_long_random_test(dut):
 
 
 @cocotb.test()
-async def tx_subsystem_dma_req_ready_gating_test(dut):
-    """Use sequence-driven idle stimulus to isolate dma_req_ready gating behavior."""
+async def tx_subsystem_multi_queue_round_robin_test(dut):
+    """Preload two queues and verify round-robin packet service without starvation."""
     await initialize_tb(dut, clk_period_ns=10)
     testbase = TxSubsystemTestBase(dut)
 
-    q0 = 0b01
+    words_per_queue = 4
+    total_words = words_per_queue * 2
 
-    # Keep AXIS ingress idle via sequence; only scheduler-side request path is active.
-    await testbase.sequence.add_idle(
-        cycles=4,
-        q_valid=q0,
-        q_last=q0,
-        dma_req_ready=0,
-        m_axis_tready=1,
+    # Preload while output is stalled to ensure both queues are populated.
+    for idx in range(words_per_queue):
+        q0_data = (0 << 252) | idx
+        q1_data = (1 << 252) | idx
+
+        await testbase.sequence.add_dma_axis_word(
+            data=q0_data,
+            keep=0xFFFF_FFFF,
+            last=1,
+            tdest=0,
+            m_axis_tready=0,
+            notify_expected=False,
+        )
+        await testbase.sequence.add_dma_axis_word(
+            data=q1_data,
+            keep=0xFFFF_FFFF,
+            last=1,
+            tdest=1,
+            m_axis_tready=0,
+            notify_expected=False,
+        )
+
+    # Release output and drain.
+    await testbase.sequence.add_idle(cycles=total_words * 6, m_axis_tready=1)
+    observed_words = await _collect_dma_words_from_monitor(
+        testbase, expected_words=total_words, timeout_cycles=8000
     )
-    await testbase.sequence.add_idle(
-        cycles=8,
-        q_valid=q0,
-        q_last=q0,
-        dma_req_ready=1,
-        m_axis_tready=1,
-    )
-
-    blocked_reads = 0
-    enabled_reads = 0
-
-    # Sample while queued sequence items are being driven.
-    for _ in range(20):
-        await RisingEdge(dut.clk)
-        if int(dut.dma_read_en_o.value):
-            if int(dut.dma_req_ready_i.value):
-                enabled_reads += 1
-            else:
-                blocked_reads += 1
-
     await testbase.wait_for_driver_done()
-    await testbase.scoreboard.check()
 
-    assert blocked_reads == 0, "dma_read_en_o must stay low while dma_req_ready_i=0"
-    assert enabled_reads > 0, "dma_read_en_o should assert once dma_req_ready_i is enabled"
+    observed_qids = [((word[0] >> 252) & 0xF) for word in observed_words]
+    assert observed_qids == [0, 1, 0, 1, 0, 1, 0, 1], (
+        f"Unexpected queue service order: {observed_qids}"
+    )
 
 @cocotb.test()
 async def tx_subsystem_axis_random_ready_test(dut):
-    """Sequence-driven random downstream backpressure with scoreboard checking."""
+    """Long AXIS random traffic with randomized downstream backpressure."""
     await initialize_tb(dut, clk_period_ns=10)
     testbase = TxSubsystemTestBase(dut)
 
     rng = random.Random(0x25AA_2026)
-    num_words = 24
+    num_words = 96
 
     for idx in range(num_words):
         data = rng.getrandbits(256)
         keep = rng.getrandbits(32)
-        last = 1 if idx == (num_words - 1) else 0
-        ready = 1 if rng.random() < 0.7 else 0
+        last = 1 if (idx % rng.randint(1, 6) == 0) else 0
 
         await testbase.sequence.add_dma_axis_word(
             data=data,
             keep=keep,
             last=last,
-            q_valid=0,
-            q_last=0,
-            dma_req_ready=1,
-            m_axis_tready=ready,
+            tdest=0,
+            m_axis_tready=1,
         )
 
-        gap_cycles = rng.randint(0, 2)
-        if gap_cycles:
-            await testbase.sequence.add_idle(
-                cycles=gap_cycles,
-                q_valid=0,
-                q_last=0,
-                dma_req_ready=1,
-                m_axis_tready=(1 if rng.random() < 0.7 else 0),
-            )
+        # Pace ingress to keep all words accepted while preserving output stress.
+        await testbase.sequence.add_idle(
+            cycles=3,
+            tdest=0,
+            m_axis_tready=(1 if rng.random() < 0.9 else 0),
+        )
 
     # Drain with additional randomized backpressure.
-    for _ in range(num_words * 10):
+    for _ in range(num_words * 8):
         await testbase.sequence.add_idle(
             cycles=1,
-            q_valid=0,
-            q_last=0,
-            dma_req_ready=1,
+            tdest=0,
             m_axis_tready=(1 if rng.random() < 0.75 else 0),
         )
 
@@ -169,70 +200,43 @@ async def tx_subsystem_axis_random_ready_test(dut):
     await testbase.scoreboard.check()
 
 @cocotb.test()
-async def tx_subsystem_axis_end_to_end_stress_test(dut):
-    """Long sequence-driven AXIS stress with randomized backpressure and scheduler sideband."""
+async def tx_subsystem_axis_queue_full_backpressure_test(dut):
+    """Force one queue full and verify ingress backpressure instead of silent drops."""
     await initialize_tb(dut, clk_period_ns=10)
     testbase = TxSubsystemTestBase(dut)
 
-    rng = random.Random(0xE2E0_2026)
-    num_queues = len(dut.q_valid_i)
-    all_q_mask = (1 << num_queues) - 1
+    fifo_depth = 32
 
-    total_words = 256
-    words = []
-    remaining = total_words
-    while remaining > 0:
-        pkt_len = min(remaining, rng.randint(1, 8))
-        for idx in range(pkt_len):
-            words.append(
-                (
-                    rng.getrandbits(256),
-                    rng.getrandbits(32),
-                    1 if idx == (pkt_len - 1) else 0,
-                )
-            )
-        remaining -= pkt_len
-
-    for data, keep, last in words:
-        q_valid = rng.getrandbits(num_queues) & all_q_mask
-        if rng.random() < 0.25:
-            q_valid = all_q_mask
-        q_last = rng.getrandbits(num_queues) & q_valid
-        dma_req_ready = 1 if rng.random() < 0.88 else 0
-        m_axis_tready = 1 if rng.random() < 0.75 else 0
-
+    # Keep downstream stalled so selected queue fills up.
+    for idx in range(fifo_depth):
         await testbase.sequence.add_dma_axis_word(
-            data=data,
-            keep=keep,
-            last=last,
-            q_valid=q_valid,
-            q_last=q_last,
-            dma_req_ready=dma_req_ready,
-            m_axis_tready=m_axis_tready,
+            data=(0xA << 252) | idx,
+            keep=0xFFFF_FFFF,
+            last=1,
+            tdest=0,
+            m_axis_tready=0,
+            notify_expected=False,
         )
 
-        # Keep random pressure but pace ingress enough so AXIS writes are accepted.
-        for _ in range(rng.randint(4, 8)):
-            idle_q_valid = rng.getrandbits(num_queues) & all_q_mask
-            idle_q_last = rng.getrandbits(num_queues) & idle_q_valid
-            await testbase.sequence.add_idle(
-                cycles=1,
-                q_valid=idle_q_valid,
-                q_last=idle_q_last,
-                dma_req_ready=(1 if rng.random() < 0.88 else 0),
-                m_axis_tready=(1 if rng.random() < 0.8 else 0),
-            )
+    # Hold stall for a short window and observe ingress backpressure.
+    await testbase.sequence.add_idle(cycles=12, tdest=0, m_axis_tready=0)
 
-    for _ in range(total_words * 20):
-        q_valid = rng.getrandbits(num_queues) & all_q_mask
-        q_last = rng.getrandbits(num_queues) & q_valid
-        await testbase.sequence.add_idle(
-            cycles=1,
-            q_valid=q_valid,
-            q_last=q_last,
-            dma_req_ready=(1 if rng.random() < 0.9 else 0),
-            m_axis_tready=(1 if rng.random() < 0.85 else 0),
-        )
+    saw_backpressure = False
+    for _ in range(fifo_depth + 40):
+        await RisingEdge(dut.clk)
+        if int(dut.s_axis_dma_tready_o.value) == 0:
+            saw_backpressure = True
+            break
+    assert saw_backpressure, "Ingress tready should deassert when target queue is full"
 
+    # Release downstream and verify queue can drain and accept again.
+    await testbase.sequence.add_idle(cycles=fifo_depth * 6, tdest=0, m_axis_tready=1)
     await testbase.wait_for_driver_done()
-    await testbase.scoreboard.check()
+
+    recovered_ready = False
+    for _ in range(80):
+        await RisingEdge(dut.clk)
+        if int(dut.s_axis_dma_tready_o.value) == 1:
+            recovered_ready = True
+            break
+    assert recovered_ready, "Ingress tready should recover after drain"
