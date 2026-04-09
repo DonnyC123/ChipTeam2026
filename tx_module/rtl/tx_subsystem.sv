@@ -76,6 +76,13 @@ module tx_subsystem #(
   logic                   axis_accept;
   logic                   ingress_tdest_in_range;
   logic                   ingress_target_full;
+  logic                   m_axis_pop;
+  logic                   m_axis_accept_new;
+
+  logic [PCS_DATA_W-1:0]  m_axis_data_q, m_axis_data_d;
+  logic [PCS_VALID_W-1:0] m_axis_keep_q, m_axis_keep_d;
+  logic                   m_axis_last_q, m_axis_last_d;
+  logic                   m_axis_valid_q, m_axis_valid_d;
 
   logic                   in_packet_q, in_packet_d;
   logic [QID_W-1:0]       packet_tdest_q, packet_tdest_d;
@@ -159,10 +166,32 @@ module tx_subsystem #(
     end
   end
 
-  assign m_axis_pcs_if.tdata  = selected_data;
-  assign m_axis_pcs_if.tkeep  = selected_keep;
-  assign m_axis_pcs_if.tvalid = sched_read_en;
-  assign m_axis_pcs_if.tlast  = sched_read_en && selected_last;
+  assign m_axis_pop        = m_axis_valid_q && m_axis_pcs_if.tready;
+  assign m_axis_accept_new = !m_axis_valid_q || m_axis_pop;
+
+  always_comb begin
+    m_axis_data_d  = m_axis_data_q;
+    m_axis_keep_d  = m_axis_keep_q;
+    m_axis_last_d  = m_axis_last_q;
+    m_axis_valid_d = m_axis_valid_q;
+
+    if (m_axis_pop) begin
+      m_axis_last_d  = 1'b0;
+      m_axis_valid_d = 1'b0;
+    end
+
+    if (sched_read_en && m_axis_accept_new) begin
+      m_axis_data_d  = selected_data;
+      m_axis_keep_d  = selected_keep;
+      m_axis_last_d  = selected_last;
+      m_axis_valid_d = 1'b1;
+    end
+  end
+
+  assign m_axis_pcs_if.tdata  = m_axis_data_q;
+  assign m_axis_pcs_if.tkeep  = m_axis_keep_q;
+  assign m_axis_pcs_if.tvalid = m_axis_valid_q;
+  assign m_axis_pcs_if.tlast  = m_axis_last_q;
 
   tx_scheduling #(
       .NUM_QUEUES     (NUM_QUEUES),
@@ -173,7 +202,7 @@ module tx_subsystem #(
       .q_valid_i      (sched_q_valid),
       .q_last_i       (sched_q_last),
       .fifo_full_i    (1'b0),
-      .fifo_grant_i   (m_axis_pcs_if.tready),
+      .fifo_grant_i   (m_axis_accept_new),
       .dma_read_en_o  (sched_read_en),
       .dma_queue_sel_o(sched_queue_sel),
       .fifo_req_o     (sched_fifo_req)
@@ -195,9 +224,17 @@ module tx_subsystem #(
     if (rst) begin
       in_packet_q    <= 1'b0;
       packet_tdest_q <= '0;
+      m_axis_data_q  <= '0;
+      m_axis_keep_q  <= '0;
+      m_axis_last_q  <= 1'b0;
+      m_axis_valid_q <= 1'b0;
     end else begin
       in_packet_q    <= in_packet_d;
       packet_tdest_q <= packet_tdest_d;
+      m_axis_data_q  <= m_axis_data_d;
+      m_axis_keep_q  <= m_axis_keep_d;
+      m_axis_last_q  <= m_axis_last_d;
+      m_axis_valid_q <= m_axis_valid_d;
     end
   end
 
@@ -242,12 +279,29 @@ module tx_subsystem #(
   endproperty
   a_scheduler_dequeue_nonempty: assert property (p_scheduler_dequeue_nonempty);
 
+  property p_scheduler_read_requires_output_space;
+    @(posedge clk) disable iff (rst)
+      sched_read_en |-> m_axis_accept_new;
+  endproperty
+  a_scheduler_read_requires_output_space: assert property (p_scheduler_read_requires_output_space);
+
   // Packet-end marker cannot assert on an invalid beat.
   property p_last_requires_valid;
     @(posedge clk) disable iff (rst)
       m_axis_pcs_if.tlast |-> m_axis_pcs_if.tvalid;
   endproperty
   a_last_requires_valid: assert property (p_last_requires_valid);
+
+  // Egress payload must be stable while downstream back-pressures.
+  property p_m_axis_hold_while_wait;
+    @(posedge clk) disable iff (rst)
+      (m_axis_pcs_if.tvalid && !m_axis_pcs_if.tready)
+      |=> (m_axis_pcs_if.tvalid &&
+           $stable(m_axis_pcs_if.tdata) &&
+           $stable(m_axis_pcs_if.tkeep) &&
+           $stable(m_axis_pcs_if.tlast));
+  endproperty
+  a_m_axis_hold_while_wait: assert property (p_m_axis_hold_while_wait);
 
   c_multi_queue_seen: cover property (
       @(posedge clk) disable iff (rst)

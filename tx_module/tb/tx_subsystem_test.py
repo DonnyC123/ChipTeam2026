@@ -1,15 +1,22 @@
 import random
 
 import cocotb
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import Event, RisingEdge
 
 from tb.tx_subsystem_test_base import TxSubsystemTestBase
+from tb.tx_subsystem_sequence_item import TxSubsystemSequenceItem
 from tb_utils.tb_common import initialize_tb
 
 
 BEATS_PER_WORD = 4
 PCS_DATA_W = 64
 PCS_VALID_W = 8
+
+
+def _rand_last_keep_mask(rng: random.Random) -> int:
+    """Generate non-zero LSB-contiguous keep for AXIS packet tail words."""
+    valid_bytes = rng.randint(1, 32)
+    return (1 << valid_bytes) - 1
 
 
 async def _collect_dma_words_from_monitor(
@@ -240,3 +247,112 @@ async def tx_subsystem_axis_queue_full_backpressure_test(dut):
             recovered_ready = True
             break
     assert recovered_ready, "Ingress tready should recover after drain"
+
+
+@cocotb.test()
+async def tx_subsystem_dma_axis_multiqueue_packet_integration_test(dut):
+    """
+    Generic-sequence integration test with DMA-like packet traffic:
+    - multi-queue via TDEST
+    - packet-level TDEST stability
+    - randomized egress backpressure
+    - per-queue order and TLAST/KEEP integrity
+    """
+    await initialize_tb(dut, clk_period_ns=10)
+    testbase = TxSubsystemTestBase(dut)
+
+    rng = random.Random(0xD6A2_2026)
+    num_queues = TxSubsystemSequenceItem.NUM_QUEUES
+    qid_mask = (1 << TxSubsystemSequenceItem.QID_W) - 1
+
+    accepted_ingress_words = []
+    stop_capture = Event()
+
+    async def capture_ingress_accepts():
+        while True:
+            await RisingEdge(dut.clk)
+            if stop_capture.is_set():
+                return
+
+            if int(dut.s_axis_dma_tvalid_i.value) and int(dut.s_axis_dma_tready_o.value):
+                accepted_ingress_words.append(
+                    (
+                        int(dut.s_axis_dma_tdata_i.value),
+                        int(dut.s_axis_dma_tkeep_i.value),
+                        int(dut.s_axis_dma_tlast_i.value),
+                        int(dut.s_axis_dma_tdest_i.value),
+                    )
+                )
+
+    capture_task = cocotb.start_soon(capture_ingress_accepts())
+
+    packet_count = 36
+    for pkt_id in range(packet_count):
+        queue_id = rng.randrange(num_queues)
+        words_in_packet = rng.randint(1, 6)
+
+        for word_idx in range(words_in_packet):
+            is_last = int(word_idx == (words_in_packet - 1))
+            keep = _rand_last_keep_mask(rng) if is_last else 0xFFFF_FFFF
+
+            tagged_data = (
+                ((queue_id & qid_mask) << 252)
+                | ((pkt_id & 0xFF) << 244)
+                | ((word_idx & 0xF) << 240)
+                | rng.getrandbits(240)
+            )
+
+            await testbase.sequence.add_dma_axis_word(
+                data=tagged_data,
+                keep=keep,
+                last=is_last,
+                tdest=queue_id,
+                m_axis_tready=(1 if rng.random() < 0.86 else 0),
+                notify_expected=False,
+            )
+
+            # Conservative pacing keeps ingress acceptance robust while preserving random pressure.
+            for _ in range(4 + rng.randint(0, 2)):
+                await testbase.sequence.add_idle(
+                    cycles=1,
+                    tdest=queue_id,
+                    m_axis_tready=(1 if rng.random() < 0.82 else 0),
+                )
+
+    # Drain all outstanding data.
+    await testbase.sequence.add_idle(cycles=packet_count * 36, tdest=0, m_axis_tready=1)
+    await testbase.wait_for_driver_done()
+
+    stop_capture.set()
+    await RisingEdge(dut.clk)
+    await capture_task
+
+    assert len(accepted_ingress_words) > 0, "No AXIS ingress words were accepted"
+
+    observed_words = await _collect_dma_words_from_monitor(
+        testbase,
+        expected_words=len(accepted_ingress_words),
+        timeout_cycles=(len(accepted_ingress_words) * 24) + 3000,
+    )
+
+    expected_by_queue = {q: [] for q in range(num_queues)}
+    for data, keep, last, qid in accepted_ingress_words:
+        expected_by_queue[qid].append((data, keep, last))
+
+    observed_by_queue = {q: [] for q in range(num_queues)}
+    for data, keep, last in observed_words:
+        qid = (data >> 252) & qid_mask
+        assert qid in observed_by_queue, f"Observed invalid queue tag in payload: {qid}"
+        observed_by_queue[qid].append((data, keep, last))
+
+    for q in range(num_queues):
+        assert observed_by_queue[q] == expected_by_queue[q], (
+            f"Queue {q} order/data mismatch: "
+            f"exp={len(expected_by_queue[q])} obs={len(observed_by_queue[q])}"
+        )
+
+        for _, keep, last in observed_by_queue[q]:
+            if not last:
+                assert keep == 0xFFFF_FFFF, (
+                    f"Queue {q}: non-last beat must keep full mask, got 0x{keep:08x}"
+                )
