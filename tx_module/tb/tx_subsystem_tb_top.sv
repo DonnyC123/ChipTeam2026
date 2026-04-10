@@ -7,7 +7,7 @@ module tx_subsystem_tb_top #(
   localparam int PCS_DATA_W  = 64;
   localparam int PCS_VALID_W = 8;
   localparam int FIFO_DEPTH  = 32;
-  localparam int NUM_QUEUES  = 2;
+  localparam int NUM_QUEUES  = 4;
   localparam int QID_W       = (NUM_QUEUES > 1) ? $clog2(NUM_QUEUES) : 1;
 
   logic                              clk;

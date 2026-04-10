@@ -9,7 +9,7 @@ from tb_utils.abstract_transactions import AbstractTransaction
 class TxSubsystemSequenceItem(AbstractTransaction):
     DMA_DATA_W = 256
     DMA_VALID_W = 32
-    NUM_QUEUES = 2
+    NUM_QUEUES = 4
     QID_W = (NUM_QUEUES - 1).bit_length() if NUM_QUEUES > 1 else 1
 
     s_axis_dma_tdata_i: LogicArray = field(

@@ -19,6 +19,14 @@ def _rand_last_keep_mask(rng: random.Random) -> int:
     return (1 << valid_bytes) - 1
 
 
+def _mask_data_by_keep(data: int, keep: int) -> int:
+    masked = 0
+    for byte_idx in range(32):
+        if (keep >> byte_idx) & 1:
+            masked |= ((data >> (8 * byte_idx)) & 0xFF) << (8 * byte_idx)
+    return masked
+
+
 async def _collect_dma_words_from_monitor(
     testbase: TxSubsystemTestBase,
     expected_words: int,
@@ -39,7 +47,10 @@ async def _collect_dma_words_from_monitor(
             assembled_keep |= int(beat_keep) << (beat_idx * PCS_VALID_W)
             assembled_last = int(beat_last)
 
-            if beat_idx == (BEATS_PER_WORD - 1):
+            # Word boundary:
+            # - normal/non-last words always consume 4 PCS beats
+            # - last words may terminate early on beat_last
+            if beat_last or (beat_idx == (BEATS_PER_WORD - 1)):
                 words.append((assembled_data, assembled_keep, assembled_last))
                 assembled_data = 0
                 assembled_keep = 0
@@ -68,12 +79,12 @@ async def tx_subsystem_axis_basic_test(dut):
         ),
         (
             0x_2222_2222_2222_2222_2222_2222_2222_2222_2222_2222_2222_2222_2222_2222_2222_2222,
-            0x0FFF_FFFF,
+            0xFFFF_FFFF,
             0,
         ),
         (
             0x_3333_3333_3333_3333_3333_3333_3333_3333_3333_3333_3333_3333_3333_3333_3333_3333,
-            0x00FF_00FF,
+            0x0000_0FFF,
             1,
         ),
     ]
@@ -103,7 +114,7 @@ async def tx_subsystem_axis_long_random_test(dut):
 
     for _ in range(num_words):
         data = rng.getrandbits(256)
-        keep = rng.getrandbits(32)
+        keep = _rand_last_keep_mask(rng)
         # One-word packets to keep expected ordering deterministic.
         last = 1
         await testbase.sequence.add_dma_axis_word(
@@ -177,8 +188,8 @@ async def tx_subsystem_axis_random_ready_test(dut):
 
     for idx in range(num_words):
         data = rng.getrandbits(256)
-        keep = rng.getrandbits(32)
         last = 1 if (idx % rng.randint(1, 6) == 0) else 0
+        keep = _rand_last_keep_mask(rng) if last else 0xFFFF_FFFF
 
         await testbase.sequence.add_dma_axis_word(
             data=data,
@@ -295,12 +306,12 @@ async def tx_subsystem_dma_axis_multiqueue_packet_integration_test(dut):
             is_last = int(word_idx == (words_in_packet - 1))
             keep = _rand_last_keep_mask(rng) if is_last else 0xFFFF_FFFF
 
-            tagged_data = (
-                ((queue_id & qid_mask) << 252)
-                | ((pkt_id & 0xFF) << 244)
-                | ((word_idx & 0xF) << 240)
-                | rng.getrandbits(240)
-            )
+            tagged_data = rng.getrandbits(256)
+            # Keep tags in low bytes so they survive last-word partial keep masking.
+            tagged_data &= ~((1 << 16) - 1)
+            tagged_data |= ((pkt_id & 0xFF) << 8)
+            tagged_data |= ((word_idx & 0xF) << 4)
+            tagged_data |= (queue_id & qid_mask)
 
             await testbase.sequence.add_dma_axis_word(
                 data=tagged_data,
@@ -337,11 +348,12 @@ async def tx_subsystem_dma_axis_multiqueue_packet_integration_test(dut):
 
     expected_by_queue = {q: [] for q in range(num_queues)}
     for data, keep, last, qid in accepted_ingress_words:
-        expected_by_queue[qid].append((data, keep, last))
+        expected_by_queue[qid].append((_mask_data_by_keep(data, keep), keep, last))
 
     observed_by_queue = {q: [] for q in range(num_queues)}
     for data, keep, last in observed_words:
-        qid = (data >> 252) & qid_mask
+        data = _mask_data_by_keep(data, keep)
+        qid = data & qid_mask
         assert qid in observed_by_queue, f"Observed invalid queue tag in payload: {qid}"
         observed_by_queue[qid].append((data, keep, last))
 

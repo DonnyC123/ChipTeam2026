@@ -1,6 +1,6 @@
 package tx_scheduling_pkg;
 
-  localparam int NUM_QUEUES  = 2;
+  localparam int NUM_QUEUES  = 4;
   localparam int QUEUE_ID_W  = NUM_QUEUES > 1 ? $clog2(NUM_QUEUES) : 1;
 
   typedef enum logic {

@@ -27,7 +27,7 @@ endinterface
 
 module tx_subsystem #(
     parameter int FIFO_DEPTH       = 32,
-    parameter int NUM_QUEUES       = 2,
+    parameter int NUM_QUEUES       = 4,
     parameter int MAX_BURST_BEATS  = 256
 ) (
     input  logic                                           clk,
@@ -51,6 +51,7 @@ module tx_subsystem #(
   localparam int DMA_VALID_W = tx_fifo_pkg::DMA_VALID_W;
   localparam int PCS_DATA_W  = tx_fifo_pkg::PCS_DATA_W;
   localparam int PCS_VALID_W = tx_fifo_pkg::PCS_VALID_W;
+  localparam logic [DMA_VALID_W-1:0] DMA_KEEP_ALL = {DMA_VALID_W{1'b1}};
 
   localparam int QID_W = (NUM_QUEUES > 1) ? $clog2(NUM_QUEUES) : 1;
 
@@ -108,6 +109,21 @@ module tx_subsystem #(
 
   assign ingress_tdest_in_range = (s_axis_dma_tdest_i < NUM_QUEUES);
   assign axis_accept            = s_axis_dma_tvalid_i && s_axis_dma_tready_o;
+
+  function automatic logic keep_is_lsb_contiguous(input logic [DMA_VALID_W-1:0] keep);
+    logic seen_zero;
+    begin
+      keep_is_lsb_contiguous = 1'b1;
+      seen_zero = 1'b0;
+      for (int i = 0; i < DMA_VALID_W; i++) begin
+        if (!keep[i]) begin
+          seen_zero = 1'b1;
+        end else if (seen_zero) begin
+          keep_is_lsb_contiguous = 1'b0;
+        end
+      end
+    end
+  endfunction
 
   always_comb begin
     ingress_target_full = 1'b1;
@@ -271,6 +287,25 @@ module tx_subsystem #(
            $stable(s_axis_dma_tdest_i));
   endproperty
   a_axis_hold_while_wait: assert property (p_axis_hold_while_wait);
+
+  // AXIS byte-enable contract expected by downstream PCS encoder.
+  property p_non_last_keep_full;
+    @(posedge clk) disable iff (rst)
+      (axis_accept && !s_axis_dma_tlast_i) |-> (s_axis_dma_tkeep_i == DMA_KEEP_ALL);
+  endproperty
+  a_non_last_keep_full: assert property (p_non_last_keep_full);
+
+  property p_last_keep_nonzero;
+    @(posedge clk) disable iff (rst)
+      (axis_accept && s_axis_dma_tlast_i) |-> (s_axis_dma_tkeep_i != '0);
+  endproperty
+  a_last_keep_nonzero: assert property (p_last_keep_nonzero);
+
+  property p_last_keep_contiguous;
+    @(posedge clk) disable iff (rst)
+      (axis_accept && s_axis_dma_tlast_i) |-> keep_is_lsb_contiguous(s_axis_dma_tkeep_i);
+  endproperty
+  a_last_keep_contiguous: assert property (p_last_keep_contiguous);
 
   // Scheduler is only allowed to dequeue from a non-empty selected queue.
   property p_scheduler_dequeue_nonempty;

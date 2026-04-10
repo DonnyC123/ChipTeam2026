@@ -25,8 +25,8 @@ module tx_fifo #(
   // - If dma_wr_en_i when full, word is dropped and overflow_o pulses for observability.
   // Egress:
   // - pcs_data_o/pcs_valid_o/pcs_last_o present the current 64b beat of head word.
-  // - Head advances only when pcs_read_i && !empty.
-  // - pcs_last_o can assert only on final beat of a stored word marked dma_last_i=1.
+  // - Head advances on read of the current word's terminal beat.
+  // - pcs_last_o can assert only on the terminal valid beat of dma_last_i=1 words.
   // Scheduler sideband:
   // - sched_grant_o indicates FIFO can accept a new word this cycle (not a pop grant).
 
@@ -50,7 +50,10 @@ module tx_fifo #(
 
   fifo_entry_t         rd_entry;
   logic [BEAT_CNT_W-1:0] beat_cnt_d, beat_cnt_q;
-  logic                fetch_next;
+  logic [BEAT_CNT_W-1:0] terminal_beat_idx;
+  logic [BEAT_CNT_W-1:0] last_valid_beat_idx;
+  logic                rd_last_word_has_valid;
+  logic                head_pop;
 
   initial begin
     if ((DMA_DATA_W % PCS_DATA_W) != 0) begin
@@ -83,23 +86,38 @@ module tx_fifo #(
       wr_ptr_d = wr_ptr_q + 1;
     end
 
-    fetch_next = pcs_read_i && (beat_cnt_q == (BEATS_PER_WORD - 1));
+    rd_entry = mem[rd_ptr_q.addr];
+
+    last_valid_beat_idx = '0;
+    rd_last_word_has_valid = 1'b0;
+    for (int i = 0; i < BEATS_PER_WORD; i++) begin
+      if (|rd_entry.valid[i * PCS_VALID_W +: PCS_VALID_W]) begin
+        last_valid_beat_idx = BEAT_CNT_W'(i);
+        rd_last_word_has_valid = 1'b1;
+      end
+    end
+
+    if (rd_entry.last) begin
+      terminal_beat_idx = rd_last_word_has_valid ? last_valid_beat_idx : '0;
+    end else begin
+      terminal_beat_idx = BEAT_CNT_W'(BEATS_PER_WORD - 1);
+    end
+
+    head_pop = pcs_read_i && !empty && (beat_cnt_q == terminal_beat_idx);
 
     rd_ptr_d = rd_ptr_q;
-    if (fetch_next && !empty) begin
+    if (head_pop) begin
       rd_ptr_d = rd_ptr_q + 1;
     end
 
     beat_cnt_d = beat_cnt_q;
     if (pcs_read_i && !empty) begin
-      if (beat_cnt_q == (BEATS_PER_WORD - 1)) begin
+      if (beat_cnt_q == terminal_beat_idx) begin
         beat_cnt_d = '0;
       end else begin
         beat_cnt_d = beat_cnt_q + 1;
       end
     end
-
-    rd_entry = mem[rd_ptr_q.addr];
 
     pcs_data_o  = '0;
     pcs_valid_o = '0;
@@ -107,7 +125,7 @@ module tx_fifo #(
     if (!empty) begin
       pcs_data_o  = rd_entry.data[beat_cnt_q * PCS_DATA_W +: PCS_DATA_W];
       pcs_valid_o = rd_entry.valid[beat_cnt_q * PCS_VALID_W +: PCS_VALID_W];
-      pcs_last_o  = rd_entry.last && (beat_cnt_q == (BEATS_PER_WORD - 1));
+      pcs_last_o  = rd_entry.last && rd_last_word_has_valid && (beat_cnt_q == terminal_beat_idx);
     end
 
     sched_grant_o = sched_req_i && !full;
@@ -140,15 +158,25 @@ module tx_fifo #(
 
   property p_last_only_on_final_beat;
     @(posedge clk) disable iff (rst)
-      pcs_last_o |-> (!empty && rd_entry.last && (beat_cnt_q == (BEATS_PER_WORD - 1)));
+      pcs_last_o |-> (!empty &&
+                      rd_entry.last &&
+                      rd_last_word_has_valid &&
+                      (beat_cnt_q == terminal_beat_idx));
   endproperty
   a_last_only_on_final_beat: assert property (p_last_only_on_final_beat);
 
   property p_no_last_on_nonfinal_beat;
     @(posedge clk) disable iff (rst)
-      (!empty && rd_entry.last && (beat_cnt_q != (BEATS_PER_WORD - 1))) |-> !pcs_last_o;
+      (!empty && rd_entry.last && rd_last_word_has_valid && (beat_cnt_q != terminal_beat_idx))
+      |-> !pcs_last_o;
   endproperty
   a_no_last_on_nonfinal_beat: assert property (p_no_last_on_nonfinal_beat);
+
+  property p_last_word_has_valid_beat;
+    @(posedge clk) disable iff (rst)
+      (!empty && rd_entry.last) |-> rd_last_word_has_valid;
+  endproperty
+  a_last_word_has_valid_beat: assert property (p_last_word_has_valid_beat);
 
   property p_empty_read_does_not_advance;
     @(posedge clk) disable iff (rst)

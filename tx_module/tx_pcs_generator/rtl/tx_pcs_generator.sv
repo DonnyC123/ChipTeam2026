@@ -159,6 +159,10 @@ module tx_pcs_generator #(
     logic [DATA_W-1:0] moved_data;
     logic [KEEP_W-1:0] moved_keep;
     logic moved_last;
+    logic hold_accept;
+    logic [DATA_W-1:0] hold_data;
+    logic [KEEP_W-1:0] hold_keep;
+    logic hold_last;
     logic [63:0] control_payload;
     int unsigned moved_bytes;
     int eop_pos;
@@ -189,6 +193,10 @@ module tx_pcs_generator #(
     out_data_d = out_data_q;
     out_control_d = out_control_q;
     out_valid_d = out_valid_q;
+    hold_accept = 1'b0;
+    hold_data = '0;
+    hold_keep = '0;
+    hold_last = 1'b0;
 
     axis_accept = in_valid_i && in_ready_o;
     out_advance = (!out_valid_q) || out_ready_i;
@@ -221,12 +229,18 @@ module tx_pcs_generator #(
         skid_data_d[0] = in_data_i;
         skid_keep_d[0] = in_keep_i;
         skid_last_d[0] = in_last_i;
+        skid_count_d = 1;
       end else if (skid_count_d == 1) begin
         skid_data_d[1] = in_data_i;
         skid_keep_d[1] = in_keep_i;
         skid_last_d[1] = in_last_i;
+        skid_count_d = 2;
+      end else begin
+        hold_accept = 1'b1;
+        hold_data = in_data_i;
+        hold_keep = in_keep_i;
+        hold_last = in_last_i;
       end
-      skid_count_d = skid_count_d + 1'b1;
     end
 
     if ((skid_count_d != 0) && (byte_count_d <= (BYTE_BUF_BYTES - KEEP_W))) begin
@@ -252,6 +266,20 @@ module tx_pcs_generator #(
         end
       end
       byte_count_d = byte_count_d + moved_bytes[BYTE_CNT_W-1:0];
+    end
+
+    if (hold_accept) begin
+      if (skid_count_d == 0) begin
+        skid_data_d[0] = hold_data;
+        skid_keep_d[0] = hold_keep;
+        skid_last_d[0] = hold_last;
+        skid_count_d = 1;
+      end else if (skid_count_d == 1) begin
+        skid_data_d[1] = hold_data;
+        skid_keep_d[1] = hold_keep;
+        skid_last_d[1] = hold_last;
+        skid_count_d = 2;
+      end
     end
 
     if (out_advance) begin

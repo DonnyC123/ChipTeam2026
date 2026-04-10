@@ -6,8 +6,8 @@ from tb_utils.abstract_transactions import AbstractTransaction
 
 @dataclass
 class TxSchedulingSequenceItem(AbstractTransaction):
-    NUM_QUEUES = 2
-    QID_W = 1
+    NUM_QUEUES = 4
+    QID_W = 2
 
     q_valid_i: LogicArray = field(
         default_factory=lambda: LogicArray(0, TxSchedulingSequenceItem.NUM_QUEUES)

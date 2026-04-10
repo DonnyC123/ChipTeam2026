@@ -9,7 +9,7 @@ class TxSchedulingModel(GenericModel):
     Each expected item corresponds to a cycle where fifo_req_o should be high.
     """
 
-    def __init__(self, num_queues: int = 2, max_burst_beats: int = 256):
+    def __init__(self, num_queues: int = 4, max_burst_beats: int = 256):
         super().__init__()
         if max_burst_beats < 1:
             raise ValueError("max_burst_beats must be >= 1")
