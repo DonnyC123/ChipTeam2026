@@ -46,6 +46,8 @@ Lane mapping is little-endian:
 - Last accepted beat must satisfy:
   - `in_keep_i != 8'h00`
   - `in_keep_i` is LSB-contiguous
+- This S0-only implementation requires minimum frame length `>= 7` bytes.
+  Short frames (`<7` bytes) are treated as illegal input and trigger assertion in simulation.
 
 ## Continuous Stream Behavior
 

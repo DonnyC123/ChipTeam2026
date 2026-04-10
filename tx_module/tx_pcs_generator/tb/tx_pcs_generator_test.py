@@ -33,23 +33,54 @@ def _packet_to_axis_words(packet_bytes):
     return words
 
 
-async def _push_packet(testbase: TxPcsGeneratorTestBase, payload: bytes, out_ready_fn):
-    for data, keep, last in _packet_to_axis_words(payload):
-        while not int(testbase.dut.in_ready_o.value):
-            await testbase.sequence.add_cycle(
-                valid=False,
-                out_ready=out_ready_fn(),
-            )
-            await RisingEdge(testbase.dut.clk)
-
+async def _push_axis_word(
+    testbase: TxPcsGeneratorTestBase,
+    data: int,
+    keep: int,
+    last: int,
+    out_ready_fn,
+):
+    accepted = False
+    while not accepted:
+        ready_now = int(testbase.dut.in_ready_o.value)
         await testbase.sequence.add_cycle(
             valid=True,
             data=data,
             keep=keep,
             last=last,
+            out_ready=1,
+        )
+        await RisingEdge(testbase.dut.clk)
+        accepted = bool(ready_now)
+
+    # Leave one clean idle beat between words so a new word does not
+    # accidentally overwrite a held transaction in the generic driver.
+    await testbase.sequence.add_cycle(
+        valid=False,
+        out_ready=out_ready_fn(),
+    )
+    await RisingEdge(testbase.dut.clk)
+
+
+async def _wait_ingress_ready(testbase: TxPcsGeneratorTestBase, out_ready_fn):
+    while not int(testbase.dut.in_ready_o.value):
+        await testbase.sequence.add_cycle(
+            valid=False,
             out_ready=out_ready_fn(),
         )
         await RisingEdge(testbase.dut.clk)
+
+
+async def _push_packet(testbase: TxPcsGeneratorTestBase, payload: bytes, out_ready_fn):
+    for data, keep, last in _packet_to_axis_words(payload):
+        await _wait_ingress_ready(testbase, out_ready_fn)
+        await _push_axis_word(
+            testbase=testbase,
+            data=data,
+            keep=keep,
+            last=last,
+            out_ready_fn=out_ready_fn,
+        )
 
 
 async def _capture_blocks(dut, sink, stop_event: Event):
@@ -158,6 +189,43 @@ async def tx_pcs_generator_back_to_back_frames_test(dut):
 
 
 @cocotb.test()
+async def tx_pcs_generator_in_frame_input_bubble_test(dut):
+    """Inject input bubbles mid-frame; encoder must wait and preserve frame state."""
+    await initialize_tb(dut, clk_period_ns=10)
+    testbase = TxPcsGeneratorTestBase(dut)
+    await _flush_actual_queue(testbase)
+
+    payload = bytes(range(0x20, 0x20 + 20))
+    words = _packet_to_axis_words(payload)
+
+    first_data, first_keep, first_last = words[0]
+    await _push_axis_word(
+        testbase=testbase,
+        data=first_data,
+        keep=first_keep,
+        last=first_last,
+        out_ready_fn=lambda: 1,
+    )
+
+    await testbase.sequence.add_idle(cycles=24, out_ready=1)
+
+    for data, keep, last in words[1:]:
+        await _push_axis_word(
+            testbase=testbase,
+            data=data,
+            keep=keep,
+            last=last,
+            out_ready_fn=lambda: 1,
+        )
+
+    await testbase.sequence.add_idle(cycles=40, out_ready=1)
+
+    await testbase.driver.wait_until_idle()
+    await RisingEdge(dut.clk)
+    await testbase.scoreboard.check()
+
+
+@cocotb.test()
 async def tx_pcs_generator_random_protocol_stress_test(dut):
     """Random frame sizes + random out_ready jitter, with legal AXIS keep/last behavior."""
     await initialize_tb(dut, clk_period_ns=10)
@@ -174,7 +242,7 @@ async def tx_pcs_generator_random_protocol_stress_test(dut):
         await _push_packet(
             testbase,
             payload,
-            out_ready_fn=lambda: 1,
+            out_ready_fn=lambda: 1 if rng.random() < 0.78 else 0,
         )
 
         await testbase.sequence.add_idle(cycles=rng.randint(0, 4), out_ready=1)

@@ -42,6 +42,7 @@ module tx_pcs_generator #(
   localparam int SKID_DEPTH = 2;
   localparam int BYTE_BUF_BYTES = 64;
   localparam int BYTE_CNT_W = $clog2(BYTE_BUF_BYTES + 1);
+  localparam int INGRESS_BYTE_W = 4;
 
   logic [DATA_W-1:0]      skid_data_q [0:SKID_DEPTH-1];
   logic [DATA_W-1:0]      skid_data_d [0:SKID_DEPTH-1];
@@ -59,7 +60,9 @@ module tx_pcs_generator #(
 
   logic                   in_frame_q, in_frame_d;
   logic                   need_t0_q, need_t0_d;
-  logic                   frame_underflow_q, frame_underflow_d;
+  logic                   short_frame_error_q, short_frame_error_d;
+  logic                   ingress_in_pkt_q, ingress_in_pkt_d;
+  logic [INGRESS_BYTE_W-1:0] ingress_pkt_bytes_q, ingress_pkt_bytes_d;
 
   logic [DATA_W-1:0]      out_data_q, out_data_d;
   logic [CONTROL_W-1:0]   out_control_q, out_control_d;
@@ -162,6 +165,8 @@ module tx_pcs_generator #(
     int short_eop_pos;
     int scan_limit;
     int unsigned kbytes;
+    int unsigned accepted_bytes;
+    int unsigned pkt_total_bytes;
 
     for (int i = 0; i < SKID_DEPTH; i++) begin
       skid_data_d[i] = skid_data_q[i];
@@ -177,7 +182,9 @@ module tx_pcs_generator #(
     byte_count_d = byte_count_q;
     in_frame_d = in_frame_q;
     need_t0_d = need_t0_q;
-    frame_underflow_d = 1'b0;
+    short_frame_error_d = short_frame_error_q;
+    ingress_in_pkt_d = ingress_in_pkt_q;
+    ingress_pkt_bytes_d = ingress_pkt_bytes_q;
 
     out_data_d = out_data_q;
     out_control_d = out_control_q;
@@ -187,6 +194,29 @@ module tx_pcs_generator #(
     out_advance = (!out_valid_q) || out_ready_i;
 
     if (axis_accept) begin
+      accepted_bytes = in_last_i ? keep_lsb_count(in_keep_i) : KEEP_W;
+
+      if (!ingress_in_pkt_q) begin
+        pkt_total_bytes = accepted_bytes;
+      end else begin
+        pkt_total_bytes = ingress_pkt_bytes_q + accepted_bytes;
+      end
+
+      if (in_last_i) begin
+        if (pkt_total_bytes < 7) begin
+          short_frame_error_d = 1'b1;
+        end
+        ingress_in_pkt_d = 1'b0;
+        ingress_pkt_bytes_d = '0;
+      end else begin
+        ingress_in_pkt_d = 1'b1;
+        if (pkt_total_bytes >= 7) begin
+          ingress_pkt_bytes_d = INGRESS_BYTE_W'(7);
+        end else begin
+          ingress_pkt_bytes_d = pkt_total_bytes[INGRESS_BYTE_W-1:0];
+        end
+      end
+
       if (skid_count_d == 0) begin
         skid_data_d[0] = in_data_i;
         skid_keep_d[0] = in_keep_i;
@@ -327,9 +357,8 @@ module tx_pcs_generator #(
             in_frame_d = 1'b0;
             need_t0_d = 1'b0;
           end else begin
-            // AXIS source is expected to provide frame beats continuously.
+            // Wait for more bytes; do not report underflow or drop frame state.
             out_valid_d = 1'b0;
-            frame_underflow_d = 1'b1;
           end
         end
       end
@@ -342,7 +371,9 @@ module tx_pcs_generator #(
       byte_count_q <= '0;
       in_frame_q <= 1'b0;
       need_t0_q <= 1'b0;
-      frame_underflow_q <= 1'b0;
+      short_frame_error_q <= 1'b0;
+      ingress_in_pkt_q <= 1'b0;
+      ingress_pkt_bytes_q <= '0;
       out_data_q <= idle_block_payload();
       out_control_q <= SYNC_CONTROL;
       out_valid_q <= 1'b0;
@@ -361,7 +392,9 @@ module tx_pcs_generator #(
       byte_count_q <= byte_count_d;
       in_frame_q <= in_frame_d;
       need_t0_q <= need_t0_d;
-      frame_underflow_q <= frame_underflow_d;
+      short_frame_error_q <= short_frame_error_d;
+      ingress_in_pkt_q <= ingress_in_pkt_d;
+      ingress_pkt_bytes_q <= ingress_pkt_bytes_d;
       out_data_q <= out_data_d;
       out_control_q <= out_control_d;
       out_valid_q <= out_valid_d;
@@ -435,11 +468,11 @@ module tx_pcs_generator #(
   endproperty
   a_control_block_type_legal: assert property (p_control_block_type_legal);
 
-  property p_no_frame_underflow;
+  property p_no_short_frame_error;
     @(posedge clk) disable iff (rst)
-      !frame_underflow_q;
+      !$rose(short_frame_error_q);
   endproperty
-  a_no_frame_underflow: assert property (p_no_frame_underflow);
+  a_no_short_frame_error: assert property (p_no_short_frame_error);
 
   c_idle_block_seen: cover property (
       @(posedge clk) out_valid_o && (out_control_o == SYNC_CONTROL) && (out_data_o[7:0] == BLOCK_IDLE)
