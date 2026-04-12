@@ -10,6 +10,7 @@ pythonpath = [
 # update the testpath
 testpaths = [
     "descrambler/tb",
+    "rx_tb/tb"
 ]
 
 python_files = ["*_runner.py"]
