@@ -11,6 +11,7 @@ class EthernetAssemblerTransaction(AbstractTransaction):
     DATA_OUT_W = 64
     BYTES_OUT = DATA_OUT_W // 8
 
+    drop_frame_o: Logic = field(default_factory=lambda: Logic("0"))
     out_valid_o: Logic = field(default_factory=lambda: Logic("0"))
     out_data_o: LogicArray = field(
         default_factory=lambda: LogicArray("X" * EthernetAssemblerTransaction.DATA_OUT_W)
@@ -29,6 +30,7 @@ class EthernetAssemblerTransaction(AbstractTransaction):
     @classmethod
     def invalid_seq_item(cls) -> Self:
         return cls(
+            drop_frame_o=Logic(0),
             out_valid_o=Logic(0),
             out_data_o=LogicArray("0" * cls.DATA_OUT_W),
             bytes_valid_o=LogicArray("0" * cls.BYTES_OUT),
@@ -53,6 +55,7 @@ class EthernetAssemblerTransaction(AbstractTransaction):
     @property
     def to_data(self) -> Dict[str, Any]:
         return {
+            "drop_frame": bool(self._to_int(self.drop_frame_o, 0)),
             "out_valid": self.valid,
             "out_data": self._to_int(self.out_data_o, 0),
             "data_valid": self.data_valid,

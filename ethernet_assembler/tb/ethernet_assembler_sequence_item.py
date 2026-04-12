@@ -15,6 +15,7 @@ class EthernetAssemblerSequenceItem(AbstractTransaction):
     PAYLOAD_MASK = (1 << DATA_IN_W) - 1
     BIT_REVERSE_TABLE = tuple(int(f"{i:08b}"[::-1], 2) for i in range(256))
 
+    # Signals for the DUT
     input_data_i: LogicArray = field(
         default_factory=lambda: LogicArray("X" * EthernetAssemblerSequenceItem.DATA_IN_W)
     )
@@ -22,8 +23,18 @@ class EthernetAssemblerSequenceItem(AbstractTransaction):
         default_factory=lambda: LogicArray("X" * EthernetAssemblerSequenceItem.HEADER_W)
     )
     in_valid_i: Logic = field(default_factory=lambda: Logic("0"))
-    locked_i: Logic = field(default_factory=lambda: Logic("1"))
+    locked_i: Logic = field(default_factory=lambda: Logic("0"))
     cancel_frame_i: Logic = field(default_factory=lambda: Logic("0"))
+
+    # Flags for the model
+    no_valid_data: Logic = field(
+        default_factory=lambda: Logic("0"),
+        metadata={"model_only": True},
+    )
+    drop_frame: Logic = field(
+        default_factory=lambda: Logic("0"),
+        metadata={"model_only": True},
+    )
 
     @classmethod
     def _reverse_bits(cls, value: int, width: int) -> int:
@@ -99,6 +110,8 @@ class EthernetAssemblerSequenceItem(AbstractTransaction):
             in_valid_i=Logic(0),
             locked_i=Logic(1),
             cancel_frame_i=Logic(0),
+            no_valid_data=Logic(0),
+            drop_frame=Logic(0),
         )
 
     @property
@@ -117,4 +130,6 @@ class EthernetAssemblerSequenceItem(AbstractTransaction):
             "in_valid": bool(self._to_int(self.in_valid_i, 0)),
             "locked": bool(self._to_int(self.locked_i, 1)),
             "cancel_frame": bool(self._to_int(self.cancel_frame_i, 0)),
+            "no_valid_data": bool(self._to_int(self.no_valid_data, 0)),
+            "drop_frame": bool(self._to_int(self.drop_frame, 0)),
         }
