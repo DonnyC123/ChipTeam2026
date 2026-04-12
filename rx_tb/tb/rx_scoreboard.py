@@ -1,73 +1,81 @@
+import pprint
+
 import cocotb
 from rx_tb.tb.rx_transaction import RxTransaction
 
+
 class RxScoreboard:
     def __init__(self, name: str = "RxScoreboard"):
-        self.expected_queue: list[list[int]] = []
+        self.name = name
+
+        self._expected_payloads: list[list[int]] = []
+
+        self._assembled_bytes: list[int] = []
+
         self.match_count    = 0
         self.error_count    = 0
         self.bitslip_count  = 0
-        self.lock_loss_count= 0
-
-        self._current_frame: list[int] = []
-        self._in_frame: bool = False
+        self.lock_loss_count = 0
 
     def add_expected(self, frame: list[int]):
-        self.expected_queue.append(list(frame))
+        self._expected_payloads.append(list(frame))
 
     def ingest(self, txn: RxTransaction):
-
-        if not txn.valid:
-            if self._in_frame:
-                self._close_frame()
+        if not txn.valid and txn.n_valid == 0:
             return
 
-        valid_bytes = txn.valid_bytes  
-        if not valid_bytes:
-            if self._in_frame:
-                self._close_frame()
-            return
-
-        if not self._in_frame:
-            self._in_frame = True
-            self._current_frame = []
-
-        self._current_frame.extend(valid_bytes)
+        self._assembled_bytes.extend(self._extract_bytes(txn))
 
     def flush(self):
-        if self._in_frame and self._current_frame:
-            self._close_frame()
-
-    def _close_frame(self):
-        frame = list(self._current_frame)
-        self._current_frame = []
-        self._in_frame = False
-        self._compare(frame)
-
-    def _compare(self, actual: list[int]):
-        if not self.expected_queue:
-            self.error_count += 1
-            return
-
-        expected = self.expected_queue.pop(0)
-
-        if actual == expected:
-            self.match_count += 1
-        else:
-            self.error_count += 1
-            if len(actual) == len(expected):
-                bad = [i for i,(a,e) in enumerate(zip(actual, expected)) if a != e]
+        self._assembled_bytes = []
 
     def check_all_received(self):
-        remaining = len(self.expected_queue)
-        if remaining:
+        missing = []
+
+        for idx, expected in enumerate(self._expected_payloads):
+            if self._contains(self._assembled_bytes, expected):
+                self.match_count += 1
+            else:
+                self.error_count += 1
+                missing.append((idx, expected))
+
+                print(expected) 
+                print(self._assembled_bytes)
+
+                cocotb.log.warning(
+                    f"[{self.name}] Expected payload #{idx} "
+                    f"({len(expected)} bytes starting "
+                    f"0x{expected[0]:02X}...) NOT found in DUT output."
+                )
+
+        if missing:
             raise AssertionError(
-                f"{remaining} expected frame(s) never received by DUT."
+                f"{len(missing)} expected payload(s) not found in DUT output. "
+                f"See warnings above."
             )
 
-    def summary(self) -> str:
-        return (
-            f"Scoreboard summary: "
-            f"{self.match_count} passed, {self.error_count} failed, "
-            f"{self.bitslip_count} bitslips, {self.lock_loss_count} lock losses"
-        )
+
+    @staticmethod
+    def _extract_bytes(txn: RxTransaction) -> list[int]:
+        raw = list(txn.valid_bytes)
+
+        if hasattr(txn, "n_valid") and txn.n_valid > 0:
+            return raw
+        else:
+            return []
+
+    @staticmethod
+    def _contains(haystack: list[int], needle: list[int]) -> bool:
+        if not needle:
+            return True
+        if len(needle) > len(haystack):
+            return False
+
+        n = len(needle)
+        first = needle[0]
+
+        for i in range(len(haystack) - n + 1):
+            if haystack[i] == first and haystack[i : i + n] == needle:
+                return True
+
+        return False

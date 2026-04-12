@@ -18,7 +18,7 @@ class RxTransaction(AbstractTransaction):
     def valid_bytes(self) -> list[int]:
         mask  = int(self.bytes_valid_o)
         raw   = int(self.out_data_o).to_bytes(8, "little")
-        return [raw[i] for i in range(8) if (mask >> i) & 1]
+        return [raw[i] for i in range(7,-1,-1) if (mask >> i) & 1]
 
     @property
     def n_valid(self) -> int:

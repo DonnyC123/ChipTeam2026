@@ -27,11 +27,7 @@ module rx_top #(
     logic                 descrambled_valid;
 
     logic                 drop_frame;
-
-    // Pipeline registers to realign header bits and locked signal
-    // with the descrambler's one-cycle latency
     logic [1:0]           header_bits_q;
-    logic                 locked_q;
 
     bubbler #(
         .BIT_IN_W  (DATA_64_W),
@@ -74,10 +70,8 @@ module rx_top #(
     always_ff @(posedge clk) begin
         if (rst) begin
             header_bits_q <= '0;
-            locked_q      <= '0;
         end else begin
             header_bits_q <= bubbler_data_66[65:64];
-            locked_q      <= locked_o;
         end
     end
 
@@ -88,7 +82,7 @@ module rx_top #(
         .clk            (clk),
         .rst            (rst),
         .in_valid_i     (descrambled_valid),
-        .locked_i       (locked_q),          
+        .locked_i       (locked_o),          
         .cancel_frame_i (1'b0),
         .input_data_i   (descrambled_data_64),
         .header_bits_i  (header_bits_q),     

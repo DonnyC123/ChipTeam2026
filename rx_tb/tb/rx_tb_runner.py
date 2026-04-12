@@ -10,7 +10,7 @@ sources = [
     "ethernet_assembler/rtl/nic_global_package.sv",
     "ethernet_assembler/rtl/ethernet_assembler.sv",
     "bubbler/rtl/bubbler.sv",
-    "scrambler/rtl/descrambler.sv",
+    "descrambler/rtl/descrambler.sv",
     "rx_tb/rtl/rx_top.sv"
 ]
 

@@ -47,12 +47,12 @@ class RxSequence(GenericSequence):
         0xFF,  # TERM_L7: 7 valid data bytes
     ]
 
-    CTRL_HDR = 0b10
-    DATA_HDR = 0b01
+    CTRL_HDR = 0b01
+    DATA_HDR = 0b10
 
     def __init__(self, driver):
         super().__init__(driver)
-        self.scrambler_state = 0
+        self.scrambler_state = (1 << self.SCRAMBLER_STATE_W) - 1
         self._stream = BitStream()
 
     async def _push_word(self, header: int, payload_64: int):
@@ -73,40 +73,63 @@ class RxSequence(GenericSequence):
     def _build_ctrl_payload(self, ctrl_byte: int, data_bytes: list[int]) -> int:
         assert len(data_bytes) <= 7
         padded = data_bytes + [0] * (7 - len(data_bytes))
-        word = ctrl_byte << 56
+        word = ctrl_byte
         for i, b in enumerate(padded):
-            word |= (b & 0xFF) << (i * 8)
+            word |= (b & 0xFF) << ((i+1) * 8)
         return word
+
+    async def send_bubble(self):
+        await self._flush_stream()
+        await self._drive_64b(0, valid=False)
+
+    def bit_reverse_old(self, word):
+        payload2 = 0
+        for i in range(8):
+            byte = (word >> (i * 8)) & 0xFF
+            out_byte = 0
+            for j in range(8):
+                bit = (byte >> j) & 1
+                out_byte |= bit << (7-j)
+            payload2 |= out_byte << (i * 8)
+        return payload2
+
+    def bit_reverse(self, word):
+        payload2 = 0
+        for i in range(64):
+            bit = (word >> i) & 1
+            payload2 |= bit << (63 - i)
+        return payload2
 
     async def send_idles(self, count: int):
         idle_payload = self._build_ctrl_payload(
             self.IDLE_BLK, [self.IDLE_BLK] * 7
         )
         for _ in range(count):
-            await self._push_word(self.CTRL_HDR, idle_payload)
+            # Scramble the idle payload just like data words
+            await self._push_word(self.CTRL_HDR, self.scramble_64b(self.bit_reverse(idle_payload)))
 
-    async def send_bubble(self):
-        await self._flush_stream()
-        await self._drive_64b(0, valid=False)
 
     async def send_ethernet_frame(self, frame_bytes: list[int]):
-        padded = frame_bytes + [0] * max(0, 7 - len(frame_bytes))
+        # padded = frame_bytes + [0] * max(0, 7 - len(frame_bytes))
 
-        # SOF — no scrambling
-        sof_raw = self._build_ctrl_payload(self.SOF_L0, padded[:7])
-        await self._push_word(self.CTRL_HDR, sof_raw)
+        # SOF — scrambled
+        sof_raw = self._build_ctrl_payload(self.SOF_L0, frame_bytes[:7])
+        await self._push_word(self.CTRL_HDR, self.scramble_64b(self.bit_reverse(sof_raw)))
 
-        # Data words — scrambled
+        # Data words — scrambled (already correct)
         remaining = frame_bytes[7:]
         while len(remaining) > 7:
             word = int.from_bytes(remaining[:8], "little")
-            await self._push_word(self.DATA_HDR, self.scramble_64b(word))
+            await self._push_word(self.DATA_HDR, self.scramble_64b(self.bit_reverse(word)))
             remaining = remaining[8:]
 
-        # TERM — no scrambling
+        # TERM — scrambled
         n_valid  = len(remaining)
-        term_raw = self._build_ctrl_payload(self.TERM_CODES[n_valid], remaining)
-        await self._push_word(self.CTRL_HDR, term_raw)
+        remaining.append(self.TERM_CODES[n_valid]) 
+        for _ in range(7 - n_valid):
+            remaining.append(self.IDLE_BLK);
+        word2 = int.from_bytes(remaining[:8], "little")
+        await self._push_word(self.CTRL_HDR, self.scramble_64b(self.bit_reverse(word2)))
 
     async def send_back_to_back_frames(
         self,
