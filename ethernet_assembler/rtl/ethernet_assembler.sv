@@ -61,7 +61,7 @@ function automatic logic [DATA_OUT_W-1:0] bit_reverse(input logic [DATA_OUT_W-1:
 endfunction
 
 // Our team belives the sync/control bit are in network order
-// assign header_bits  = {header_bits_i[0], header_bits_i[1]}; // Filp sync/control bits from network -> regular order
+assign header_bits  = {header_bits_i[0], header_bits_i[1]}; // Filp sync/control bits from network -> regular order
 assign out_data_o_d = bit_reverse(input_data_i[DATA_OUT_W-1:0]);
 assign can_read     = in_valid_i && locked_i && !cancel_frame_i;
 assign control_byte = out_data_o_d[DATA_OUT_W-1 -: SIZE_BYTE];
@@ -82,6 +82,7 @@ always_comb begin
         drop_mode_d     = 1'b1;
 
     // Drop mode: ignore everything until cancel is low and a new start frame arrives
+    end else if (!in_valid_i) begin
     end else if (drop_mode_q) begin
         in_frame_d      = 1'b0;
         bytes_valid_o_d = '0;
@@ -125,29 +126,34 @@ always_comb begin
 
     // Valid input, currently in-frame, and control header.
     end else if (can_read && in_frame_q && (header_bits == CTRL_HDR)) begin
-        unique case (control_byte)
-        
-            // End Frame Headers
-            TERM_L0: begin bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; end
-            TERM_L1: begin bytes_valid_o_d = 8'b0100_0000; in_frame_d = 1'b0; end
-            TERM_L2: begin bytes_valid_o_d = 8'b0110_0000; in_frame_d = 1'b0; end
-            TERM_L3: begin bytes_valid_o_d = 8'b0111_0000; in_frame_d = 1'b0; end
-            TERM_L4: begin bytes_valid_o_d = 8'b0111_1000; in_frame_d = 1'b0; end
-            TERM_L5: begin bytes_valid_o_d = 8'b0111_1100; in_frame_d = 1'b0; end
-            TERM_L6: begin bytes_valid_o_d = 8'b0111_1110; in_frame_d = 1'b0; end
-            TERM_L7: begin bytes_valid_o_d = 8'b0111_1111; in_frame_d = 1'b0; end
-
-            // Ordered Set + Data Headers
-            OS_D6:  bytes_valid_o_d = 8'b0111_0111;
-            OS_D5:  bytes_valid_o_d = 8'b0111_0111;
-            OS_D3T: bytes_valid_o_d = 8'b0111_0000;
-            OS_D3B: bytes_valid_o_d = 8'b0000_0111;
-
-            default: begin bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; drop_frame_o_d = 1'b1; end
-        endcase
+        if (out_data_o_d[DATA_OUT_W-1 -: SIZE_BYTE] == TERM_L0) begin
+            bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; 
+        end else if (out_data_o_d[DATA_OUT_W-9 -: SIZE_BYTE] == TERM_L1) begin
+            bytes_valid_o_d = 8'b1000_0000; in_frame_d = 1'b0; 
+        end else if (out_data_o_d[DATA_OUT_W-17 -: SIZE_BYTE] == TERM_L2) begin
+            bytes_valid_o_d = 8'b1100_0000; in_frame_d = 1'b0; 
+        end else if (out_data_o_d[DATA_OUT_W-25 -: SIZE_BYTE] == TERM_L3) begin
+            bytes_valid_o_d = 8'b1110_0000; in_frame_d = 1'b0;
+        end else if (out_data_o_d[DATA_OUT_W-33 -: SIZE_BYTE] == TERM_L4) begin
+            bytes_valid_o_d = 8'b1111_0000; in_frame_d = 1'b0;
+        end else if (out_data_o_d[DATA_OUT_W-41 -: SIZE_BYTE] == TERM_L5) begin
+            bytes_valid_o_d = 8'b1111_1000; in_frame_d = 1'b0; 
+        end else if (out_data_o_d[DATA_OUT_W-49 -: SIZE_BYTE] == TERM_L6) begin
+            bytes_valid_o_d = 8'b1111_1100; in_frame_d = 1'b0; 
+        end else if (out_data_o_d[DATA_OUT_W-57 -: SIZE_BYTE] == TERM_L7) begin
+            bytes_valid_o_d = 8'b1111_1110; in_frame_d = 1'b0; 
+        end else begin
+            drop_frame_o_d = 1'b1;
+        end
+    end
+            // // Ordered Set + Data Headers
+            // OS_D6:  bytes_valid_o_d = 8'b0111_0111;
+            // OS_D5:  bytes_valid_o_d = 8'b0111_0111;
+            // OS_D3T: bytes_valid_o_d = 8'b0111_0000;
+            // OS_D3B: bytes_valid_o_d = 8'b0000_0111;
 
     // Valid input, currently in frame and its a data header.
-    end else if (can_read && (header_bits == DATA_HDR) && in_frame_q) begin
+    else if (can_read && (header_bits == DATA_HDR) && in_frame_q) begin
         bytes_valid_o_d = 8'b1111_1111;
     end
 
