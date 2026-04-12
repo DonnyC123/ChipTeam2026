@@ -84,7 +84,7 @@ always_comb begin
         drop_mode_d     = 1'b1;
 
     // Drop mode: ignore everything until cancel is low and a new start frame arrives
-    end else if (drop_mode_q) begin
+    end else if (can_read && drop_mode_q) begin
         in_frame_d      = 1'b0;
         bytes_valid_o_d = '0;
 
@@ -110,7 +110,7 @@ always_comb begin
         end
 
     // Invalid sync header or not locked while in frame.
-    end else if (in_frame_q && (!locked_i || (CTRL_HDR != header_bits && DATA_HDR != header_bits))) begin
+    end else if (in_valid_i && in_frame_q && (!locked_i || (CTRL_HDR != header_bits && DATA_HDR != header_bits))) begin
         drop_frame_o_d  = 1'b1;
         in_frame_d      = 1'b0;
         bytes_valid_o_d = '0;
