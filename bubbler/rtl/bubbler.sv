@@ -18,21 +18,24 @@ logic [BIT_OUT_W-1:0]           output_d, output_q;
 logic                           valid_d, valid_q;
 
 always_comb begin
-    remainder_d      = remainder_q;
-    bits_remaining_d = bits_remaining_q; 
+    //remainder_d      = remainder_q;
+     
     output_d         = '0;
     valid_d          = '0;
-    if (valid_i) begin
-        if ((bits_remaining_q + BIT_IN_W) < BIT_OUT_W) begin
-            remainder_d      = _64b_i;
-            bits_remaining_d = BIT_IN_W;
-        end else begin
-            output_d         = (66'(_64b_i) << bits_remaining_q) & 66'h3FFFFFFFFFFFFFFFF;
-            output_d         = output_d + remainder_q;
+    if (valid_i && ((bits_remaining_q + BIT_IN_W) < BIT_OUT_W)) begin
+        remainder_d      = _64b_i;
+        bits_remaining_d = BIT_IN_W;
+    end else begin
+        output_d         = (66'(_64b_i) << bits_remaining_q) & 66'h3FFFFFFFFFFFFFFFF;
+        output_d         = output_d + remainder_q;
+        if (valid_i) begin
             remainder_d      = (66'(_64b_i) >> (BIT_OUT_W - bits_remaining_q )) & 66'h3FFFFFFFFFFFFFFFF;
             bits_remaining_d = bits_remaining_q - (BIT_OUT_W - BIT_IN_W);
-            valid_d          = 1'b1;
+        end else begin
+            remainder_d      = remainder_q;
+            bits_remaining_d = bits_remaining_q;
         end
+        valid_d          = valid_i;
     end
 end
 
