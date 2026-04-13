@@ -1,15 +1,22 @@
 // Ethernet 'Assembler' Planning:
-// NOTE: The sequence item/transaction files dont exist yet.
 // Inputs:
-// - 66 bits of input_data_i (the MSB and MSB-1 are control signals, rest is data)
+// - 64 bits of input_data_i
+// - 2 header bits (techinally the left most 2 bits of the 66b stream)
 // - an bool in_valid_i signal which indicates if input_data_i is valid
 // - a 'locked_i' bool signals which indicates that we are able to process our data
+// - cancel_frame_i signal coming from the fifo we are sending data to
+// IF that cancel frame signal goes high at ANY time (even for 1 cycle) then we drop the current frame 
+// and ignore all data untill we see another start frame signal when control is low
+
 // Outputs:
 // - A bool out_valid_o signal that indicates if any of the output bytes are valid
 // - 64 bits called out_data_o (which is the input 66 minus the 2 control bits)
 // - an array of 8 data_valid signals (bools) which indicate which bytes of out_data_o are valid
+// - drop_frame_o just tells the collector FIFO to ignore the current frame that its collecting
+
 // Functionaility:
-// - We need to parse the control bits (the MSB and MSB-1) from input_data_i
+// - We need to look at the control bits
+// - everything comes in in network order
 // - If those bits are equal to 10 this is a control payload, and we need to check the first byte of the data (bits 63:56) to decide what to do
 //     - We reference the 64/66b chart to decide if this is a start/end/idle frame
 //     - We set the data_valid array based on that
