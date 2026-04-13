@@ -41,7 +41,7 @@ def test_tx_pcs_generator():
 
     sim.test(
         hdl_toplevel="tx_pcs_generator",
-        test_module="tx_pcs_generator.tb.tx_pcs_generator_test",
+        test_module="tx_pcs_generator_test",
         waves=waves,
         test_args=modelsim_sim_args,
         extra_env={

@@ -10,12 +10,20 @@ This module converts AXI-Stream frame bytes into 64b/66b blocks for the TX pipel
   - `in_last_i`
   - `in_valid_i`
   - `in_ready_o`
-- `out_*` is 64b/66b block output:
+- `out_*` is 64b/66b block output toward scrambler/debubbler path:
   - `out_control_o[1:0]` is **sync header**
     - `2'b01`: data block
     - `2'b10`: control block
   - `out_data_o[63:0]` is 66b payload bits `[65:2]`
   - `out_valid_o`/`out_ready_i` use ready/valid handshake
+
+## TX Chain Integration Contract
+
+- PCS -> Scrambler signals: `out_control_o[1:0]`, `out_data_o[63:0]`, `out_valid_o`.
+- If downstream logic has no backpressure support, tie `out_ready_i` to `1'b1`.
+- Scrambler is expected to scramble **payload** (`out_data_o`) only.
+- Sync header (`out_control_o`) is sideband and must stay aligned with the corresponding payload block.
+- Downstream gearbox/debubbler interpretation must use `{sync_header, payload64}` of the same cycle.
 
 ## Block Encoding
 
@@ -49,13 +57,14 @@ Lane mapping is little-endian:
 - This S0-only implementation requires minimum frame length `>= 7` bytes.
   Short frames (`<7` bytes) are treated as illegal input and trigger assertion in simulation.
 
-## Continuous Stream Behavior
+## Continuous Stream and Stall Behavior
 
 - With no frame bytes available, module emits idle control blocks.
 - During `out_valid_o && !out_ready_i`, `out_control_o/out_data_o` remain stable.
+- While in-frame, if buffered bytes are temporarily insufficient to legally emit next block,
+  the module waits for more input bytes (`out_valid_o` may deassert) and does not drop frame state.
 
 ## Integration Notes (Team Contract)
 
-- Scrambler consumes `out_data_o[63:0]` payload path.
-- Sync header (`out_control_o[1:0]`) is carried on control sideband to downstream gearbox/debubbler path.
 - Downstream must interpret `{out_control_o, out_data_o}` using the same block-type table above.
+- This module does not generate ordered sets/fault blocks in current scope.

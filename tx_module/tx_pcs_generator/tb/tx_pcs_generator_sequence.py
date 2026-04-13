@@ -1,7 +1,7 @@
 from cocotb.types import Logic, LogicArray
 
 from tb_utils.generic_sequence import GenericSequence
-from tx_pcs_generator.tb.tx_pcs_generator_sequence_item import TxPcsGeneratorSequenceItem
+from tx_pcs_generator_sequence_item import TxPcsGeneratorSequenceItem
 
 
 class TxPcsGeneratorSequence(GenericSequence):

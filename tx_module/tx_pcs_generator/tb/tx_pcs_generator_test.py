@@ -4,7 +4,7 @@ import cocotb
 from cocotb.triggers import Event, RisingEdge
 
 from tb_utils.tb_common import initialize_tb
-from tx_pcs_generator.tb.tx_pcs_generator_test_base import TxPcsGeneratorTestBase
+from tx_pcs_generator_test_base import TxPcsGeneratorTestBase
 
 
 SYNC_DATA = 0b01

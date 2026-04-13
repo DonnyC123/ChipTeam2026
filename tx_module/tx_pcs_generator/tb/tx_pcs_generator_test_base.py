@@ -4,10 +4,10 @@ from tb_utils.generic_monitor import GenericValidMonitor
 from tb_utils.generic_scoreboard import GenericScoreboard
 from tb_utils.generic_test_base import GenericTestBase
 
-from tx_pcs_generator.tb.tx_pcs_generator_model import TxPcsGeneratorModel
-from tx_pcs_generator.tb.tx_pcs_generator_out_transaction import TxPcsGeneratorOutTransaction
-from tx_pcs_generator.tb.tx_pcs_generator_sequence import TxPcsGeneratorSequence
-from tx_pcs_generator.tb.tx_pcs_generator_sequence_item import TxPcsGeneratorSequenceItem
+from tx_pcs_generator_model import TxPcsGeneratorModel
+from tx_pcs_generator_out_transaction import TxPcsGeneratorOutTransaction
+from tx_pcs_generator_sequence import TxPcsGeneratorSequence
+from tx_pcs_generator_sequence_item import TxPcsGeneratorSequenceItem
 
 
 class TxPcsGeneratorTestBase(GenericTestBase):
