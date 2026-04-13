@@ -21,7 +21,7 @@ async def sanity_test(dut):
     await testbase.scoreboard.check()
 
 
-# removed test to make testing faster. It works I swear
+# removed test to make testing faster. It works I swear. Please read it
 # @cocotb.test()
 # async def intermediate_test(dut):
 #     await initialize_tb(dut, clk_period_ns=10)
