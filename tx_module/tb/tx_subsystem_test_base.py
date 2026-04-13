@@ -1,7 +1,7 @@
-from tb.tx_subsystem_model import TxSubsystemModel
-from tb.tx_subsystem_sequence import TxSubsystemSequence
-from tb.tx_subsystem_sequence_item import TxSubsystemSequenceItem
-from tb.tx_subsystem_out_transaction import TxSubsystemOutTransaction
+from tx_subsystem_model import TxSubsystemModel
+from tx_subsystem_sequence import TxSubsystemSequence
+from tx_subsystem_sequence_item import TxSubsystemSequenceItem
+from tx_subsystem_out_transaction import TxSubsystemOutTransaction
 
 from tb_utils.generic_checker import GenericChecker
 from tb_utils.generic_drivers import GenericDriver

@@ -13,6 +13,8 @@ sources = [
     str(TX_MODULE_DIR / "tx_fifo" / "rtl" / "tx_fifo.sv"),
     str(TX_MODULE_DIR / "tx_scheduling" / "rtl" / "tx_scheduling_pkg.sv"),
     str(TX_MODULE_DIR / "tx_scheduling" / "rtl" / "tx_scheduling.sv"),
+    str(TX_MODULE_DIR / "rtl" / "tx_axis_if.sv"),
+    str(TX_MODULE_DIR / "rtl" / "tx_subsystem_pkg.sv"),
     str(TX_MODULE_DIR / "rtl" / "tx_subsystem.sv"),
     str(TB_DIR / "tx_subsystem_tb_top.sv"),
 ]
@@ -50,7 +52,7 @@ def test_tx_subsystem():
 
     sim.test(
         hdl_toplevel="tx_subsystem_tb_top",
-        test_module="tb.tx_subsystem_test",
+        test_module="tx_subsystem_test",
         waves=waves,
         test_args=modelsim_sim_args,
         extra_env={

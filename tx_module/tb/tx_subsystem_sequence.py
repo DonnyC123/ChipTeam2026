@@ -1,6 +1,6 @@
 from cocotb.types import Logic, LogicArray
 
-from tb.tx_subsystem_sequence_item import TxSubsystemSequenceItem
+from tx_subsystem_sequence_item import TxSubsystemSequenceItem
 from tb_utils.generic_sequence import GenericSequence
 
 

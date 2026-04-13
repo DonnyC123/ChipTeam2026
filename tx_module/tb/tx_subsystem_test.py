@@ -3,8 +3,8 @@ import random
 import cocotb
 from cocotb.triggers import Event, RisingEdge
 
-from tb.tx_subsystem_test_base import TxSubsystemTestBase
-from tb.tx_subsystem_sequence_item import TxSubsystemSequenceItem
+from tx_subsystem_test_base import TxSubsystemTestBase
+from tx_subsystem_sequence_item import TxSubsystemSequenceItem
 from tb_utils.tb_common import initialize_tb
 
 
