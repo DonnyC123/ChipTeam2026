@@ -123,11 +123,9 @@ class RxSequence(GenericSequence):
 
         # TERM — scrambled
         n_valid  = len(remaining)
-        remaining.append(self.TERM_CODES[n_valid]) 
-        for _ in range(7 - n_valid):
-            remaining.append(self.IDLE_BLK);
-        word2 = int.from_bytes(remaining[:8], "little")
-        await self._push_word(self.CTRL_HDR, self.scramble_64b(self.bit_reverse(word2)))
+
+        term_raw = self._build_ctrl_payload(self.TERM_CODES[n_valid], remaining)
+        await self._push_word(self.CTRL_HDR, self.scramble_64b(self.bit_reverse(term_raw)))
 
     async def send_back_to_back_frames(
         self,
