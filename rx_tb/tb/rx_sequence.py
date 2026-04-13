@@ -110,8 +110,6 @@ class RxSequence(GenericSequence):
 
 
     async def send_ethernet_frame(self, frame_bytes: list[int]):
-        # padded = frame_bytes + [0] * max(0, 7 - len(frame_bytes))
-
         # SOF — scrambled
         sof_raw = self._build_ctrl_payload(self.SOF_L0, frame_bytes[:7])
         await self._push_word(self.CTRL_HDR, self.scramble_64b(self.bit_reverse(sof_raw)))

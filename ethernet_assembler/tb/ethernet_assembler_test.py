@@ -1,936 +1,650 @@
 import os
 import random
-from dataclasses import dataclass
 
 import cocotb
-from cocotb.triggers import RisingEdge, Timer
+from cocotb.triggers import ReadOnly, RisingEdge
 
-from ethernet_assembler.tb.ethernet_assembler_sequence import EthernetAssemblerSequence
-from ethernet_assembler.tb.ethernet_assembler_sequence_item import EthernetAssemblerSequenceItem
-from ethernet_assembler.tb.ethernet_assembler_tb_common import initialize_tb, reset_dut
 from ethernet_assembler.tb.ethernet_assembler_test_base import EthernetAssemblerTestBase
-
-HEADER_W = EthernetAssemblerSequence.HEADER_W
-PAYLOAD_W = EthernetAssemblerSequence.PAYLOAD_W
-BLOCK_TYPE_W = EthernetAssemblerSequence.BLOCK_TYPE_W
-CONTROL_DATA_W = PAYLOAD_W - BLOCK_TYPE_W
-PAYLOAD_MASK = (1 << PAYLOAD_W) - 1
-
-DATA_HDR = EthernetAssemblerSequence.DATA_SYNC_HEADER
-CTRL_HDR = EthernetAssemblerSequence.CONTROL_SYNC_HEADER
-BAD_HDR_00 = EthernetAssemblerSequence.SYNC_HEADER_BAD1
-BAD_HDR_11 = EthernetAssemblerSequence.SYNC_HEADER_BAD2
-
-SOF_L0 = EthernetAssemblerSequence.START_BLOCKS[0]
-SOF_L4 = EthernetAssemblerSequence.START_BLOCKS[4]
-TERM_L0 = EthernetAssemblerSequence.TERM_BLOCKS[0]
-TERM_L7 = EthernetAssemblerSequence.TERM_BLOCKS[7]
-IDLE_BLK = EthernetAssemblerSequence.IDLE_BLOCK
-
-TERM_VALID_MASKS = {
-    EthernetAssemblerSequence.TERM_BLOCKS[0]: 0x00,
-    EthernetAssemblerSequence.TERM_BLOCKS[1]: 0x40,
-    EthernetAssemblerSequence.TERM_BLOCKS[2]: 0x60,
-    EthernetAssemblerSequence.TERM_BLOCKS[3]: 0x70,
-    EthernetAssemblerSequence.TERM_BLOCKS[4]: 0x78,
-    EthernetAssemblerSequence.TERM_BLOCKS[5]: 0x7C,
-    EthernetAssemblerSequence.TERM_BLOCKS[6]: 0x7E,
-    EthernetAssemblerSequence.TERM_BLOCKS[7]: 0x7F,
-}
-
-ORDERED_SET_VALID_MASKS = {
-    EthernetAssemblerSequence.ORDERED_SET_BLOCKS["OS_D6"]: 0x77,
-    EthernetAssemblerSequence.ORDERED_SET_BLOCKS["OS_D5"]: 0x77,
-    EthernetAssemblerSequence.ORDERED_SET_BLOCKS["OS_D3T"]: 0x70,
-    EthernetAssemblerSequence.ORDERED_SET_BLOCKS["OS_D3B"]: 0x07,
-}
-
-CONTRACT_MATRIX = {
-    "idle": {
-        "data": {"drop_frame": 0, "out_valid": 0, "bytes_valid": 0x00, "next_state": "idle"},
-        "term": {"drop_frame": 0, "out_valid": 0, "bytes_valid": 0x00, "next_state": "idle"},
-        "start_l0": {
-            "drop_frame": 0,
-            "out_valid": 1,
-            "bytes_valid": 0x7F,
-            "next_state": "in_frame",
-        },
-        "start_l4": {
-            "drop_frame": 0,
-            "out_valid": 1,
-            "bytes_valid": 0x07,
-            "next_state": "in_frame",
-        },
-    },
-    "in_frame": {
-        "data": {"drop_frame": 0, "out_valid": 1, "bytes_valid": 0xFF, "next_state": "in_frame"},
-        "term_l7": {
-            "drop_frame": 0,
-            "out_valid": 1,
-            "bytes_valid": 0x7F,
-            "next_state": "idle",
-        },
-        "double_sof": {
-            "drop_frame": 1,
-            "out_valid": 0,
-            "bytes_valid": 0x00,
-            "next_state": "idle",
-        },
-        "idle_corrupt": {
-            "drop_frame": 1,
-            "out_valid": 0,
-            "bytes_valid": 0x00,
-            "next_state": "idle",
-        },
-        "unknown_corrupt": {
-            "drop_frame": 1,
-            "out_valid": 0,
-            "bytes_valid": 0x00,
-            "next_state": "idle",
-        },
-        "bad_header": {
-            "drop_frame": 1,
-            "out_valid": 0,
-            "bytes_valid": 0x00,
-            "next_state": "idle",
-        },
-        "cancel": {
-            "drop_frame": None,
-            "out_valid": 0,
-            "bytes_valid": 0x00,
-            "next_state": "cancel_suppressed",
-        },
-    },
-    "cancel_suppressed": {
-        "any_while_cancel_high": {
-            "drop_frame": None,
-            "out_valid": 0,
-            "bytes_valid": 0x00,
-            "next_state": "cancel_suppressed",
-        },
-        "cancel_low_non_sof": {
-            "drop_frame": 0,
-            "out_valid": 0,
-            "bytes_valid": 0x00,
-            "next_state": "cancel_suppressed",
-        },
-        "cancel_low_sof_l0": {
-            "drop_frame": 0,
-            "out_valid": 1,
-            "bytes_valid": 0x7F,
-            "next_state": "in_frame",
-        },
-        "cancel_low_sof_l4": {
-            "drop_frame": 0,
-            "out_valid": 1,
-            "bytes_valid": 0x07,
-            "next_state": "in_frame",
-        },
-    },
-}
+from tb_utils.tb_common import initialize_tb
 
 
-@dataclass
-class ContractState:
-    in_frame: bool = False
-    cancel_suppressed: bool = False
+def _env_int(name: str, default: int) -> int:
+    return int(os.getenv(name, str(default)), 0)
 
 
-def _compose_control_payload(block_type: int, payload_low: int = 0) -> int:
-    payload_low_mask = (1 << CONTROL_DATA_W) - 1
-    return ((block_type & 0xFF) << CONTROL_DATA_W) | (payload_low & payload_low_mask)
+def _env_flag(name: str, default: bool = False) -> bool:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+    return raw_value.strip().lower() in {"1", "true", "t", "yes", "y", "on"}
 
 
-def _compose_raw_block(sync_header: int, payload: int) -> int:
-    return ((sync_header & ((1 << HEADER_W) - 1)) << PAYLOAD_W) | (payload & PAYLOAD_MASK)
-
-
-def _to_network_input(raw_input_data: int) -> int:
-    return EthernetAssemblerSequenceItem._to_network_order(raw_input_data)
-
-
-async def _prime_inputs(dut):
-    dut.input_data_i.value = 0
-    dut.in_valid_i.value = 0
-    dut.locked_i.value = 1
-    dut.cancel_frame_i.value = 0
-    await RisingEdge(dut.clk)
-    await Timer(1, unit="ns")
-
-
-async def _drive_block(
-    dut,
-    *,
-    sync_header: int,
-    payload: int,
-    in_valid: bool = True,
-    locked: bool = True,
-    cancel_frame: bool = False,
-):
-    raw_input_data = _compose_raw_block(sync_header=sync_header, payload=payload)
-    dut.input_data_i.value = _to_network_input(raw_input_data)
-    dut.in_valid_i.value = int(in_valid)
-    dut.locked_i.value = int(locked)
-    dut.cancel_frame_i.value = int(cancel_frame)
-
-    await RisingEdge(dut.clk)
-    await Timer(1, unit="ns")
-
-    obs = {
+def _sample_outputs(dut) -> dict[str, int]:
+    return {
         "drop_frame": int(dut.drop_frame_o.value),
         "out_valid": int(dut.out_valid_o.value),
         "bytes_valid": int(dut.bytes_valid_o.value),
     }
-    return obs
 
 
-async def _drive_control(
-    dut,
-    *,
-    block_type: int,
-    payload_low: int = 0,
-    in_valid: bool = True,
-    locked: bool = True,
-    cancel_frame: bool = False,
-):
-    payload = _compose_control_payload(block_type=block_type, payload_low=payload_low)
-    return await _drive_block(
-        dut,
-        sync_header=CTRL_HDR,
-        payload=payload,
-        in_valid=in_valid,
-        locked=locked,
-        cancel_frame=cancel_frame,
-    )
+async def _drain_driver_and_capture(testbase: EthernetAssemblerTestBase, settle_cycles: int = 2):
+    samples = []
 
+    while await testbase.driver.busy():
+        await RisingEdge(testbase.dut.clk)
+        await ReadOnly()
+        samples.append(_sample_outputs(testbase.dut))
 
-async def _drive_data(
-    dut,
-    *,
-    payload: int,
-    in_valid: bool = True,
-    locked: bool = True,
-    cancel_frame: bool = False,
-):
-    return await _drive_block(
-        dut,
-        sync_header=DATA_HDR,
-        payload=payload,
-        in_valid=in_valid,
-        locked=locked,
-        cancel_frame=cancel_frame,
-    )
+    for _ in range(settle_cycles):
+        await RisingEdge(testbase.dut.clk)
+        await ReadOnly()
+        samples.append(_sample_outputs(testbase.dut))
 
+    return samples
 
-def _assert_observation(
-    obs: dict,
-    *,
-    label: str,
-    drop_frame: int | None = None,
-    out_valid: int | None = None,
-    bytes_valid: int | None = None,
-):
-    if drop_frame is not None:
-        assert obs["drop_frame"] == drop_frame, (
-            f"{label}: drop_frame mismatch (expected {drop_frame}, got {obs['drop_frame']})"
-        )
 
-    if out_valid is not None:
-        assert obs["out_valid"] == out_valid, (
-            f"{label}: out_valid mismatch (expected {out_valid}, got {obs['out_valid']})"
-        )
-
-    if bytes_valid is not None:
-        assert obs["bytes_valid"] == bytes_valid, (
-            f"{label}: bytes_valid mismatch (expected 0x{bytes_valid:02X}, got 0x{obs['bytes_valid']:02X})"
-        )
-
-
-def _assert_from_contract_matrix(obs: dict, *, state: str, stimulus: str, label: str):
-    expected = CONTRACT_MATRIX[state][stimulus]
-    _assert_observation(
-        obs,
-        label=label,
-        drop_frame=expected["drop_frame"],
-        out_valid=expected["out_valid"],
-        bytes_valid=expected["bytes_valid"],
-    )
-
-
-def _log_trace(seed: int, step: int, action: str, obs: dict, state: ContractState):
-    cocotb.log.info(
-        "seed=0x%08X step=%04d action=%s -> drop=%d out_valid=%d bytes_valid=0x%02X (in_frame=%d cancel_suppressed=%d)",
-        seed,
-        step,
-        action,
-        obs["drop_frame"],
-        obs["out_valid"],
-        obs["bytes_valid"],
-        int(state.in_frame),
-        int(state.cancel_suppressed),
-    )
-
-
-def _pick_invalid_control_block_type(rng: random.Random) -> int:
-    while True:
-        candidate = rng.getrandbits(BLOCK_TYPE_W)
-        if candidate not in EthernetAssemblerSequence.VALID_CONTROL_BLOCK_TYPES:
-            return candidate
-
-
-@cocotb.test()
-async def contract_matrix_direct_test(dut):
-    await initialize_tb(dut, clk_period_ns=10)
-    await _prime_inputs(dut)
-
-    obs = await _drive_data(dut, payload=0x0102030405060708)
-    _assert_from_contract_matrix(obs, state="idle", stimulus="data", label="idle_data")
-
-    obs = await _drive_control(dut, block_type=TERM_L0, payload_low=0x1020304050607)
-    _assert_from_contract_matrix(obs, state="idle", stimulus="term", label="idle_term")
-
-    obs = await _drive_control(dut, block_type=SOF_L0, payload_low=0x11223344556677)
-    _assert_from_contract_matrix(obs, state="idle", stimulus="start_l0", label="idle_sof_l0")
-
-    obs = await _drive_data(dut, payload=0x2122232425262728)
-    _assert_from_contract_matrix(obs, state="in_frame", stimulus="data", label="in_frame_data")
-
-    obs = await _drive_control(dut, block_type=TERM_L7, payload_low=0x31323334353637)
-    _assert_from_contract_matrix(obs, state="in_frame", stimulus="term_l7", label="in_frame_term_l7")
-
-    # Double-end out-of-frame must be ignored.
-    obs = await _drive_control(dut, block_type=TERM_L7, payload_low=0x41424344454647)
-    _assert_from_contract_matrix(obs, state="idle", stimulus="term", label="idle_double_term")
-
-    await reset_dut(dut, 20)
-    await _prime_inputs(dut)
-    obs = await _drive_control(dut, block_type=SOF_L4, payload_low=0x51525354555657)
-    _assert_from_contract_matrix(obs, state="idle", stimulus="start_l4", label="idle_sof_l4")
-
-
-@cocotb.test()
-async def corruption_drop_single_pulse_test(dut):
-    await initialize_tb(dut, clk_period_ns=10)
-    await _prime_inputs(dut)
-
-    # Back-to-back double start: drop once on first corruption offense.
-    obs = await _drive_control(dut, block_type=SOF_L0, payload_low=0x01020304050607)
-    _assert_observation(obs, label="bb_sof0", drop_frame=0, out_valid=1, bytes_valid=0x7F)
-
-    obs = await _drive_control(dut, block_type=SOF_L4, payload_low=0x11121314151617)
-    _assert_observation(obs, label="bb_sof1_corrupt", drop_frame=1, out_valid=0, bytes_valid=0x00)
-
-    obs = await _drive_control(dut, block_type=IDLE_BLK, payload_low=0x21222324252627)
-    _assert_observation(obs, label="bb_post_corrupt_idle", drop_frame=0, out_valid=0, bytes_valid=0x00)
-
-    obs = await _drive_control(dut, block_type=SOF_L0, payload_low=0x31323334353637)
-    _assert_observation(obs, label="bb_recover_sof", drop_frame=0, out_valid=1, bytes_valid=0x7F)
-
-    # Spaced double start corruption.
-    await reset_dut(dut, 20)
-    await _prime_inputs(dut)
-    await _drive_control(dut, block_type=SOF_L0, payload_low=0x41424344454647)
-    await _drive_data(dut, payload=0x5152535455565758)
-
-    obs = await _drive_control(dut, block_type=SOF_L4, payload_low=0x61626364656667)
-    _assert_observation(obs, label="spaced_double_sof", drop_frame=1, out_valid=0, bytes_valid=0x00)
-
-    obs = await _drive_data(dut, payload=0x7172737475767778)
-    _assert_observation(obs, label="spaced_post_corrupt_data", drop_frame=0, out_valid=0, bytes_valid=0x00)
-
-    # In-frame junk/unknown/bad-header each cause one corruption drop and end frame.
-    await reset_dut(dut, 20)
-    await _prime_inputs(dut)
-    await _drive_control(dut, block_type=SOF_L0, payload_low=0x81828384858687)
-
-    obs = await _drive_control(dut, block_type=IDLE_BLK, payload_low=0x91929394959697)
-    _assert_observation(obs, label="in_frame_idle_corrupt", drop_frame=1, out_valid=0, bytes_valid=0x00)
-
-    obs = await _drive_control(dut, block_type=0x12, payload_low=0xA1A2A3A4A5A6A7)
-    _assert_observation(obs, label="post_idle_unknown_no_extra_drop", drop_frame=0, out_valid=0, bytes_valid=0x00)
-
-    await reset_dut(dut, 20)
-    await _prime_inputs(dut)
-    await _drive_control(dut, block_type=SOF_L0, payload_low=0xB1B2B3B4B5B6B7)
-
-    obs = await _drive_control(dut, block_type=0x12, payload_low=0xC1C2C3C4C5C6C7)
-    _assert_observation(obs, label="in_frame_unknown_corrupt", drop_frame=1, out_valid=0, bytes_valid=0x00)
-
-    obs = await _drive_block(dut, sync_header=BAD_HDR_00, payload=0xD1D2D3D4D5D6D7D8)
-    _assert_observation(obs, label="post_unknown_bad_hdr_no_extra_drop", drop_frame=0, out_valid=0, bytes_valid=0x00)
-
-    await reset_dut(dut, 20)
-    await _prime_inputs(dut)
-    await _drive_control(dut, block_type=SOF_L0, payload_low=0xE1E2E3E4E5E6E7)
-
-    obs = await _drive_block(dut, sync_header=BAD_HDR_11, payload=0xF1F2F3F4F5F6F7F8)
-    _assert_observation(obs, label="in_frame_bad_header_corrupt", drop_frame=1, out_valid=0, bytes_valid=0x00)
-
-    obs = await _drive_control(dut, block_type=TERM_L7, payload_low=0x01020304050607)
-    _assert_observation(obs, label="post_bad_header_term_no_extra_drop", drop_frame=0, out_valid=0, bytes_valid=0x00)
-
-
-@cocotb.test()
-async def cancel_suppression_contract_test(dut):
-    await initialize_tb(dut, clk_period_ns=10)
-    await _prime_inputs(dut)
-
-    # Enter frame and stream payload.
-    obs = await _drive_control(dut, block_type=SOF_L0, payload_low=0x01020304050607)
-    _assert_observation(obs, label="cancel_sof", drop_frame=0, out_valid=1, bytes_valid=0x7F)
-
-    obs = await _drive_data(dut, payload=0x1112131415161718)
-    _assert_observation(obs, label="cancel_data_before", drop_frame=0, out_valid=1, bytes_valid=0xFF)
-
-    # Canceled cycles do not constrain drop_frame.
-    obs = await _drive_data(dut, payload=0x2122232425262728, cancel_frame=True)
-    _assert_from_contract_matrix(obs, state="in_frame", stimulus="cancel", label="cancel_in_frame_single_pulse")
-
-    # Held-high cancel suppresses all outputs, including SOF.
-    obs = await _drive_data(dut, payload=0x3132333435363738, cancel_frame=True)
-    _assert_from_contract_matrix(
-        obs,
-        state="cancel_suppressed",
-        stimulus="any_while_cancel_high",
-        label="cancel_high_data",
-    )
-
-    obs = await _drive_control(dut, block_type=SOF_L0, payload_low=0x41424344454647, cancel_frame=True)
-    _assert_from_contract_matrix(
-        obs,
-        state="cancel_suppressed",
-        stimulus="any_while_cancel_high",
-        label="cancel_high_sof",
-    )
-
-    # Cancel low but no new SOF still suppressed.
-    obs = await _drive_data(dut, payload=0x5152535455565758, cancel_frame=False)
-    _assert_from_contract_matrix(
-        obs,
-        state="cancel_suppressed",
-        stimulus="cancel_low_non_sof",
-        label="cancel_low_data_no_sof",
-    )
-
-    # Recovery requires fresh uncanceled SOF.
-    obs = await _drive_control(dut, block_type=SOF_L4, payload_low=0x61626364656667, cancel_frame=False)
-    _assert_from_contract_matrix(
-        obs,
-        state="cancel_suppressed",
-        stimulus="cancel_low_sof_l4",
-        label="cancel_recover_sof_l4",
-    )
-
-    obs = await _drive_data(dut, payload=0x7172737475767778, cancel_frame=False)
-    _assert_observation(obs, label="cancel_recover_data", drop_frame=0, out_valid=1, bytes_valid=0xFF)
-
-    # Single-cycle cancel pulse still requires SOF-based recovery.
-    await reset_dut(dut, 20)
-    await _prime_inputs(dut)
-    await _drive_control(dut, block_type=SOF_L0, payload_low=0x81828384858687)
-    await _drive_data(dut, payload=0x9192939495969798)
-
-    obs = await _drive_data(dut, payload=0xA1A2A3A4A5A6A7A8, cancel_frame=True)
-    _assert_observation(obs, label="cancel_single_cycle", out_valid=0, bytes_valid=0x00)
-
-    obs = await _drive_data(dut, payload=0xB1B2B3B4B5B6B7B8, cancel_frame=False)
-    _assert_observation(obs, label="cancel_single_cycle_post_data", drop_frame=0, out_valid=0, bytes_valid=0x00)
-
-    obs = await _drive_control(dut, block_type=SOF_L0, payload_low=0xC1C2C3C4C5C6C7, cancel_frame=False)
-    _assert_observation(obs, label="cancel_single_cycle_recover", drop_frame=0, out_valid=1, bytes_valid=0x7F)
-
-
-@cocotb.test()
-async def constrained_random_contract_invariant_test(dut):
-    await initialize_tb(dut, clk_period_ns=10)
-    await _prime_inputs(dut)
-
-    seed = int(os.getenv("EA_RANDOM_SEED", "305419896"), 0)
-    num_steps = int(os.getenv("EA_RANDOM_STEPS", "1500"), 0)
-    rng = random.Random(seed)
-    state = ContractState()
-
-    cocotb.log.info("Starting constrained-random audit: seed=0x%08X steps=%d", seed, num_steps)
-
-    for step in range(num_steps):
-        action = ""
-        obs = None
-
-        if state.cancel_suppressed:
-            roll = rng.random()
-            if roll < 0.30:
-                action = "cancel_high_data"
-                obs = await _drive_data(dut, payload=rng.getrandbits(PAYLOAD_W), cancel_frame=True)
-                _assert_observation(obs, label=action, out_valid=0, bytes_valid=0x00)
-            elif roll < 0.55:
-                action = "cancel_high_sof"
-                obs = await _drive_control(
-                    dut,
-                    block_type=rng.choice((SOF_L0, SOF_L4)),
-                    payload_low=rng.getrandbits(CONTROL_DATA_W),
-                    cancel_frame=True,
-                )
-                _assert_observation(obs, label=action, out_valid=0, bytes_valid=0x00)
-            elif roll < 0.80:
-                action = "cancel_low_non_sof"
-                obs = await _drive_data(dut, payload=rng.getrandbits(PAYLOAD_W), cancel_frame=False)
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=0, bytes_valid=0x00)
-            else:
-                lane = rng.choice((0, 4))
-                action = f"cancel_recover_sof_l{lane}"
-                obs = await _drive_control(
-                    dut,
-                    block_type=EthernetAssemblerSequence.START_BLOCKS[lane],
-                    payload_low=rng.getrandbits(CONTROL_DATA_W),
-                    cancel_frame=False,
-                )
-                expected_mask = 0x7F if lane == 0 else 0x07
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=1, bytes_valid=expected_mask)
-                state.cancel_suppressed = False
-                state.in_frame = True
-
-        elif state.in_frame:
-            roll = rng.random()
-            if roll < 0.32:
-                action = "in_frame_data"
-                obs = await _drive_data(dut, payload=rng.getrandbits(PAYLOAD_W))
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=1, bytes_valid=0xFF)
-            elif roll < 0.48:
-                action = "in_frame_term"
-                term_block = rng.choice(tuple(EthernetAssemblerSequence.TERM_BLOCKS.values()))
-                obs = await _drive_control(
-                    dut,
-                    block_type=term_block,
-                    payload_low=rng.getrandbits(CONTROL_DATA_W),
-                )
-                _assert_observation(
-                    obs,
-                    label=action,
-                    drop_frame=0,
-                    out_valid=int(TERM_VALID_MASKS[term_block] != 0),
-                    bytes_valid=TERM_VALID_MASKS[term_block],
-                )
-                state.in_frame = False
-            elif roll < 0.63:
-                action = "in_frame_ordered_set"
-                os_block = rng.choice(tuple(ORDERED_SET_VALID_MASKS))
-                obs = await _drive_control(
-                    dut,
-                    block_type=os_block,
-                    payload_low=rng.getrandbits(CONTROL_DATA_W),
-                )
-                _assert_observation(
-                    obs,
-                    label=action,
-                    drop_frame=0,
-                    out_valid=1,
-                    bytes_valid=ORDERED_SET_VALID_MASKS[os_block],
-                )
-            elif roll < 0.74:
-                action = "in_frame_double_sof_corrupt"
-                obs = await _drive_control(
-                    dut,
-                    block_type=rng.choice((SOF_L0, SOF_L4)),
-                    payload_low=rng.getrandbits(CONTROL_DATA_W),
-                )
-                _assert_observation(obs, label=action, drop_frame=1, out_valid=0, bytes_valid=0x00)
-                state.in_frame = False
-            elif roll < 0.84:
-                action = "in_frame_idle_corrupt"
-                obs = await _drive_control(dut, block_type=IDLE_BLK, payload_low=rng.getrandbits(CONTROL_DATA_W))
-                _assert_observation(obs, label=action, drop_frame=1, out_valid=0, bytes_valid=0x00)
-                state.in_frame = False
-            elif roll < 0.92:
-                action = "in_frame_unknown_corrupt"
-                obs = await _drive_control(dut, block_type=0x12, payload_low=rng.getrandbits(CONTROL_DATA_W))
-                _assert_observation(obs, label=action, drop_frame=1, out_valid=0, bytes_valid=0x00)
-                state.in_frame = False
-            elif roll < 0.97:
-                action = "in_frame_bad_header_corrupt"
-                bad_hdr = rng.choice((BAD_HDR_00, BAD_HDR_11))
-                obs = await _drive_block(
-                    dut,
-                    sync_header=bad_hdr,
-                    payload=rng.getrandbits(PAYLOAD_W),
-                )
-                _assert_observation(obs, label=action, drop_frame=1, out_valid=0, bytes_valid=0x00)
-                state.in_frame = False
-            else:
-                action = "in_frame_cancel"
-                obs = await _drive_data(
-                    dut,
-                    payload=rng.getrandbits(PAYLOAD_W),
-                    cancel_frame=True,
-                )
-                _assert_observation(obs, label=action, out_valid=0, bytes_valid=0x00)
-                state.in_frame = False
-                state.cancel_suppressed = True
-
-        else:
-            roll = rng.random()
-            if roll < 0.40:
-                lane = rng.choice((0, 4))
-                action = f"idle_sof_l{lane}"
-                obs = await _drive_control(
-                    dut,
-                    block_type=EthernetAssemblerSequence.START_BLOCKS[lane],
-                    payload_low=rng.getrandbits(CONTROL_DATA_W),
-                )
-                expected_mask = 0x7F if lane == 0 else 0x07
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=1, bytes_valid=expected_mask)
-                state.in_frame = True
-            elif roll < 0.65:
-                action = "idle_data"
-                obs = await _drive_data(dut, payload=rng.getrandbits(PAYLOAD_W))
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=0, bytes_valid=0x00)
-            elif roll < 0.85:
-                action = "idle_term"
-                obs = await _drive_control(
-                    dut,
-                    block_type=rng.choice(tuple(EthernetAssemblerSequence.TERM_BLOCKS.values())),
-                    payload_low=rng.getrandbits(CONTROL_DATA_W),
-                )
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=0, bytes_valid=0x00)
-            else:
-                action = "idle_cancel"
-                obs = await _drive_data(
-                    dut,
-                    payload=rng.getrandbits(PAYLOAD_W),
-                    cancel_frame=True,
-                )
-                _assert_observation(obs, label=action, out_valid=0, bytes_valid=0x00)
-
-        if step < 24 or step % 128 == 0:
-            _log_trace(seed, step, action, obs, state)
-
-
-@cocotb.test()
-async def constrained_random_qualifier_stress_test(dut):
-    await initialize_tb(dut, clk_period_ns=10)
-    await _prime_inputs(dut)
-
-    seed = int(os.getenv("EA_QUALIFIER_RANDOM_SEED", "2779096485"), 0)
-    num_steps = int(os.getenv("EA_QUALIFIER_RANDOM_STEPS", "1800"), 0)
-    rng = random.Random(seed)
-    state = ContractState()
-
-    cocotb.log.info(
-        "Starting qualifier-focused constrained-random audit: seed=0x%08X steps=%d",
-        seed,
-        num_steps,
-    )
-
-    for step in range(num_steps):
-        action = ""
-        obs = None
-
-        if state.cancel_suppressed:
-            roll = rng.random()
-            if roll < 0.28:
-                action = "drop_mode_cancel_high_data"
-                obs = await _drive_data(
-                    dut,
-                    payload=rng.getrandbits(PAYLOAD_W),
-                    in_valid=rng.choice((False, True)),
-                    locked=rng.choice((False, True)),
-                    cancel_frame=True,
-                )
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=0, bytes_valid=0x00)
-            elif roll < 0.54:
-                action = "drop_mode_cancel_low_non_sof"
-                if rng.random() < 0.5:
-                    obs = await _drive_data(
-                        dut,
-                        payload=rng.getrandbits(PAYLOAD_W),
-                        in_valid=True,
-                        locked=True,
-                        cancel_frame=False,
-                    )
-                else:
-                    obs = await _drive_control(
-                        dut,
-                        block_type=rng.choice(
-                            (
-                                IDLE_BLK,
-                                TERM_L7,
-                                _pick_invalid_control_block_type(rng),
-                            )
-                        ),
-                        payload_low=rng.getrandbits(CONTROL_DATA_W),
-                        in_valid=True,
-                        locked=True,
-                        cancel_frame=False,
-                    )
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=0, bytes_valid=0x00)
-            elif roll < 0.76:
-                action = "drop_mode_sof_blocked_by_qualifier"
-                in_valid = rng.choice((False, True))
-                locked = rng.choice((False, True))
-                if in_valid and locked:
-                    locked = False
-                lane = rng.choice((0, 4))
-                obs = await _drive_control(
-                    dut,
-                    block_type=EthernetAssemblerSequence.START_BLOCKS[lane],
-                    payload_low=rng.getrandbits(CONTROL_DATA_W),
-                    in_valid=in_valid,
-                    locked=locked,
-                    cancel_frame=False,
-                )
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=0, bytes_valid=0x00)
-            else:
-                lane = rng.choice((0, 4))
-                action = f"drop_mode_recover_sof_l{lane}"
-                obs = await _drive_control(
-                    dut,
-                    block_type=EthernetAssemblerSequence.START_BLOCKS[lane],
-                    payload_low=rng.getrandbits(CONTROL_DATA_W),
-                    in_valid=True,
-                    locked=True,
-                    cancel_frame=False,
-                )
-                expected_mask = 0x7F if lane == 0 else 0x07
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=1, bytes_valid=expected_mask)
-                state.cancel_suppressed = False
-                state.in_frame = True
-
-        elif state.in_frame:
-            roll = rng.random()
-            if roll < 0.20:
-                action = "in_frame_data"
-                obs = await _drive_data(dut, payload=rng.getrandbits(PAYLOAD_W))
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=1, bytes_valid=0xFF)
-            elif roll < 0.34:
-                action = "in_frame_ordered_set"
-                os_block = rng.choice(tuple(ORDERED_SET_VALID_MASKS))
-                obs = await _drive_control(
-                    dut,
-                    block_type=os_block,
-                    payload_low=rng.getrandbits(CONTROL_DATA_W),
-                )
-                _assert_observation(
-                    obs,
-                    label=action,
-                    drop_frame=0,
-                    out_valid=1,
-                    bytes_valid=ORDERED_SET_VALID_MASKS[os_block],
-                )
-            elif roll < 0.48:
-                action = "in_frame_term"
-                term_block = rng.choice(tuple(EthernetAssemblerSequence.TERM_BLOCKS.values()))
-                obs = await _drive_control(
-                    dut,
-                    block_type=term_block,
-                    payload_low=rng.getrandbits(CONTROL_DATA_W),
-                )
-                _assert_observation(
-                    obs,
-                    label=action,
-                    drop_frame=0,
-                    out_valid=int(TERM_VALID_MASKS[term_block] != 0),
-                    bytes_valid=TERM_VALID_MASKS[term_block],
-                )
-                state.in_frame = False
-            elif roll < 0.62:
-                action = "in_frame_in_valid_low_hold"
-                obs = await _drive_data(
-                    dut,
-                    payload=rng.getrandbits(PAYLOAD_W),
-                    in_valid=False,
-                    locked=True,
-                    cancel_frame=False,
-                )
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=0, bytes_valid=0x00)
-            elif roll < 0.74:
-                action = "in_frame_lock_loss_drop"
-                obs = await _drive_data(
-                    dut,
-                    payload=rng.getrandbits(PAYLOAD_W),
-                    in_valid=rng.choice((False, True)),
-                    locked=False,
-                    cancel_frame=False,
-                )
-                _assert_observation(obs, label=action, drop_frame=1, out_valid=0, bytes_valid=0x00)
-                state.in_frame = False
-            elif roll < 0.85:
-                action = "in_frame_bad_header_drop"
-                obs = await _drive_block(
-                    dut,
-                    sync_header=rng.choice((BAD_HDR_00, BAD_HDR_11)),
-                    payload=rng.getrandbits(PAYLOAD_W),
-                    in_valid=rng.choice((False, True)),
-                    locked=True,
-                    cancel_frame=False,
-                )
-                _assert_observation(obs, label=action, drop_frame=1, out_valid=0, bytes_valid=0x00)
-                state.in_frame = False
-            elif roll < 0.93:
-                action = "in_frame_unknown_control_drop"
-                obs = await _drive_control(
-                    dut,
-                    block_type=_pick_invalid_control_block_type(rng),
-                    payload_low=rng.getrandbits(CONTROL_DATA_W),
-                    in_valid=True,
-                    locked=True,
-                    cancel_frame=False,
-                )
-                _assert_observation(obs, label=action, drop_frame=1, out_valid=0, bytes_valid=0x00)
-                state.in_frame = False
-            else:
-                action = "in_frame_cancel"
-                obs = await _drive_data(
-                    dut,
-                    payload=rng.getrandbits(PAYLOAD_W),
-                    in_valid=rng.choice((False, True)),
-                    locked=rng.choice((False, True)),
-                    cancel_frame=True,
-                )
-                _assert_observation(obs, label=action, drop_frame=1, out_valid=0, bytes_valid=0x00)
-                state.in_frame = False
-                state.cancel_suppressed = True
-
-        else:
-            roll = rng.random()
-            if roll < 0.24:
-                lane = rng.choice((0, 4))
-                action = f"idle_sof_l{lane}"
-                obs = await _drive_control(
-                    dut,
-                    block_type=EthernetAssemblerSequence.START_BLOCKS[lane],
-                    payload_low=rng.getrandbits(CONTROL_DATA_W),
-                    in_valid=True,
-                    locked=True,
-                    cancel_frame=False,
-                )
-                expected_mask = 0x7F if lane == 0 else 0x07
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=1, bytes_valid=expected_mask)
-                state.in_frame = True
-            elif roll < 0.43:
-                action = "idle_data"
-                obs = await _drive_data(dut, payload=rng.getrandbits(PAYLOAD_W))
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=0, bytes_valid=0x00)
-            elif roll < 0.58:
-                action = "idle_term"
-                obs = await _drive_control(
-                    dut,
-                    block_type=rng.choice(tuple(EthernetAssemblerSequence.TERM_BLOCKS.values())),
-                    payload_low=rng.getrandbits(CONTROL_DATA_W),
-                )
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=0, bytes_valid=0x00)
-            elif roll < 0.70:
-                lane = rng.choice((0, 4))
-                action = f"idle_sof_l{lane}_in_valid_low"
-                obs = await _drive_control(
-                    dut,
-                    block_type=EthernetAssemblerSequence.START_BLOCKS[lane],
-                    payload_low=rng.getrandbits(CONTROL_DATA_W),
-                    in_valid=False,
-                    locked=True,
-                    cancel_frame=False,
-                )
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=0, bytes_valid=0x00)
-            elif roll < 0.80:
-                lane = rng.choice((0, 4))
-                action = f"idle_sof_l{lane}_locked_low"
-                obs = await _drive_control(
-                    dut,
-                    block_type=EthernetAssemblerSequence.START_BLOCKS[lane],
-                    payload_low=rng.getrandbits(CONTROL_DATA_W),
-                    in_valid=True,
-                    locked=False,
-                    cancel_frame=False,
-                )
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=0, bytes_valid=0x00)
-            elif roll < 0.90:
-                action = "idle_cancel"
-                if rng.random() < 0.5:
-                    obs = await _drive_data(
-                        dut,
-                        payload=rng.getrandbits(PAYLOAD_W),
-                        in_valid=rng.choice((False, True)),
-                        locked=rng.choice((False, True)),
-                        cancel_frame=True,
-                    )
-                else:
-                    obs = await _drive_control(
-                        dut,
-                        block_type=EthernetAssemblerSequence.START_BLOCKS[rng.choice((0, 4))],
-                        payload_low=rng.getrandbits(CONTROL_DATA_W),
-                        in_valid=rng.choice((False, True)),
-                        locked=rng.choice((False, True)),
-                        cancel_frame=True,
-                    )
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=0, bytes_valid=0x00)
-            else:
-                action = "idle_bad_or_unknown_control"
-                if rng.random() < 0.5:
-                    obs = await _drive_block(
-                        dut,
-                        sync_header=rng.choice((BAD_HDR_00, BAD_HDR_11)),
-                        payload=rng.getrandbits(PAYLOAD_W),
-                        in_valid=rng.choice((False, True)),
-                        locked=rng.choice((False, True)),
-                        cancel_frame=False,
-                    )
-                else:
-                    obs = await _drive_control(
-                        dut,
-                        block_type=_pick_invalid_control_block_type(rng),
-                        payload_low=rng.getrandbits(CONTROL_DATA_W),
-                        in_valid=rng.choice((False, True)),
-                        locked=rng.choice((False, True)),
-                        cancel_frame=False,
-                    )
-                _assert_observation(obs, label=action, drop_frame=0, out_valid=0, bytes_valid=0x00)
-
-        if step < 24 or step % 128 == 0:
-            _log_trace(seed, step, action, obs, state)
-
-
-@cocotb.test()
-async def model_smoke_basic_test(dut):
-    if os.getenv("EA_ENABLE_MODEL_SMOKE", "0") != "1":
-        cocotb.log.info("Skipping model smoke test (set EA_ENABLE_MODEL_SMOKE=1 to enable)")
-        return
-
-    await initialize_tb(dut, clk_period_ns=10)
-    testbase = EthernetAssemblerTestBase(dut)
-
-    await testbase.sequence.add_start_block(lane=0, payload_low=0x01020304050607)
-    await testbase.sequence.add_data_block(0x1112131415161718)
-    await testbase.sequence.add_data_block(0x2122232425262728)
-    await testbase.sequence.add_terminate_block(lane=7, payload_low=0x31323334353637)
-    await testbase.sequence.add_data_block(0x4142434445464748)
-
+async def _finalize_and_check(testbase: EthernetAssemblerTestBase):
     await testbase.wait_for_driver_done()
     await testbase.scoreboard.check()
 
 
+def _pick_unknown_control_block_type(seq, rng: random.Random) -> int:
+    valid_control_set = {
+        seq.IDLE_BLK,
+        seq.SOF_L0,
+        seq.SOF_L4,
+        seq.TERM_L0,
+        seq.TERM_L1,
+        seq.TERM_L2,
+        seq.TERM_L3,
+        seq.TERM_L4,
+        seq.TERM_L5,
+        seq.TERM_L6,
+        seq.TERM_L7,
+        seq.OS_D6,
+        seq.OS_D5,
+        seq.OS_D3T,
+        seq.OS_D3B,
+    }
+    block_type = rng.getrandbits(seq.BLOCK_TYPE_W)
+    while block_type in valid_control_set:
+        block_type = rng.getrandbits(seq.BLOCK_TYPE_W)
+    return block_type
+
+
+async def _enqueue_random_sequence_action(
+    seq,
+    rng: random.Random,
+    *,
+    include_cancel_helper: bool,
+    max_cancel_len: int,
+) -> str:
+    in_valid = rng.random() < 0.90
+    locked = rng.random() < 0.92
+
+    start_helpers = (seq.add_sof_l0, seq.add_sof_l4)
+    term_helpers = (
+        seq.add_term_l0,
+        seq.add_term_l1,
+        seq.add_term_l2,
+        seq.add_term_l3,
+        seq.add_term_l4,
+        seq.add_term_l5,
+        seq.add_term_l6,
+        seq.add_term_l7,
+    )
+    ordered_set_helpers = (seq.add_os_d6, seq.add_os_d5, seq.add_os_d3t, seq.add_os_d3b)
+
+    action_pool = [
+        "add_idle_blk",
+        "add_random_data",
+        "add_bad_header",
+        "add_random_start",
+        "add_random_end",
+        "add_manual_data",
+        "add_manual_start",
+        "add_manual_end",
+        "add_data_header",
+        "add_control_header_known",
+        "add_control_header_unknown",
+        "add_start_helper",
+        "add_term_helper",
+        "add_ordered_set_helper",
+    ]
+
+    if include_cancel_helper:
+        action_pool.append("start_and_cancel_frame")
+
+    action = rng.choice(action_pool)
+    payload = rng.getrandbits(seq.PAYLOAD_W)
+    payload_low = rng.getrandbits(seq.CONTROL_DATA_W)
+
+    if action == "add_idle_blk":
+        await seq.add_idle_blk(
+            payload_low=payload_low,
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=False,
+        )
+    elif action == "add_random_data":
+        await seq.add_random_data(
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=False,
+            rng=rng,
+        )
+    elif action == "add_bad_header":
+        await seq.add_bad_header(
+            payload=payload,
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=False,
+            rng=rng,
+        )
+    elif action == "add_random_start":
+        await seq.add_random_start(
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=False,
+            rng=rng,
+        )
+    elif action == "add_random_end":
+        await seq.add_random_end(
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=False,
+            rng=rng,
+        )
+    elif action == "add_manual_data":
+        await seq.add_manual_data(
+            payload=payload,
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=False,
+        )
+    elif action == "add_manual_start":
+        await seq.add_manual_start(
+            payload=payload,
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=False,
+            rng=rng,
+        )
+    elif action == "add_manual_end":
+        await seq.add_manual_end(
+            payload=payload,
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=False,
+            rng=rng,
+        )
+    elif action == "add_data_header":
+        await seq.add_data_header(
+            payload=payload,
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=False,
+        )
+    elif action == "add_control_header_known":
+        known_control_blocks = (
+            seq.IDLE_BLK,
+            seq.SOF_L0,
+            seq.SOF_L4,
+            seq.TERM_L0,
+            seq.TERM_L1,
+            seq.TERM_L2,
+            seq.TERM_L3,
+            seq.TERM_L4,
+            seq.TERM_L5,
+            seq.TERM_L6,
+            seq.TERM_L7,
+            seq.OS_D6,
+            seq.OS_D5,
+            seq.OS_D3T,
+            seq.OS_D3B,
+        )
+        block_type = rng.choice(known_control_blocks)
+        control_payload = seq._compose_control_payload(
+            block_type=block_type,
+            payload_low=payload_low,
+        )
+        await seq.add_control_header(
+            payload=control_payload,
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=False,
+        )
+    elif action == "add_control_header_unknown":
+        block_type = _pick_unknown_control_block_type(seq, rng)
+        control_payload = seq._compose_control_payload(
+            block_type=block_type,
+            payload_low=payload_low,
+        )
+        await seq.add_control_header(
+            payload=control_payload,
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=False,
+        )
+    elif action == "add_start_helper":
+        await rng.choice(start_helpers)(
+            payload_low=payload_low,
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=False,
+        )
+    elif action == "add_term_helper":
+        await rng.choice(term_helpers)(
+            payload_low=payload_low,
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=False,
+        )
+    elif action == "add_ordered_set_helper":
+        await rng.choice(ordered_set_helpers)(
+            payload_low=payload_low,
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=False,
+        )
+    else:
+        cancel_len = rng.randint(0, max_cancel_len)
+        await seq.start_and_cancel_frame(
+            len=cancel_len,
+            in_valid=True,
+            locked=True,
+            rng=rng,
+        )
+
+    return action
+
+
+# Section A: Directed frame sanity.
 @cocotb.test()
-async def model_smoke_corruption_helpers_test(dut):
-    if os.getenv("EA_ENABLE_MODEL_SMOKE", "0") != "1":
-        cocotb.log.info("Skipping model smoke test (set EA_ENABLE_MODEL_SMOKE=1 to enable)")
-        return
-
-    await initialize_tb(dut, clk_period_ns=10)
+async def batch_valid_frame_start_to_end_test(dut):
+    await initialize_tb(dut, clk_period_ns=_env_int("EA_CLK_PERIOD_NS", 10))
     testbase = EthernetAssemblerTestBase(dut)
+    seq = testbase.sequence
 
-    seed = int(os.getenv("EA_SMOKE_SEED", "305419896"), 0)
+    seed = _env_int("EA_BATCH_VALID_SEED", 0x1A2B3C4D)
+    frame_count = _env_int("EA_BATCH_VALID_FRAMES", 8)
+    max_extra_data = _env_int("EA_BATCH_VALID_MAX_EXTRA_DATA", 4)
     rng = random.Random(seed)
 
-    await testbase.sequence.add_start_block(lane=0, payload_low=0x01020304050607)
-    await testbase.sequence.add_data_block(0x1112131415161718)
-    await testbase.sequence.add_corrupted_block(corruption_kind="bad_header", rng=rng)
-    await testbase.sequence.add_start_block(lane=4, payload_low=0x41424344454647)
-    await testbase.sequence.add_ordered_set_block(
-        os_kind="OS_D6",
-        payload_low=0x51525354555657,
+    cocotb.log.info(
+        "batch_valid_frame_start_to_end_test seed=0x%08X frames=%d",
+        seed,
+        frame_count,
     )
-    await testbase.sequence.add_corrupted_block(
-        corruption_kind="unknown_control",
-        invalid_block_type=0x12,
+
+    for _ in range(frame_count):
+        await seq.add_random_start(rng=rng)
+        for _ in range(rng.randint(0, max_extra_data)):
+            await seq.add_random_data(rng=rng)
+        await seq.add_random_end(rng=rng)
+
+    await _finalize_and_check(testbase)
+
+
+# Section B: Directed helper matrix.
+@cocotb.test()
+async def batch_helper_function_matrix_test(dut):
+    await initialize_tb(dut, clk_period_ns=_env_int("EA_CLK_PERIOD_NS", 10))
+    testbase = EthernetAssemblerTestBase(dut)
+    seq = testbase.sequence
+
+    seed = _env_int("EA_BATCH_HELPER_SEED", 0x55667788)
+    rounds = _env_int("EA_BATCH_HELPER_ROUNDS", 6)
+    max_os_data_pairs = _env_int("EA_BATCH_HELPER_MAX_OS_PAIRS", 3)
+    rng = random.Random(seed)
+
+    start_helpers = (seq.add_sof_l0, seq.add_sof_l4)
+    ordered_set_helpers = (seq.add_os_d6, seq.add_os_d5, seq.add_os_d3t, seq.add_os_d3b)
+    term_helpers = (
+        seq.add_term_l0,
+        seq.add_term_l1,
+        seq.add_term_l2,
+        seq.add_term_l3,
+        seq.add_term_l4,
+        seq.add_term_l5,
+        seq.add_term_l6,
+        seq.add_term_l7,
+    )
+
+    cocotb.log.info(
+        "batch_helper_function_matrix_test seed=0x%08X rounds=%d",
+        seed,
+        rounds,
+    )
+
+    for _ in range(rounds):
+        await seq.add_idle_blk()
+        await seq.add_random_data(rng=rng)
+        await rng.choice(start_helpers)()
+        for _ in range(rng.randint(1, max_os_data_pairs)):
+            await rng.choice(ordered_set_helpers)()
+            await seq.add_random_data(rng=rng)
+        await rng.choice(term_helpers)()
+
+    await _finalize_and_check(testbase)
+
+
+# Section C: Directed cancel/recovery contract observations.
+@cocotb.test()
+async def batch_cancel_recovery_contract_test(dut):
+    await initialize_tb(dut, clk_period_ns=_env_int("EA_CLK_PERIOD_NS", 10))
+    testbase = EthernetAssemblerTestBase(dut)
+    seq = testbase.sequence
+
+    seed = _env_int("EA_BATCH_CANCEL_SEED", 0xC0FFEE11)
+    cancel_len = max(1, _env_int("EA_BATCH_CANCEL_LEN", 3))
+    post_cancel_data = _env_int("EA_BATCH_CANCEL_POST_DATA", 5)
+    rng = random.Random(seed)
+
+    cocotb.log.info(
+        "batch_cancel_recovery_contract_test seed=0x%08X cancel_len=%d",
+        seed,
+        cancel_len,
+    )
+
+    await seq.start_and_cancel_frame(len=cancel_len, rng=rng)
+    cancel_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["drop_frame"] == 1 for sample in cancel_phase), (
+        "Expected drop_frame_o to pulse when canceling an active frame"
+    )
+
+    for _ in range(post_cancel_data):
+        await seq.add_random_data(rng=rng)
+    await seq.add_idle_blk()
+    await seq.add_term_l7()
+    suppressed_phase = await _drain_driver_and_capture(testbase)
+    assert all(sample["out_valid"] == 0 for sample in suppressed_phase), (
+        "Expected out_valid_o to stay low after cancel until a new start frame arrives"
+    )
+
+    await seq.add_random_start(rng=rng)
+    recover_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["out_valid"] == 1 for sample in recover_phase), (
+        "Expected out_valid_o to recover after a new start frame"
+    )
+
+    await seq.start_and_cancel_frame(len=0, rng=rng)
+    cancel_phase_len0 = await _drain_driver_and_capture(testbase)
+    assert any(sample["drop_frame"] == 1 for sample in cancel_phase_len0), (
+        "Expected drop_frame_o to pulse for len=0 cancel when already in-frame"
+    )
+
+    for _ in range(max(2, post_cancel_data // 2)):
+        await seq.add_random_data(rng=rng)
+    suppressed_phase_len0 = await _drain_driver_and_capture(testbase)
+    assert all(sample["out_valid"] == 0 for sample in suppressed_phase_len0), (
+        "Expected out_valid_o to remain low after len=0 cancel until start"
+    )
+
+    await seq.add_random_start(rng=rng)
+    recover_phase_len0 = await _drain_driver_and_capture(testbase)
+    assert any(sample["out_valid"] == 1 for sample in recover_phase_len0), (
+        "Expected out_valid_o to recover after start following len=0 cancel"
+    )
+    await seq.add_random_end(rng=rng)
+
+    # This test does direct waveform-style observation checks while the sequence runs.
+    # Do not run scoreboard compare here, because the direct observation helper
+    # intentionally allows gap cycles that are not mirrored into model notifications.
+    await testbase.wait_for_driver_done()
+
+
+# Section D: Random helper combinations from sequence API.
+@cocotb.test()
+async def random_sequence_function_combinations_test(dut):
+    await initialize_tb(dut, clk_period_ns=_env_int("EA_CLK_PERIOD_NS", 10))
+    testbase = EthernetAssemblerTestBase(dut)
+    seq = testbase.sequence
+
+    seed = _env_int("EA_RANDOM_HELPER_SEED", 0x9BADC0DE)
+    steps = _env_int("EA_RANDOM_HELPER_STEPS", 180)
+    include_cancel_helper = _env_flag("EA_RANDOM_HELPER_INCLUDE_CANCEL", default=False)
+    max_cancel_len = max(0, _env_int("EA_RANDOM_HELPER_MAX_CANCEL_LEN", 4))
+    rng = random.Random(seed)
+
+    cocotb.log.info(
+        "random_sequence_function_combinations_test seed=0x%08X steps=%d include_cancel=%d",
+        seed,
+        steps,
+        int(include_cancel_helper),
+    )
+
+    for step in range(steps):
+        action_name = await _enqueue_random_sequence_action(
+            seq,
+            rng,
+            include_cancel_helper=include_cancel_helper,
+            max_cancel_len=max_cancel_len,
+        )
+        if step < 20 or (step % 50 == 0):
+            cocotb.log.info("random-step=%03d action=%s", step, action_name)
+
+    await _finalize_and_check(testbase)
+
+
+# Section E: Directed edge cases.
+@cocotb.test()
+async def edge_case_bad_header_invalid_does_not_drop_test(dut):
+    await initialize_tb(dut, clk_period_ns=_env_int("EA_CLK_PERIOD_NS", 10))
+    testbase = EthernetAssemblerTestBase(dut)
+    seq = testbase.sequence
+    rng = random.Random(_env_int("EA_EDGE_INVALID_BAD_HDR_SEED", 0xA11CE001))
+
+    await seq.add_random_start(rng=rng)
+    start_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["out_valid"] == 1 for sample in start_phase), (
+        "Expected a valid output when entering frame with start helper"
+    )
+
+    await seq.add_bad_header(
+        payload=rng.getrandbits(seq.PAYLOAD_W),
+        in_valid=False,
+        locked=True,
+        cancel_frame=False,
         rng=rng,
     )
+    invalid_bad_hdr_phase = await _drain_driver_and_capture(testbase)
+    assert all(sample["drop_frame"] == 0 for sample in invalid_bad_hdr_phase), (
+        "Expected no drop_frame_o pulse for bad header when in_valid_i=0"
+    )
 
-    await testbase.wait_for_driver_done()
-    await testbase.scoreboard.check()
+    await seq.add_random_data(rng=rng)
+    post_invalid_bad_hdr_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["out_valid"] == 1 for sample in post_invalid_bad_hdr_phase), (
+        "Expected frame to remain active after invalid bad-header cycle"
+    )
+
+    await seq.add_random_end(rng=rng)
+    await _finalize_and_check(testbase)
+
+
+@cocotb.test()
+async def edge_case_bad_header_valid_drops_frame_test(dut):
+    await initialize_tb(dut, clk_period_ns=_env_int("EA_CLK_PERIOD_NS", 10))
+    testbase = EthernetAssemblerTestBase(dut)
+    seq = testbase.sequence
+    rng = random.Random(_env_int("EA_EDGE_VALID_BAD_HDR_SEED", 0xA11CE002))
+
+    await seq.add_random_start(rng=rng)
+    _ = await _drain_driver_and_capture(testbase)
+
+    await seq.add_bad_header(
+        payload=rng.getrandbits(seq.PAYLOAD_W),
+        in_valid=True,
+        locked=True,
+        cancel_frame=False,
+        rng=rng,
+    )
+    valid_bad_hdr_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["drop_frame"] == 1 for sample in valid_bad_hdr_phase), (
+        "Expected drop_frame_o pulse for bad header when in_valid_i=1"
+    )
+
+    await seq.add_random_data(rng=rng)
+    suppressed_phase = await _drain_driver_and_capture(testbase)
+    assert all(sample["out_valid"] == 0 for sample in suppressed_phase), (
+        "Expected out_valid_o low after frame drop until a new start frame"
+    )
+
+    await seq.add_random_start(rng=rng)
+    recovery_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["out_valid"] == 1 for sample in recovery_phase), (
+        "Expected out_valid_o recovery after fresh start frame"
+    )
+
+    await seq.add_random_end(rng=rng)
+    await _finalize_and_check(testbase)
+
+
+@cocotb.test()
+async def edge_case_lock_loss_requires_in_valid_test(dut):
+    await initialize_tb(dut, clk_period_ns=_env_int("EA_CLK_PERIOD_NS", 10))
+    testbase = EthernetAssemblerTestBase(dut)
+    seq = testbase.sequence
+    rng = random.Random(_env_int("EA_EDGE_LOCK_LOSS_SEED", 0xA11CE003))
+
+    await seq.add_random_start(rng=rng)
+    _ = await _drain_driver_and_capture(testbase)
+
+    await seq.add_random_data(
+        in_valid=False,
+        locked=False,
+        cancel_frame=False,
+        rng=rng,
+    )
+    invalid_lock_loss_phase = await _drain_driver_and_capture(testbase)
+    assert all(sample["drop_frame"] == 0 for sample in invalid_lock_loss_phase), (
+        "Expected no drop_frame_o when locked_i=0 but in_valid_i=0"
+    )
+
+    await seq.add_random_data(
+        in_valid=True,
+        locked=False,
+        cancel_frame=False,
+        rng=rng,
+    )
+    valid_lock_loss_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["drop_frame"] == 1 for sample in valid_lock_loss_phase), (
+        "Expected drop_frame_o pulse when locked_i=0 and in_valid_i=1 in-frame"
+    )
+
+    await seq.add_random_data(rng=rng)
+    post_drop_phase = await _drain_driver_and_capture(testbase)
+    assert all(sample["out_valid"] == 0 for sample in post_drop_phase), (
+        "Expected out_valid_o low after lock-loss drop until new start frame"
+    )
+
+    await seq.add_random_start(rng=rng)
+    recovery_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["out_valid"] == 1 for sample in recovery_phase), (
+        "Expected output recovery after valid start frame"
+    )
+
+    await seq.add_random_end(rng=rng)
+    await _finalize_and_check(testbase)
+
+
+@cocotb.test()
+async def edge_case_cancel_in_frame_ignores_in_valid_test(dut):
+    await initialize_tb(dut, clk_period_ns=_env_int("EA_CLK_PERIOD_NS", 10))
+    testbase = EthernetAssemblerTestBase(dut)
+    seq = testbase.sequence
+    rng = random.Random(_env_int("EA_EDGE_CANCEL_QUALIFIERS_SEED", 0xA11CE004))
+
+    await seq.add_random_start(rng=rng)
+    _ = await _drain_driver_and_capture(testbase)
+
+    await seq.add_random_data(
+        in_valid=False,
+        locked=True,
+        cancel_frame=True,
+        rng=rng,
+    )
+    cancel_low_valid_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["drop_frame"] == 1 for sample in cancel_low_valid_phase), (
+        "Expected cancel_frame_i to drop frame even when in_valid_i=0 while in-frame"
+    )
+
+    await seq.add_random_data(rng=rng)
+    await seq.add_term_l7()
+    suppressed_phase = await _drain_driver_and_capture(testbase)
+    assert all(sample["out_valid"] == 0 for sample in suppressed_phase), (
+        "Expected drop mode suppression after cancel-driven frame abort"
+    )
+
+    await seq.add_sof_l0(in_valid=False, locked=True, cancel_frame=False)
+    blocked_recovery_phase = await _drain_driver_and_capture(testbase)
+    assert all(sample["out_valid"] == 0 for sample in blocked_recovery_phase), (
+        "Expected no recovery when SOF is not qualified (in_valid_i=0)"
+    )
+
+    await seq.add_sof_l0(in_valid=True, locked=True, cancel_frame=False)
+    recovered_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["out_valid"] == 1 for sample in recovered_phase), (
+        "Expected recovery on first qualified SOF after cancel drop"
+    )
+
+    await seq.add_random_end(rng=rng)
+    await _finalize_and_check(testbase)
+
+
+@cocotb.test()
+async def edge_case_out_of_frame_nonstart_controls_ignored_test(dut):
+    await initialize_tb(dut, clk_period_ns=_env_int("EA_CLK_PERIOD_NS", 10))
+    testbase = EthernetAssemblerTestBase(dut)
+    seq = testbase.sequence
+    rng = random.Random(_env_int("EA_EDGE_IDLE_NONSTART_SEED", 0xA11CE005))
+
+    non_start_actions = (
+        lambda: seq.add_term_l0(),
+        lambda: seq.add_term_l7(),
+        lambda: seq.add_idle_blk(),
+        lambda: seq.add_os_d6(),
+        lambda: seq.add_os_d5(),
+        lambda: seq.add_os_d3t(),
+        lambda: seq.add_os_d3b(),
+    )
+
+    for _ in range(3):
+        for action in non_start_actions:
+            await action()
+
+        unknown_block = _pick_unknown_control_block_type(seq, rng)
+        await seq.add_control_header(
+            payload=seq._compose_control_payload(
+                block_type=unknown_block,
+                payload_low=rng.getrandbits(seq.CONTROL_DATA_W),
+            ),
+            in_valid=True,
+            locked=True,
+            cancel_frame=False,
+        )
+
+        await seq.add_random_data(
+            in_valid=True,
+            locked=True,
+            cancel_frame=False,
+            rng=rng,
+        )
+
+    idle_phase = await _drain_driver_and_capture(testbase)
+    assert all(sample["out_valid"] == 0 for sample in idle_phase), (
+        "Expected no valid output when only non-start symbols are seen out-of-frame"
+    )
+    assert all(sample["drop_frame"] == 0 for sample in idle_phase), (
+        "Expected no drop_frame_o pulse for non-start out-of-frame symbols"
+    )
+
+    await seq.add_random_start(rng=rng)
+    recovery_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["out_valid"] == 1 for sample in recovery_phase), (
+        "Expected valid output once a proper start frame is received"
+    )
+
+    await seq.add_random_end(rng=rng)
+    await _finalize_and_check(testbase)

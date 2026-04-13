@@ -1,69 +1,104 @@
+from dataclasses import dataclass
 from typing import Any, Dict, Mapping, Tuple
 
 from tb_utils.generic_model import GenericModel
 
-# Ethernet 'Assembler' Planning:
-# NOTE: The sequence item/transaction files dont exist yet.
 
-# Inputs:
-# - 66 bits of input_data (the MSB and MSB-1 are control signals, rest is data)
-# - an bool in_valid signal which indicates if input_data is valid
-# - a 'locked' bool signals which indicates that we are able to process our data
+@dataclass(frozen=True)
+class ControlBlockSpec:
+    kind: str
+    valid_mask: Tuple[bool, ...]
+    enters_frame: bool = False
+    exits_frame: bool = False
 
-# Outputs: 
-# - A bool out_valid signal that indicates if any of the output bytes are valid
-# - 64 bits called out_data (which is the input 66 minus the 2 control bits)
-# - an array of 8 data_valid signals (bools) which indicate which bytes of out_data are valid
-
-# Functionaility:
-# - We need to parse the control bits (the MSB and MSB-1) from input_data
-# - If those bits are equal to 10 this is a control payload, and we need to check the first byte of the data (bits 63:56) to decide what to do
-#     - We reference the 64/66b chart to decide if this is a start/end/idle frame
-#     - We set the data_valid array based on that
-#     - We need a variale to track wether we are inside of a frame, that gets set/changed
-# - else If those bits are == 01 this is a data frame, and if we are inside a frame, then we can set all of the data_valid signals to high
-
-# NETWORK ORDER: BIG ENDIAN 
-# NETWORK ORDER: THE LSB is first ex.) 0x8 becomes 0x1
 
 class EthernetAssemblerModel(GenericModel):
-    DATA_SYNC_HEADER    = 0b01
+    DATA_SYNC_HEADER = 0b01
     CONTROL_SYNC_HEADER = 0b10
-    DATA_MASK_64        = (1 << 64) - 1
-    BIT_REVERSE_TABLE   = tuple(int(f"{i:08b}"[::-1], 2) for i in range(256))
-    IDLE_BLOCK_TYPE     = 0x1E
-
-    # Start blocks (64b/66b control block type in byte [63:56]).
-    START_VALID_MASKS: Dict[int, Tuple[bool, ...]] = {
-        # Start in lane 0: byte0 is /S/, bytes1..7 are payload.
-        0x78: (False, True, True, True, True, True, True, True),
-        # Start in lane 4: byte4 is /S/, bytes5..7 are payload.
-        0x33: (False, False, False, False, False, True, True, True),
-    }
-
-    # Terminate blocks
-    END_VALID_MASKS: Dict[int, Tuple[bool, ...]] = {
-        0x87: (False, False, False, False, False, False, False, False),  # T0
-        0x99: (False, True, False, False, False, False, False, False),   # T1
-        0xAA: (False, True, True, False, False, False, False, False),    # T2
-        0xB4: (False, True, True, True, False, False, False, False),     # T3
-        0xCC: (False, True, True, True, True, False, False, False),      # T4
-        0xD2: (False, True, True, True, True, True, False, False),       # T5
-        0xE1: (False, True, True, True, True, True, True, False),        # T6
-        0xFF: (False, True, True, True, True, True, True, True),         # T7
-    }
-
-    # Non-payload control blocks that still carry data bytes.
-    NON_PAYLOAD_CONTROL_TYPES: Dict[int, Tuple[bool, ...]] = {
-        0x66: (False, True, True, True, False, True, True, True),  
-        0x55: (False, True, True, True, False, True, True, True),   
-        0x4B: (False, True, True, True, False, False, False, False),
-        0x2D: (False, False, False, False, False, True, True, True),    
-    }
+    DATA_MASK_64 = (1 << 64) - 1
+    BIT_REVERSE_TABLE = tuple(int(f"{i:08b}"[::-1], 2) for i in range(256))
     VALID_SYNC_HEADERS = {DATA_SYNC_HEADER, CONTROL_SYNC_HEADER}
 
-    def __init__(self):
+    CONTROL_BLOCK_LUT: Dict[int, ControlBlockSpec] = {
+        # Start blocks.
+        0x78: ControlBlockSpec(
+            kind="start",
+            valid_mask=(False, True, True, True, True, True, True, True),
+            enters_frame=True,
+        ),
+        0x33: ControlBlockSpec(
+            kind="start",
+            valid_mask=(False, False, False, False, False, True, True, True),
+            enters_frame=True,
+        ),
+        # Terminate blocks.
+        0x87: ControlBlockSpec(
+            kind="term",
+            valid_mask=(False, False, False, False, False, False, False, False),
+            exits_frame=True,
+        ),
+        0x99: ControlBlockSpec(
+            kind="term",
+            valid_mask=(False, True, False, False, False, False, False, False),
+            exits_frame=True,
+        ),
+        0xAA: ControlBlockSpec(
+            kind="term",
+            valid_mask=(False, True, True, False, False, False, False, False),
+            exits_frame=True,
+        ),
+        0xB4: ControlBlockSpec(
+            kind="term",
+            valid_mask=(False, True, True, True, False, False, False, False),
+            exits_frame=True,
+        ),
+        0xCC: ControlBlockSpec(
+            kind="term",
+            valid_mask=(False, True, True, True, True, False, False, False),
+            exits_frame=True,
+        ),
+        0xD2: ControlBlockSpec(
+            kind="term",
+            valid_mask=(False, True, True, True, True, True, False, False),
+            exits_frame=True,
+        ),
+        0xE1: ControlBlockSpec(
+            kind="term",
+            valid_mask=(False, True, True, True, True, True, True, False),
+            exits_frame=True,
+        ),
+        0xFF: ControlBlockSpec(
+            kind="term",
+            valid_mask=(False, True, True, True, True, True, True, True),
+            exits_frame=True,
+        ),
+        # Ordered set blocks.
+        0x66: ControlBlockSpec(
+            kind="ordered_set",
+            valid_mask=(False, True, True, True, False, True, True, True),
+        ),
+        0x55: ControlBlockSpec(
+            kind="ordered_set",
+            valid_mask=(False, True, True, True, False, True, True, True),
+        ),
+        0x4B: ControlBlockSpec(
+            kind="ordered_set",
+            valid_mask=(False, True, True, True, False, False, False, False),
+        ),
+        0x2D: ControlBlockSpec(
+            kind="ordered_set",
+            valid_mask=(False, False, False, False, False, True, True, True),
+        ),
+        # Idle block.
+        0x1E: ControlBlockSpec(
+            kind="idle",
+            valid_mask=(False, False, False, False, False, False, False, False),
+        ),
+    }
+
+    def __init__(self, cycle_accurate: bool = False):
         super().__init__()
+        self.cycle_accurate = cycle_accurate
         self.in_frame = False
         self.drop_mode = False
 
@@ -108,121 +143,117 @@ class EthernetAssemblerModel(GenericModel):
 
         return reversed_value
 
-    @classmethod
-    def _classify_block(cls, sync_header: int, block_type: int) -> str:
-        if sync_header == cls.DATA_SYNC_HEADER:
-            return "data"
+    @staticmethod
+    def _from_network_header(header_bits: int) -> int:
+        header_bits &= 0b11
+        return ((header_bits & 0b01) << 1) | ((header_bits >> 1) & 0b01)
 
-        if sync_header != cls.CONTROL_SYNC_HEADER:
-            return "bad_header"
-
-        if block_type in cls.START_VALID_MASKS:
-            return "start"
-        if block_type in cls.END_VALID_MASKS:
-            return "term"
-        if block_type in cls.NON_PAYLOAD_CONTROL_TYPES:
-            return "ordered_set"
-        if block_type == cls.IDLE_BLOCK_TYPE:
-            return "idle"
-        return "unknown_control"
-
-    def _decode_block(
-        self, input_data: int, in_valid: bool, locked: bool, cancel_frame: bool
+    def _decode_baseline(
+        self,
+        *,
+        input_data: int,
+        header_bits: int,
+        in_valid: bool,
+        locked: bool,
+        cancel_frame: bool,
     ) -> Dict[str, Any]:
         raw_payload = input_data & self.DATA_MASK_64
-        # Input payload is network-order (LSB-first on the wire). Convert back to regular bit order.
         out_data = self._reverse_bits(raw_payload, 64)
-        data_valid = [False] * 8
+        sync_header = self._from_network_header(header_bits)
+        control_byte = (out_data >> 56) & 0xFF
 
-        network_sync_header = (input_data >> 64) & 0b11
-        # Sequence item sends 66b input in network bit order; convert header
-        # back to internal order before block-type classification.
-        sync_header = ((network_sync_header & 0b01) << 1) | (
-            (network_sync_header >> 1) & 0b01
-        )
-        block_type = (out_data >> 56) & 0xFF
-        block_class = self._classify_block(sync_header=sync_header, block_type=block_type)
+        expected = {
+            "out_valid": False,
+            "out_data": out_data,
+            "data_valid": [False] * 8,
+            "drop_frame": False,
+        }
 
-        # Cancel seen while frame is active: flush current frame and enter drop mode.
-        if self.in_frame and cancel_frame:
+        was_in_frame = self.in_frame
+        was_drop_mode = self.drop_mode
+        next_in_frame = was_in_frame
+        next_drop_mode = was_drop_mode
+
+        can_read = in_valid and locked and (not cancel_frame)
+
+        # Cancel while in-frame aborts the frame and enters drop mode.
+        if was_in_frame and cancel_frame:
+            expected["drop_frame"] = True
+            next_in_frame = False
+            next_drop_mode = True
+
+        # Drop mode suppresses output until an uncanceled SOF is received.
+        elif was_drop_mode:
+            next_in_frame = False
+            if can_read and sync_header == self.CONTROL_SYNC_HEADER:
+                block_spec = self.CONTROL_BLOCK_LUT.get(control_byte)
+                if block_spec is not None and block_spec.enters_frame:
+                    expected["data_valid"] = list(block_spec.valid_mask)
+                    next_in_frame = True
+                    next_drop_mode = False
+                else:
+                    next_in_frame = False
+                    next_drop_mode = True
+
+        # In-frame lock loss or bad header is a drop only when input is valid.
+        elif was_in_frame and in_valid and ((not locked) or (sync_header not in self.VALID_SYNC_HEADERS)):
+            expected["drop_frame"] = True
+            next_in_frame = False
+
+        # Idle-state control handling.
+        elif can_read and (not was_in_frame) and sync_header == self.CONTROL_SYNC_HEADER:
+            block_spec = self.CONTROL_BLOCK_LUT.get(control_byte)
+            if block_spec is not None and block_spec.enters_frame:
+                expected["data_valid"] = list(block_spec.valid_mask)
+                next_in_frame = True
+            else:
+                next_in_frame = False
+
+        # In-frame control handling.
+        elif can_read and was_in_frame and sync_header == self.CONTROL_SYNC_HEADER:
+            block_spec = self.CONTROL_BLOCK_LUT.get(control_byte)
+            if block_spec is None:
+                expected["drop_frame"] = True
+                next_in_frame = False
+            elif block_spec.kind == "term":
+                expected["data_valid"] = list(block_spec.valid_mask)
+                if block_spec.exits_frame:
+                    next_in_frame = False
+            elif block_spec.kind == "ordered_set":
+                expected["data_valid"] = list(block_spec.valid_mask)
+            else:
+                # Start/idle/other control while in-frame is treated as corruption.
+                expected["drop_frame"] = True
+                next_in_frame = False
+
+        # In-frame data block.
+        elif can_read and sync_header == self.DATA_SYNC_HEADER and was_in_frame:
+            expected["data_valid"] = [True] * 8
+
+        expected["out_valid"] = any(expected["data_valid"])
+        self.in_frame = next_in_frame
+        self.drop_mode = next_drop_mode
+        return expected
+
+    def _apply_metadata_overrides(
+        self,
+        *,
+        expected: Dict[str, Any],
+        no_valid_data: bool,
+        drop_frame: bool,
+    ):
+        # drop_frame metadata dominates no_valid_data metadata.
+        if drop_frame:
+            expected["drop_frame"] = True
+            expected["data_valid"] = [False] * 8
+            expected["out_valid"] = False
             self.in_frame = False
             self.drop_mode = True
-            return {"out_valid": False, "out_data": out_data, "data_valid": data_valid}
+            return
 
-        # Drop mode suppresses all blocks until cancel is low and a fresh SOF arrives.
-        if self.drop_mode:
-            self.in_frame = False
-            if (
-                (not cancel_frame)
-                and in_valid
-                and locked
-                and block_class == "start"
-            ):
-                data_valid = list(self.START_VALID_MASKS[block_type])
-                self.in_frame = True
-                self.drop_mode = False
-
-            out_valid = any(data_valid)
-            return {"out_valid": out_valid, "out_data": out_data, "data_valid": data_valid}
-
-        # Cancel asserted while idle: suppress output until cancel deasserts.
-        if cancel_frame:
-            self.in_frame = False
-            return {"out_valid": False, "out_data": out_data, "data_valid": data_valid}
-
-        # Match RTL ordering: while in-frame, bad sync header or lock loss drops
-        # even if in_valid is low.
-        if self.in_frame and (
-            (not locked)
-            or (sync_header not in self.VALID_SYNC_HEADERS)
-        ):
-            self.in_frame = False
-            return {"out_valid": False, "out_data": out_data, "data_valid": data_valid}
-
-        if not in_valid or not locked:
-            return {"out_valid": False, "out_data": out_data, "data_valid": data_valid}
-
-        if block_class == "bad_header":
-            if self.in_frame:
-                self.in_frame = False
-            return {"out_valid": False, "out_data": out_data, "data_valid": data_valid}
-
-        if block_class == "data":
-            if self.in_frame:
-                data_valid = [True] * 8
-            out_valid = any(data_valid)
-            return {"out_valid": out_valid, "out_data": out_data, "data_valid": data_valid}
-
-        if block_class == "start":
-            if self.in_frame:
-                # Nested start is treated as corruption: abort and wait for fresh SOF.
-                self.in_frame = False
-            else:
-                data_valid = list(self.START_VALID_MASKS[block_type])
-                self.in_frame = True
-
-            out_valid = any(data_valid)
-            return {"out_valid": out_valid, "out_data": out_data, "data_valid": data_valid}
-
-        if block_class == "term":
-            if self.in_frame:
-                data_valid = list(self.END_VALID_MASKS[block_type])
-            self.in_frame = False
-            out_valid = any(data_valid)
-            return {"out_valid": out_valid, "out_data": out_data, "data_valid": data_valid}
-
-        if block_class == "ordered_set":
-            if self.in_frame:
-                data_valid = list(self.NON_PAYLOAD_CONTROL_TYPES[block_type])
-            out_valid = any(data_valid)
-            return {"out_valid": out_valid, "out_data": out_data, "data_valid": data_valid}
-
-        # IDLE or unknown control: ignore out-of-frame, abort in-frame.
-        if self.in_frame:
-            self.in_frame = False
-
-        out_valid = any(data_valid)
-        return {"out_valid": out_valid, "out_data": out_data, "data_valid": data_valid}
+        if no_valid_data:
+            expected["data_valid"] = [False] * 8
+            expected["out_valid"] = False
 
     async def process_notification(self, notification):
         if not isinstance(notification, Mapping):
@@ -239,22 +270,37 @@ class EthernetAssemblerModel(GenericModel):
                 notification.get("in_data", notification.get("data_i", notification.get("data"))),
             )
         )
-        in_valid = self._to_bool(
-            notification.get("in_valid", notification.get("valid")), default=True
+        header_bits = self._to_int(
+            notification.get("header_bits", notification.get("header_bits_i")),
+            default=(input_data >> 64) & 0b11,
         )
-        locked = self._to_bool(
-            notification.get("locked", notification.get("locked_i")), default=True
-        )
+        in_valid = self._to_bool(notification.get("in_valid", notification.get("valid")), default=True)
+        locked = self._to_bool(notification.get("locked", notification.get("locked_i")), default=True)
         cancel_frame = self._to_bool(
             notification.get("cancel_frame", notification.get("cancel_frame_i")),
             default=False,
         )
+        no_valid_data = self._to_bool(
+            notification.get("no_valid_data", notification.get("no_valid_data_i")),
+            default=False,
+        )
+        drop_frame = self._to_bool(
+            notification.get("drop_frame", notification.get("drop_frame_i")),
+            default=False,
+        )
 
-        expected = self._decode_block(
+        expected = self._decode_baseline(
             input_data=input_data,
+            header_bits=header_bits,
             in_valid=in_valid,
             locked=locked,
             cancel_frame=cancel_frame,
         )
-        if expected["out_valid"]:
+        self._apply_metadata_overrides(
+            expected=expected,
+            no_valid_data=no_valid_data,
+            drop_frame=drop_frame,
+        )
+
+        if self.cycle_accurate or expected["out_valid"]:
             await self.expected_queue.put(expected)

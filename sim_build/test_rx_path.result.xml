@@ -1,20 +1,7 @@
 <testsuites name="results">
   <testsuite name="all" package="all">
-    <property name="random_seed" value="1775614404" />
-    <testcase name="test_lock_and_single_frame" classname="rx_tb.tb.rx_test" file="/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_test.py" lineno="80" time="0.009475469589233398" sim_time_ns="460.0" ratio_time="48546.40666280854">
-      <failure error_type="AssertionError" error_msg="1 expected frame(s) never received by DUT." />
-    </testcase>
-    <testcase name="test_back_to_back_frames" classname="rx_tb.tb.rx_test" file="/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_test.py" lineno="95" time="0.010165214538574219" sim_time_ns="470.0" ratio_time="46236.11220564781">
-      <failure error_type="AssertionError" error_msg="3 expected frame(s) never received by DUT." />
-    </testcase>
-    <testcase name="test_frame_lengths" classname="rx_tb.tb.rx_test" file="/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_test.py" lineno="115" time="0.009202957153320312" sim_time_ns="470.0" ratio_time="51070.540932642485">
-      <failure error_type="AssertionError" error_msg="4 expected frame(s) never received by DUT." />
-    </testcase>
-    <testcase name="test_lock_loss_recovery" classname="rx_tb.tb.rx_test" file="/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_test.py" lineno="138" time="0.009347677230834961" sim_time_ns="470.0" ratio_time="50279.87043130054">
-      <failure error_type="AssertionError" error_msg="1 expected frame(s) never received by DUT." />
-    </testcase>
-    <testcase name="test_bubble_insertion" classname="rx_tb.tb.rx_test" file="/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_test.py" lineno="158" time="0.008676528930664062" sim_time_ns="470.0" ratio_time="54169.12728072104">
-      <failure error_type="AssertionError" error_msg="1 expected frame(s) never received by DUT." />
-    </testcase>
+    <property name="random_seed" value="1776013391" />
+    <testcase name="test_lock_and_single_frame" classname="rx_tb.tb.rx_test" file="/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_test.py" lineno="65" time="0.11485171318054199" sim_time_ns="9060.0" ratio_time="78884.32613763511" />
+    <testcase name="test_back_to_back_frames" classname="rx_tb.tb.rx_test" file="/home/lvr4818/ieee/ChipTeam2026/rx_tb/tb/rx_test.py" lineno="79" time="0.1213524341583252" sim_time_ns="9070.0" ratio_time="74740.98119998664" />
   </testsuite>
 </testsuites>

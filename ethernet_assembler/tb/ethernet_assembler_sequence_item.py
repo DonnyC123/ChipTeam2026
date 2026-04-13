@@ -8,17 +8,33 @@ from tb_utils.abstract_transactions import AbstractTransaction
 
 @dataclass
 class EthernetAssemblerSequenceItem(AbstractTransaction):
-    DATA_IN_W = 66
-    PAYLOAD_W = DATA_IN_W - 2
-    PAYLOAD_MASK = (1 << PAYLOAD_W) - 1
+    HEADER_W = 2
+    DATA_IN_W = 64
+    PAYLOAD_W = DATA_IN_W
+    HEADER_MASK = (1 << HEADER_W) - 1
+    PAYLOAD_MASK = (1 << DATA_IN_W) - 1
     BIT_REVERSE_TABLE = tuple(int(f"{i:08b}"[::-1], 2) for i in range(256))
 
+    # Signals for the DUT
     input_data_i: LogicArray = field(
         default_factory=lambda: LogicArray("X" * EthernetAssemblerSequenceItem.DATA_IN_W)
     )
+    header_bits_i: LogicArray = field(
+        default_factory=lambda: LogicArray("X" * EthernetAssemblerSequenceItem.HEADER_W)
+    )
     in_valid_i: Logic = field(default_factory=lambda: Logic("0"))
-    locked_i: Logic = field(default_factory=lambda: Logic("1"))
+    locked_i: Logic = field(default_factory=lambda: Logic("0"))
     cancel_frame_i: Logic = field(default_factory=lambda: Logic("0"))
+
+    # Flags for the model
+    no_valid_data: Logic = field(
+        default_factory=lambda: Logic("0"),
+        metadata={"model_only": True},
+    )
+    drop_frame: Logic = field(
+        default_factory=lambda: Logic("0"),
+        metadata={"model_only": True},
+    )
 
     @classmethod
     def _reverse_bits(cls, value: int, width: int) -> int:
@@ -46,27 +62,38 @@ class EthernetAssemblerSequenceItem(AbstractTransaction):
         return reversed_value
 
     @classmethod
-    def _to_network_order(cls, input_data: int) -> int:
-        input_data &= (1 << cls.DATA_IN_W) - 1
+    def _to_network_header(cls, header_bits: int) -> int:
+        header_bits &= cls.HEADER_MASK
+        # DUT expects network-order header bits.
+        return ((header_bits & 0b01) << 1) | ((header_bits >> 1) & 0b01)
 
-        header = (input_data >> cls.PAYLOAD_W) & 0b11
+    @classmethod
+    def _to_network_payload(cls, input_data: int) -> int:
+        input_data &= cls.PAYLOAD_MASK
+        # DUT expects network-order payload bits (bit-reversed within each byte).
+        return cls._reverse_bits(input_data, cls.PAYLOAD_W)
+
+    @classmethod
+    def _to_network_order(
+        cls, input_data: int, header_bits: int | None = None
+    ) -> tuple[int, int]:
+        # Backward compatible fallback: if header_bits is omitted, derive it from
+        # packed input_data[65:64] from legacy callers.
+        if header_bits is None:
+            header_bits = (input_data >> cls.DATA_IN_W) & cls.HEADER_MASK
         payload = input_data & cls.PAYLOAD_MASK
-
-        # DUT expects network-order bits on input: swap 2-bit header order and
-        # reverse bit order inside each payload byte.
-        network_header = ((header & 0b01) << 1) | ((header >> 1) & 0b01)
-        network_payload = cls._reverse_bits(payload, cls.PAYLOAD_W)
-
-        return (network_header << cls.PAYLOAD_W) | network_payload
+        return cls._to_network_payload(payload), cls._to_network_header(header_bits)
 
     def __post_init__(self):
         try:
-            raw_input_data = int(self.input_data_i)
+            raw_payload = int(self.input_data_i)
+            raw_header = int(self.header_bits_i)
         except (TypeError, ValueError):
             return
 
-        network_input_data = self._to_network_order(raw_input_data)
-        self.input_data_i = LogicArray.from_unsigned(network_input_data, self.DATA_IN_W)
+        network_payload, network_header = self._to_network_order(raw_payload, raw_header)
+        self.input_data_i = LogicArray.from_unsigned(network_payload, self.DATA_IN_W)
+        self.header_bits_i = LogicArray.from_unsigned(network_header, self.HEADER_W)
 
     @staticmethod
     def _to_int(value: Any, default: int = 0) -> int:
@@ -79,9 +106,12 @@ class EthernetAssemblerSequenceItem(AbstractTransaction):
     def invalid_seq_item(cls) -> Self:
         return cls(
             input_data_i=LogicArray("0" * cls.DATA_IN_W),
+            header_bits_i=LogicArray("0" * cls.HEADER_W),
             in_valid_i=Logic(0),
             locked_i=Logic(1),
             cancel_frame_i=Logic(0),
+            no_valid_data=Logic(0),
+            drop_frame=Logic(0),
         )
 
     @property
@@ -96,7 +126,10 @@ class EthernetAssemblerSequenceItem(AbstractTransaction):
     def to_data(self) -> Dict[str, Any]:
         return {
             "input_data": self._to_int(self.input_data_i, 0),
+            "header_bits": self._to_int(self.header_bits_i, 0),
             "in_valid": bool(self._to_int(self.in_valid_i, 0)),
             "locked": bool(self._to_int(self.locked_i, 1)),
             "cancel_frame": bool(self._to_int(self.cancel_frame_i, 0)),
+            "no_valid_data": bool(self._to_int(self.no_valid_data, 0)),
+            "drop_frame": bool(self._to_int(self.drop_frame, 0)),
         }

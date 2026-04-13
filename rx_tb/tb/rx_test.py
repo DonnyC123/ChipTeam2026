@@ -27,7 +27,7 @@ class PayloadMonitor(GenericValidMonitor):
             txn.out_data_o    = self.dut.out_data_o.value
             txn.bytes_valid_o = self.dut.bytes_valid_o.value
 
-            if txn.valid or txn.n_valid > 0:
+            if txn.valid:
                 self.actual_queue.put_nowait(txn)
 
 

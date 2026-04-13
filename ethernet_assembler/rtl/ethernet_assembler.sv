@@ -37,6 +37,8 @@ module ethernet_assembler #(
     output logic [BYTES_OUT-1:0]  bytes_valid_o
 );
 
+localparam PIPE_DEPTH = 1;
+
 logic [1:0]            header_bits;
 logic [BYTES_OUT-1:0]  bytes_valid_o_d;
 logic [DATA_OUT_W-1:0] out_data_o_d;
@@ -82,8 +84,12 @@ always_comb begin
         drop_mode_d     = 1'b1;
 
     // Drop mode: ignore everything until cancel is low and a new start frame arrives
+<<<<<<< HEAD
     end else if (!in_valid_i) begin
     end else if (drop_mode_q) begin
+=======
+    end else if (can_read && drop_mode_q) begin
+>>>>>>> origin/jacob_assembler
         in_frame_d      = 1'b0;
         bytes_valid_o_d = '0;
 
@@ -109,7 +115,7 @@ always_comb begin
         end
 
     // Invalid sync header or not locked while in frame.
-    end else if (in_frame_q && (!locked_i || (CTRL_HDR != header_bits && DATA_HDR != header_bits))) begin
+    end else if (in_valid_i && in_frame_q && (!locked_i || (CTRL_HDR != header_bits && DATA_HDR != header_bits))) begin
         drop_frame_o_d  = 1'b1;
         in_frame_d      = 1'b0;
         bytes_valid_o_d = '0;
@@ -160,23 +166,102 @@ always_comb begin
     out_valid_o_d = |bytes_valid_o_d;
 end
 
-// Clocked Outputs
-always_ff @(posedge clk) begin
-    if (rst) begin
-        drop_mode_q     <= 1'b0;
-        in_frame_q      <= 1'b0;
-        bytes_valid_o   <= 8'h00;
-        out_valid_o     <= 1'b0; 
-        drop_frame_o    <= 1'b0;
-    end else begin
-        drop_mode_q     <= drop_mode_d;
-        in_frame_q      <= in_frame_d;
-        bytes_valid_o   <= bytes_valid_o_d;
-        out_data_o      <= out_data_o_d;
-        out_valid_o     <= out_valid_o_d;
-        drop_frame_o    <= drop_frame_o_d;
-    end
-end
+// Clocked Outputs //
+
+// drop_frame_o_d;
+data_pipeline #(
+    .DATA_W    (1),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (1),
+    .RST_VAL   (0)
+) data_pipeline_inst1 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(drop_frame_o_d),
+    .data_o(drop_frame_o)
+);
+
+// drop_mode_d, drop_mode_q;
+data_pipeline #(
+    .DATA_W    (1),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (1),
+    .RST_VAL   (0)
+) data_pipeline_inst2 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(drop_mode_d),
+    .data_o(drop_mode_q)
+);
+
+// in_frame_d, in_frame_q;
+data_pipeline #(
+    .DATA_W    (1),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (1),
+    .RST_VAL   (0)
+) data_pipeline_inst3 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(in_frame_d),
+    .data_o(in_frame_q)
+);
+
+//out_valid_o_d
+data_pipeline #(
+    .DATA_W    (1),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (1),
+    .RST_VAL   (0)
+) data_pipeline_inst4 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(out_valid_o_d),
+    .data_o(out_valid_o)
+);
+
+//out_data_o_d
+data_pipeline #(
+    .DATA_W    (DATA_OUT_W),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (0)
+    // theres another parameter for reset value
+) data_pipeline_inst5 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(out_data_o_d),
+    .data_o(out_data_o)
+);
+
+//bytes_valid_o_d
+data_pipeline #(
+    .DATA_W    (BYTES_OUT),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (0)
+) data_pipeline_inst6 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(bytes_valid_o_d),
+    .data_o(bytes_valid_o)
+);
+
+// Old Clocked Outputs
+// always_ff @(posedge clk) begin
+//     if (rst) begin
+//         drop_mode_q     <= 1'b0;
+//         in_frame_q      <= 1'b0;
+//         bytes_valid_o   <= 8'h00;
+//         out_valid_o     <= 1'b0; 
+//         drop_frame_o    <= 1'b0;
+//     end else begin
+//         drop_mode_q     <= drop_mode_d;
+//         in_frame_q      <= in_frame_d;
+//         bytes_valid_o   <= bytes_valid_o_d;
+//         out_data_o      <= out_data_o_d;
+//         out_valid_o     <= out_valid_o_d;
+//         drop_frame_o    <= drop_frame_o_d;
+//     end
+// end
 
 always @(posedge clk) begin
     if (in_valid_i && locked_i) begin
