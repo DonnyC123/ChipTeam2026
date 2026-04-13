@@ -1,6 +1,9 @@
 package nic_global_pkg;
 
 // These are parameters from the ethernet_assembler module, used in 64b/66b
+// We dont care about C's or O's
+// T = terminate (ignore all bytes to the right of the T, including the T)
+// D = data
 localparam logic [7:0] IDLE_BLK = 8'h1E; // C0..C7
 localparam logic [7:0] SOF_L0   = 8'h78; // S0 D1..D7 (start in lane0)
 localparam logic [7:0] SOF_L4   = 8'h33; // C0..C3 S4 D5..D7 (start in lane4)
@@ -20,7 +23,5 @@ localparam logic [1:0] CTRL_HDR = 2'b10;
 localparam logic [1:0] DATA_HDR = 2'b01;
 
 localparam int SIZE_BYTE = 8;
-
-// Add more to package down here
 
 endpackage
