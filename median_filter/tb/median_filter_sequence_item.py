@@ -1,12 +1,12 @@
 from dataclasses import dataclass, field
 from typing import Self
 from cocotb.types import Logic
-from tb_utils.abstract_transactions import AbstractTransaction
+from tb_utils.abstract_transactions import AbstractValidTransaction
 from .pixel_interface_transaction import PixelInterfaceTransaction
 
 
 @dataclass
-class MedianFilterSequenceItem(AbstractTransaction):
+class MedianFilterSequenceItem(AbstractValidTransaction):
     start_i: Logic = field(default_factory=lambda: Logic("0"))
 
     pixel_valid_if_i: PixelInterfaceTransaction = field(
@@ -16,6 +16,10 @@ class MedianFilterSequenceItem(AbstractTransaction):
     @property
     def valid(self) -> bool:
         return bool(self.pixel_valid_if_i.valid)
+
+    @valid.setter
+    def valid(self, value: bool) -> None:
+        self.pixel_valid_if_i.valid = Logic(value)
 
     @property
     def to_data(self):
