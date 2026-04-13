@@ -1,19 +1,22 @@
 module scrambler #(
-    parameter BIT_W   = 64,
-    parameter STATE_W = 58
+    parameter BIT_IN_W  = 64,
+    parameter BIT_OUT_W = 66,
+    parameter HEAD_W    = 2,
+    parameter STATE_W   = 58
 )(
     input  logic                     clk,
     input  logic                     rst,
-    input  logic [BIT_W-1:0]         _64b_i,
+    input  logic [BIT_IN_W-1:0]      _64b_i,
     input  logic                     valid_i,
-    output logic [BIT_W-1:0]         _64b_o,
+    input  logic [HEAD_W-1:0]        _2b_header_i,
+    output logic [BIT_OUT_W-1:0]     _66b_o,
     output logic                     valid_o,
 );
 
 localparam TAP_1 = 19;
 localparam TAP_2 = 0;
 
-logic [BIT_W-1:0]   scrambled_d, scrambled_q;
+logic [BIT_IN_W-1:0]   scrambled_d, scrambled_q;
 logic [STATE_W-1:0] state_d, state_q, state_intermediate;
 logic               valid_o_d, valid_o_q;
 logic               valid_state_d, valid_state_q;
@@ -25,7 +28,7 @@ always_comb begin
     valid_state_d        = 1'b0;
     if (valid_i && valid_state_q) begin
         state_intermediate = state_q;
-        for (int i = 0; i < BIT_W; i++) begin
+        for (int i = 0; i < BIT_IN_W; i++) begin
             scrambled_d[i]     = _64b_i[i] ^ state_intermediate[TAP_1] ^ state_intermediate[TAP_2];
             state_intermediate = {state_intermediate[STATE_W-2:0], (_64b_i[i] ^ state_intermediate[TAP_1] ^ state_intermediate[TAP_2])};
         end
@@ -56,6 +59,6 @@ always_ff @(posedge clk) begin
 end
 
 assign valid_o       = valid_o_q;
-assign _64b_o        = scrambled_q;
+assign _66b_o        = {_2b_header_i[HEAD_W-1:0], scrambled_q[BIT_IN_W-1:0]};
 
 endmodule
