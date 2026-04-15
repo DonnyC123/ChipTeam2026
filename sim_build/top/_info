@@ -10,17 +10,17 @@ z2
 cModel Technology
 Z0 d/home/lvr4818/ieee/ChipTeam2026/sim_build
 T_opt
-!s110 1776013390
-VN>XXg`EJzIW9JnQ?9@54f2
+!s110 1776219396
+V0NKYoX:SN10T3ACG[Vd7b0
 04 6 4 work rx_top fast 0
-=1-a4bb6d3fef1e-69dbd04e-38db7-3f532c
+=1-b49691574b56-69def504-9416e-5d1f7
 o-quiet +acc -auto_acc_if_foreign -work top +acc
 Z1 tCvgOpt 0
 n@_opt
 OL;O;2020.1;71
 valignment_finder
 Z2 DXx6 sv_std 3 std 0 22 9oUSJO;AeEaW`l:M@^WG92
-Z3 !s110 1776013389
+Z3 !s110 1776219395
 !i10b 1
 !s100 GC:LH8XP1f2I1fNSdDmJZ3
 Z4 !s11b Dg1SIo80bB@j0V0VzS_@n1
@@ -28,7 +28,7 @@ IlKP?0oJ8lRM8=SnRPiLl73
 Z5 VDg1SIo80bB@j0V0VzS_@n1
 S1
 R0
-Z6 w1775614696
+Z6 w1776042773
 8/home/lvr4818/ieee/ChipTeam2026/alignment_finder/rtl/alignment_finder.sv
 F/home/lvr4818/ieee/ChipTeam2026/alignment_finder/rtl/alignment_finder.sv
 !i122 8
@@ -37,7 +37,7 @@ Z7 OL;L;2020.1;71
 r1
 !s85 0
 31
-Z8 !s108 1776013389.000000
+Z8 !s108 1776219395.000000
 !s107 /home/lvr4818/ieee/ChipTeam2026/alignment_finder/rtl/alignment_finder.sv|
 !s90 -work|top|-sv|/home/lvr4818/ieee/ChipTeam2026/alignment_finder/rtl/alignment_finder.sv|
 !i113 0
@@ -45,7 +45,7 @@ Z9 o-work top -sv -L mtiAvm -L mtiRnm -L mtiOvm -L mtiUvm -L mtiUPF -L infact
 R1
 vbram
 R2
-Z10 !s110 1776013388
+Z10 !s110 1776219394
 !i10b 1
 !s100 M[aDk4J7J1U==fLLTjimN3
 R4
@@ -62,7 +62,7 @@ R7
 r1
 !s85 0
 31
-Z12 !s108 1776013388.000000
+Z12 !s108 1776219394.000000
 !s107 /home/lvr4818/ieee/ChipTeam2026/rtl_utils/bram.sv|
 !s90 -work|top|-sv|/home/lvr4818/ieee/ChipTeam2026/rtl_utils/bram.sv|
 !i113 0
@@ -72,17 +72,17 @@ vbubbler
 R2
 R3
 !i10b 1
-!s100 TY_:WNZon]7f=7kj3ROeX3
+!s100 8HWoYl39>bDVfkbnSDkoz3
 R4
-I@MVNf]8d^`?:=mbGN<PaQ1
+IR0RZgFgbgcYoLg13hS[b:3
 R5
 S1
 R0
-w1775954014
+w1776215357
 8/home/lvr4818/ieee/ChipTeam2026/bubbler/rtl/bubbler.sv
 F/home/lvr4818/ieee/ChipTeam2026/bubbler/rtl/bubbler.sv
 !i122 11
-L0 1 63
+L0 1 66
 R7
 r1
 !s85 0
@@ -120,7 +120,7 @@ R9
 R1
 vdata_status_pipeline
 R2
-R10
+R3
 !i10b 1
 !s100 SS23]^^gQ[hb5ok1dEO@T2
 R4
@@ -162,7 +162,7 @@ R7
 r1
 !s85 0
 31
-R12
+R8
 !s107 /home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_status_shift_reg.sv|
 !s90 -work|top|-sv|/home/lvr4818/ieee/ChipTeam2026/rtl_utils/data_status_shift_reg.sv|
 !i113 0
@@ -197,13 +197,13 @@ vdescrambler
 R2
 R3
 !i10b 1
-!s100 GQ_mKj53?36m=jAMW5b5L2
+!s100 4alTS9>59GCJ]j2M<NiPM2
 R4
-Iz]:<N6;Bz`MXZFCJ6U5861
+I[fN];3V=;^ETa>nXH7A1?0
 R5
 S1
 R0
-w1775965479
+w1776217307
 8/home/lvr4818/ieee/ChipTeam2026/descrambler/rtl/descrambler.sv
 F/home/lvr4818/ieee/ChipTeam2026/descrambler/rtl/descrambler.sv
 !i122 12
@@ -220,23 +220,23 @@ R9
 R1
 vethernet_assembler
 R2
-Z13 DXx4 work 14 nic_global_pkg 0 22 X3H65X`^l<XWiaG_L6=z:1
-DXx4 work 26 ethernet_assembler_sv_unit 0 22 MQ1=UA`@nBaMhFO6=CaAA0
+Z13 DXx4 work 14 nic_global_pkg 0 22 L;2Hk`MYcCEiYA[I2]bYF0
+DXx4 work 26 ethernet_assembler_sv_unit 0 22 O?^Pa[=mN>ekhNEA]kiUM1
 R3
 R5
 r1
 !s85 0
 !i10b 1
-!s100 ]BLG8<3dZ]7M<IlYMAEai2
-Ibh_nEc9TXCILVi7DiJ4]P0
+!s100 n;9b`BTH_fGcnQcFJimCB3
+IS[`bAUaU92VITW3bJZAoA3
 !s105 ethernet_assembler_sv_unit
 S1
 R0
-Z14 w1775965116
+Z14 w1776215522
 Z15 8/home/lvr4818/ieee/ChipTeam2026/ethernet_assembler/rtl/ethernet_assembler.sv
 Z16 F/home/lvr4818/ieee/ChipTeam2026/ethernet_assembler/rtl/ethernet_assembler.sv
 !i122 10
-L0 21 173
+L0 31 221
 R7
 31
 R8
@@ -249,12 +249,12 @@ Xethernet_assembler_sv_unit
 R2
 R13
 R3
-VMQ1=UA`@nBaMhFO6=CaAA0
+VO?^Pa[=mN>ekhNEA]kiUM1
 r1
 !s85 0
 !i10b 1
-!s100 :fQH[Sm52=Vja]f?UIJEj1
-IMQ1=UA`@nBaMhFO6=CaAA0
+!s100 iF]S:k>e<9Gj5O2hjgPY80
+IO?^Pa[=mN>ekhNEA]kiUM1
 !i103 1
 S1
 R0
@@ -262,7 +262,7 @@ R14
 R15
 R16
 !i122 10
-L0 19 0
+L0 29 0
 R7
 31
 R8
@@ -300,13 +300,13 @@ Xnic_global_pkg
 R2
 R3
 !i10b 1
-!s100 4?l>_Fgf[`VD=ZC[nEQ`c0
+!s100 ==f=g7G5;_L[>E5Z^5ZTj3
 R4
-IX3H65X`^l<XWiaG_L6=z:1
-VX3H65X`^l<XWiaG_L6=z:1
+IL;2Hk`MYcCEiYA[I2]bYF0
+VL;2Hk`MYcCEiYA[I2]bYF0
 S1
 R0
-R6
+w1776215295
 8/home/lvr4818/ieee/ChipTeam2026/ethernet_assembler/rtl/nic_global_package.sv
 F/home/lvr4818/ieee/ChipTeam2026/ethernet_assembler/rtl/nic_global_package.sv
 !i122 9
@@ -331,7 +331,7 @@ I54O5Y6J?oLhSNR;PdkeS71
 R5
 S1
 R0
-w1775961715
+R6
 8/home/lvr4818/ieee/ChipTeam2026/rx_tb/rtl/rx_top.sv
 F/home/lvr4818/ieee/ChipTeam2026/rx_tb/rtl/rx_top.sv
 !i122 13

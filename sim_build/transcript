@@ -1,5 +1,5 @@
 # vsim -c -onfinish exit -pli "/home/lvr4818/miniconda3/envs/ieee_chip_team/lib/python3.11/site-packages/cocotb/libs/libcocotbvpi_modelsim.so" -voptargs="+acc" top.rx_top -do "log -recursive /*;run -all; quit" 
-# Start time: 12:03:10 on Apr 12,2026
+# Start time: 21:16:36 on Apr 14,2026
 # ** Note: (vsim-3812) Design is being optimized...
 # ** Warning: (vsim-3865) Due to PLI being present, global +acc is being enabled automatically. This will cause your simulation to run very slowly. Please use vsim -no_autoacc to disable this feature. This feature is now deprecated and will be removed from future releases.
 # ** Note: (vopt-143) Recognized 1 FSM in module "alignment_finder(fast)".
@@ -24,6 +24,9 @@
 # Loading work.nic_global_pkg(fast)
 # Loading work.ethernet_assembler_sv_unit(fast)
 # Loading work.ethernet_assembler(fast)
+# Loading work.data_pipeline(fast)
+# Loading work.data_pipeline(fast__1)
+# Loading work.data_pipeline(fast__2)
 # Loading /home/lvr4818/miniconda3/envs/ieee_chip_team/lib/python3.11/site-packages/cocotb/libs/libcocotbvpi_modelsim.so
 #      -.--ns INFO     gpi                                ..mbed/gpi_embed.cpp:93   in _embed_init_python              Using Python 3.11.9 interpreter at /home/lvr4818/miniconda3/envs/ieee_chip_team/bin/python
 #      -.--ns INFO     gpi                                ../gpi/GpiCommon.cpp:79   in gpi_print_registered_impl       VPI registered
@@ -31,742 +34,926 @@
 # log -recursive /*
 # run -all
 #      0.00ns INFO     cocotb                             Running on ModelSim SE-64 version 2020.1 2020.01
-#      0.00ns INFO     cocotb                             Seeding Python random module with 1776013391
+#      0.00ns INFO     cocotb                             Seeding Python random module with 1776219397
 #      0.00ns INFO     cocotb                             Initialized cocotb v2.0.1 from /home/lvr4818/miniconda3/envs/ieee_chip_team/lib/python3.11/site-packages/cocotb
 #      0.00ns INFO     cocotb                             Running tests
-#      0.00ns INFO     cocotb.regression                  running rx_tb.tb.rx_test.test_lock_and_single_frame (1/2)
-# time=60 | BUBBLER | 64i=5929293030328282 | 66o=00
-# time=70 | BUBBLER | 64i=faeddeed782d6699 | 66o=00
-# time=80 | DESCRAMBLER | 64i=5929293030328282 | 64o=00
-# time=80 | BUBBLER | 64i=c7f8ecf8eb28eba7 | 66o=15929293030328282
-# time=90 | BUBBLER | 64i=f486a0395fe55fd8 | 66o=1febb77bb5e0b59a6
-# time=90 | DESCRAMBLER | 64i=febb77bb5e0b59a6 | 64o=00
-# time=100 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=100 | DESCRAMBLER | 64i=8c7f8ecf8eb28eba | 64o=7878787878787878
-# time=100 | BUBBLER | 64i=83f2bfc6fb833753 | 66o=18c7f8ecf8eb28eba
-# time=110 | BUBBLER | 64i=aa5b01f0ce3f09ce | 66o=14fd21a80e57f957f
-# time=110 | DESCRAMBLER | 64i=4fd21a80e57f957f | 64o=7878787878787878
-# time=110 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=120 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=120 | DESCRAMBLER | 64i=ce83f2bfc6fb8337 | 64o=7878787878787878
-# time=120 | BUBBLER | 64i=7bfff0b87964f430 | 66o=1ce83f2bfc6fb8337
-# time=130 | BUBBLER | 64i=f3e0e0a3f3ff9828 | 66o=10c2a96c07c338fc2
-# time=130 | DESCRAMBLER | 64i=c2a96c07c338fc2 | 64o=7878787878787878
-# time=130 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=140 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=140 | DESCRAMBLER | 64i=8287bfff0b87964f | 64o=7878787878787878
-# time=140 | BUBBLER | 64i=297cf03fd683600f | 66o=18287bfff0b87964f
-# time=150 | BUBBLER | 64i=477782879665a56d | 66o=1803fcf83828fcffe
-# time=150 | DESCRAMBLER | 64i=803fcf83828fcffe | 64o=7878787878787878
-# time=150 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=160 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=160 | DESCRAMBLER | 64i=a56d297cf03fd683 | 64o=7878787878787878
-# time=160 | BUBBLER | 64i=a6f2f6c909c77277 | 66o=1a56d297cf03fd683
-# time=170 | BUBBLER | 64i=1c8a13b8029b5867 | 66o=1dc9dd1dde0a1e599
-# time=170 | DESCRAMBLER | 64i=dc9dd1dde0a1e599 | 64o=7878787878787878
-# time=170 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=180 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=180 | DESCRAMBLER | 64i=b5867a6f2f6c909c | 64o=7878787878787878
-# time=180 | BUBBLER | 64i=75847190b454d95 | 66o=1b5867a6f2f6c909c
-# time=190 | BUBBLER | 64i=e0c51c0aed17fb54 | 66o=115365472284ee00a
-# time=190 | DESCRAMBLER | 64i=15365472284ee00a | 64o=7878787878787878
-# time=190 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=200 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=200 | DESCRAMBLER | 64i=17fb54075847190b | 64o=7878787878787878
-# time=200 | BUBBLER | 64i=b86e9b0c6f55b6f | 66o=117fb54075847190b
-# time=210 | BUBBLER | 64i=82b7b99c5b52eaa7 | 66o=1bd56dbf8314702bb
-# time=210 | DESCRAMBLER | 64i=bd56dbf8314702bb | 64o=7878787878787878
-# time=210 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=220 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=220 | DESCRAMBLER | 64i=b52eaa70b86e9b0c | 64o=7878787878787878
-# time=220 | BUBBLER | 64i=d73e6fe714decdc | 66o=1b52eaa70b86e9b0c
-# time=230 | BUBBLER | 64i=35ee5bfd4c379ac2 | 66o=1c537b3720adee671
-# time=230 | DESCRAMBLER | 64i=c537b3720adee671 | 64o=7878787878787878
-# time=230 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=240 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=240 | DESCRAMBLER | 64i=4c379ac20d73e6fe | 64o=7878787878787878
-# time=240 | BUBBLER | 64i=d7b8fff53a1e6afc | 66o=14c379ac20d73e6fe
-# time=250 | BUBBLER | 64i=2dd0c691bd565407 | 66o=14e879abf0d7b96ff
-# time=250 | DESCRAMBLER | 64i=4e879abf0d7b96ff | 64o=7878787878787878
-# time=250 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=260 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=260 | DESCRAMBLER | 64i=1bd565407d7b8fff | 64o=7878787878787878
-# time=260 | BUBBLER | 64i=46025b49fa54410e | 66o=11bd565407d7b8fff
-# time=270 | BUBBLER | 64i=3a60f9bd03bbf7cb | 66o=127e9510438b7431a
-# time=270 | DESCRAMBLER | 64i=27e9510438b7431a | 64o=7878787878787878
-# time=270 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=280 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=280 | DESCRAMBLER | 64i=bd03bbf7cb46025b | 64o=7878787878787878
-# time=280 | BUBBLER | 64i=fd547601ec3e3d5a | 66o=1bd03bbf7cb46025b
-# time=290 | BUBBLER | 64i=e0fedcfc742831bf | 66o=1807b0f8f568e983e
-# time=290 | DESCRAMBLER | 64i=807b0f8f568e983e | 64o=7878787878787878
-# time=290 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=300 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=300 | DESCRAMBLER | 64i=cfc742831bffd547 | 64o=7878787878787878
-# time=300 | BUBBLER | 64i=c30f50f5a6f00f50 | 66o=1cfc742831bffd547
-# time=310 | BUBBLER | 64i=3c394e96aabc387b | 66o=143d69bc03d4383fb
-# time=310 | DESCRAMBLER | 64i=43d69bc03d4383fb | 64o=7878787878787878
-# time=310 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=320 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=320 | DESCRAMBLER | 64i=4e96aabc387bc30f | 64o=7878787878787878
-# time=320 | BUBBLER | 64i=a82605fffefe1e2e | 66o=14e96aabc387bc30f
-# time=330 | BUBBLER | 64i=afdc03b83834fcfd | 66o=1817fffbf878b8f0e
-# time=330 | DESCRAMBLER | 64i=817fffbf878b8f0e | 64o=7878787878787878
-# time=330 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=340 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=340 | DESCRAMBLER | 64i=c03b83834fcfda82 | 64o=7878787878787878
-# time=340 | BUBBLER | 64i=ff60f1e3f0c3a0f5 | 66o=1c03b83834fcfda82
-# time=350 | BUBBLER | 64i=95e569657c3d7fc3 | 66o=183c78fc30e83d6bf
-# time=350 | DESCRAMBLER | 64i=83c78fc30e83d6bf | 64o=7878787878787878
-# time=350 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=360 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=360 | DESCRAMBLER | 64i=e569657c3d7fc3ff | 64o=7878787878787878
-# time=360 | BUBBLER | 64i=a7e8dddd88787796 | 66o=1e569657c3d7fc3ff
-# time=370 | BUBBLER | 64i=d8c72cecef2b2b6f | 66o=1fa3777621e1de5a5
-# time=370 | DESCRAMBLER | 64i=fa3777621e1de5a5 | 64o=7878787878787878
-# time=370 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=380 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=380 | DESCRAMBLER | 64i=8c72cecef2b2b6fa | 64o=7878787878787878
-# time=380 | BUBBLER | 64i=56a1d65fc64fe54c | 66o=18c72cecef2b2b6fa
-# time=390 | BUBBLER | 64i=8ebfcebb82bb4ffb | 66o=15a87597f193f9533
-# time=390 | DESCRAMBLER | 64i=5a87597f193f9533 | 64o=7878787878787878
-# time=390 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=400 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=400 | BUBBLER | 64i=c0ab5a01c0fe3a0d | 66o=00
-# time=410 | DESCRAMBLER | 64i=8ebfcebb82bb4ffb | 64o=00
-# time=410 | BUBBLER | 64i=6c7bf330b92d64c7 | 66o=18ebfcebb82bb4ffb
-# time=420 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=420 | BUBBLER | 64i=cf3e0b0a3fcff98 | 66o=1f02ad680703f8e83
-# time=420 | DESCRAMBLER | 64i=f02ad680703f8e83 | 64o=7878787878787878
-# time=430 | DESCRAMBLER | 64i=86c7bf330b92d64c | 64o=7878787878787878
-# time=430 | BUBBLER | 64i=c796830c3fd6c360 | 66o=186c7bf330b92d64c
-# time=430 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=440 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=440 | BUBBLER | 64i=f3fff0a1e0ffd0f | 66o=18033cf82c28ff3fe
-# time=440 | DESCRAMBLER | 64i=8033cf82c28ff3fe | 64o=7878787878787878
-# time=450 | DESCRAMBLER | 64i=fc796830c3fd6c3 | 64o=7878787878787878
-# time=450 | BUBBLER | 64i=5697c7c3fcfc360a | 66o=10fc796830c3fd6c3
-# time=450 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=460 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=460 | BUBBLER | 64i=feeee1d2d3c695a9 | 66o=18283cfffc28783ff
-# time=460 | DESCRAMBLER | 64i=8283cfffc28783ff | 64o=7878787878787878
-# time=470 | DESCRAMBLER | 64i=5a95697c7c3fcfc3 | 64o=7878787878787878
-# time=470 | BUBBLER | 64i=838f8fce8e826faf | 66o=15a95697c7c3fcfc3
-# time=470 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=480 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=480 | BUBBLER | 64i=3f0c6a0f55fdc07f | 66o=1bebffbbb874b4f1a
-# time=480 | DESCRAMBLER | 64i=bebffbbb874b4f1a | 64o=7878787878787878
-# time=490 | DESCRAMBLER | 64i=c07f838f8fce8e82 | 64o=7878787878787878
-# time=490 | BUBBLER | 64i=e83c2bfc3fb60f1d | 66o=1c07f838f8fce8e82
-# time=490 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=500 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=500 | BUBBLER | 64i=a00f0fe0f0d8fc3c | 66o=183c74fc31a83d57f
-# time=500 | DESCRAMBLER | 64i=83c74fc31a83d57f | 64o=7878787878787878
-# time=510 | DESCRAMBLER | 64i=8fc3ce83c2bfc3fb | 64o=7878787878787878
-# time=510 | BUBBLER | 64i=ffc787830f43f5a5 | 66o=18fc3ce83c2bfc3fb
-# time=510 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=520 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=520 | BUBBLER | 64i=e0f3f3f098283ff | 66o=10fd696803c3f83c3
-# time=520 | DESCRAMBLER | 64i=fd696803c3f83c3 | 64o=7878787878787878
-# time=530 | DESCRAMBLER | 64i=8283ffffc787830f | 64o=7878787878787878
-# time=530 | BUBBLER | 64i=30fc3d683700ff0e | 66o=18283ffffc787830f
-# time=530 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=540 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=540 | BUBBLER | 64i=f0a0f0ffdc3c783c | 66o=1c03fc38383cfcfc2
-# time=540 | DESCRAMBLER | 64i=c03fc38383cfcfc2 | 64o=7878787878787878
-# time=550 | DESCRAMBLER | 64i=c3c783c30fc3d683 | 64o=7878787878787878
-# time=550 | BUBBLER | 64i=3c3fc3c360f0f3f0 | 66o=1c3c783c30fc3d683
-# time=550 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=560 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=560 | BUBBLER | 64i=87879695a569697c | 66o=183c3cfc3c283c3ff
-# time=560 | DESCRAMBLER | 64i=83c3cfc3c283c3ff | 64o=7878787878787878
-# time=570 | DESCRAMBLER | 64i=a569697c3c3fc3c3 | 64o=7878787878787878
-# time=570 | BUBBLER | 64i=90909c672777777 | 66o=1a569697c3c3fc3c3
-# time=570 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=580 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=580 | BUBBLER | 64i=9b319b1d32cd0d0d | 66o=19c9ddddde1e1e5a5
-# time=580 | DESCRAMBLER | 64i=9c9ddddde1e1e5a5 | 64o=7878787878787878
-# time=590 | DESCRAMBLER | 64i=d32cd0d0d090909c | 64o=7878787878787878
-# time=590 | BUBBLER | 64i=144a54529a129b02 | 66o=1d32cd0d0d090909c
-# time=590 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=600 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=600 | BUBBLER | 64i=a01c51071447144b | 66o=14a684a6c0a6cc66c
-# time=600 | DESCRAMBLER | 64i=4a684a6c0a6cc66c | 64o=7878787878787878
-# time=610 | DESCRAMBLER | 64i=71447144b144a54 | 64o=7878787878787878
-# time=610 | BUBBLER | 64i=9129b4d3f5495fe3 | 66o=1071447144b144a54
-# time=610 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=620 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=620 | BUBBLER | 64i=48a9971f92ea730b | 66o=134fd5257f8e80714
-# time=620 | DESCRAMBLER | 64i=34fd5257f8e80714 | 64o=7878787878787878
-# time=630 | DESCRAMBLER | 64i=71f92ea730b9129b | 64o=7878787878787878
-# time=630 | BUBBLER | 64i=37a64c8248b98c7d | 66o=171f92ea730b9129b
-# time=630 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=640 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=640 | BUBBLER | 64i=de69fe0d77a6fe09 | 66o=1320922e631f522a6
-# time=640 | DESCRAMBLER | 64i=320922e631f522a6 | 64o=7878787878787878
-# time=650 | DESCRAMBLER | 64i=fe0d77a6fe0937a6 | 64o=7878787878787878
-# time=650 | BUBBLER | 64i=b9a6fd35ee6bfd35 | 66o=1fe0d77a6fe0937a6
-# time=650 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=660 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=660 | BUBBLER | 64i=d0d261bd12540b17 | 66o=1bf4d7b9aff4d779a
-# time=660 | DESCRAMBLER | 64i=bf4d7b9aff4d779a | 64o=7878787878787878
-# time=670 | DESCRAMBLER | 64i=261bd12540b17b9a | 64o=7878787878787878
-# time=670 | BUBBLER | 64i=256d9fa57410e7d | 66o=1261bd12540b17b9a
-# time=670 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=680 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=680 | BUBBLER | 64i=f958dba9114834ba | 66o=15b67e95d0439f743
-# time=680 | DESCRAMBLER | 64i=5b67e95d0439f743 | 64o=7878787878787878
-# time=690 | DESCRAMBLER | 64i=58dba9114834ba02 | 64o=7878787878787878
-# time=690 | BUBBLER | 64i=64637c944645d2b2 | 66o=158dba9114834ba02
-# time=690 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=700 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=700 | BUBBLER | 64i=954df28519008ac8 | 66o=118df25119174acbe
-# time=700 | DESCRAMBLER | 64i=18df25119174acbe | 64o=7878787878787878
-# time=710 | DESCRAMBLER | 64i=54df28519008ac86 | 64o=7878787878787878
-# time=710 | BUBBLER | 64i=66329f449bfd3b21 | 66o=154df28519008ac86
-# time=710 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=720 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=720 | BUBBLER | 64i=5dfddf853bdbcf73 | 66o=198ca7d126ff4ec86
-# time=720 | DESCRAMBLER | 64i=98ca7d126ff4ec86 | 64o=7878787878787878
-# time=730 | BUBBLER | 64i=6bc9f510d6bff969 | 66o=00
-# time=730 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=740 | DESCRAMBLER | 64i=5dfddf853bdbcf73 | 64o=00
-# time=740 | BUBBLER | 64i=d040ac59c27d1f3b | 66o=15dfddf853bdbcf73
-# time=750 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=78 | data=1e55dd33bb55dd33
-# time=750 | BUBBLER | 64i=e5403fab70c13460 | 66o=2daf27d4435affe5a
-# time=750 | DESCRAMBLER | 64i=daf27d4435affe5a | 64o=1e55dd33bb55dd33
-# time=760 | DESCRAMBLER | 64i=d040ac59c27d1f3 | 64o=bb55dd33bb55dd33
-# time=760 | BUBBLER | 64i=b4a978826ba3dea4 | 66o=20d040ac59c27d1f3
-# time=760 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=dd | data=bb55dd33bb55dd33
-# time=760 | ASSEMBLER OUT | valid=1 | data=78aabbccddaabbcc | bytes_valid=01111111
-# time=770 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=dd | data=bb55dd33bb55dd33
-# time=770 | ASSEMBLER OUT | valid=1 | data=ddaabbccddaabbcc | bytes_valid=11111111
-# time=770 | BUBBLER | 64i=e00417778f775e1b | 66o=2939500feadc304d1
-# time=770 | DESCRAMBLER | 64i=939500feadc304d1 | 64o=bb55dd33bb55dd33
-# time=780 | DESCRAMBLER | 64i=1bb4a978826ba3de | 64o=bb55dd33bb55dd33
-# time=780 | BUBBLER | 64i=bea499e3e919199b | 66o=21bb4a978826ba3de
-# time=780 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=dd | data=bb55dd33bb55dd33
-# time=780 | ASSEMBLER OUT | valid=1 | data=ddaabbccddaabbcc | bytes_valid=11111111
-# time=790 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=dd | data=bb55dd33bb55dd33
-# time=790 | ASSEMBLER OUT | valid=1 | data=ddaabbccddaabbcc | bytes_valid=11111111
-# time=790 | BUBBLER | 64i=9dea9d17349ee0ab | 66o=266f80105dde3ddd7
-# time=790 | DESCRAMBLER | 64i=66f80105dde3ddd7 | 64o=bb55dd33bb55dd33
-# time=800 | DESCRAMBLER | 64i=abbea499e3e9191 | 64o=bb55dd33bb55dd33
-# time=800 | BUBBLER | 64i=4de98ae42e75902b | 66o=20abbea499e3e9191
-# time=800 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=dd | data=bb55dd33bb55dd33
-# time=800 | ASSEMBLER OUT | valid=1 | data=ddaabbccddaabbcc | bytes_valid=11111111
-# time=810 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=dd | data=bb55dd33bb55dd33
-# time=810 | ASSEMBLER OUT | valid=1 | data=ddaabbccddaabbcc | bytes_valid=11111111
-# time=810 | BUBBLER | 64i=90e9950db5eddcff | 66o=240ae77aa745cd27b
-# time=810 | DESCRAMBLER | 64i=40ae77aa745cd27b | 64o=bb55dd33bb55dd33
-# time=820 | DESCRAMBLER | 64i=dcff4de98ae42e75 | 64o=bb55dd33bb55dd33
-# time=820 | BUBBLER | 64i=6f872370ee245ad7 | 66o=1dcff4de98ae42e75
-# time=820 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=dd | data=bb55dd33bb55dd33
-# time=820 | ASSEMBLER OUT | valid=1 | data=ddaabbccddaabbcc | bytes_valid=11111111
-# time=830 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=dd | data=bb99787878787878
-# time=830 | ASSEMBLER OUT | valid=1 | data=ddaabbccddaabbcc | bytes_valid=11111111
-# time=830 | BUBBLER | 64i=802e29e6c650d553 | 66o=116b5e43a65436d7b
-# time=830 | DESCRAMBLER | 64i=16b5e43a65436d7b | 64o=bb99787878787878
-# time=840 | DESCRAMBLER | 64i=d5536f872370ee2 | 64o=7878787878787878
-# time=840 | BUBBLER | 64i=d4f5205671620bab | 66o=10d5536f872370ee2
-# time=840 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=840 | ASSEMBLER OUT | valid=1 | data=dd991e1e1e1e1e1e | bytes_valid=10000000
-# time=850 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=850 | BUBBLER | 64i=432812499d5ced19 | 66o=1882eae00b8a79b19
-# time=850 | DESCRAMBLER | 64i=882eae00b8a79b19 | 64o=7878787878787878
-# time=860 | DESCRAMBLER | 64i=5ced19d4f5205671 | 64o=7878787878787878
-# time=860 | BUBBLER | 64i=d5f14f99455cb120 | 66o=15ced19d4f5205671
-# time=860 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=870 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=870 | BUBBLER | 64i=7453982e9ad9b78e | 66o=1572c4810ca049267
-# time=870 | DESCRAMBLER | 64i=572c4810ca049267 | 64o=7878787878787878
-# time=880 | DESCRAMBLER | 64i=ad9b78ed5f14f994 | 64o=7878787878787878
-# time=880 | BUBBLER | 64i=c95db2397ab8c91d | 66o=1ad9b78ed5f14f994
-# time=880 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=890 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=890 | BUBBLER | 64i=3089eb05ef73a49e | 66o=1eae32475d14e60ba
-# time=890 | DESCRAMBLER | 64i=eae32475d14e60ba | 64o=7878787878787878
-# time=900 | DESCRAMBLER | 64i=ef73a49ec95db239 | 64o=7878787878787878
-# time=900 | BUBBLER | 64i=17858bf4246e58d5 | 66o=1ef73a49ec95db239
-# time=900 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=910 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=910 | BUBBLER | 64i=311d04d4e44daab5 | 66o=1091b96354c227ac1
-# time=910 | DESCRAMBLER | 64i=91b96354c227ac1 | 64o=7878787878787878
-# time=920 | DESCRAMBLER | 64i=4e44daab517858bf | 64o=7878787878787878
-# time=920 | BUBBLER | 64i=469ecb4f6c94faba | 66o=14e44daab517858bf
-# time=920 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=930 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=930 | BUBBLER | 64i=d0cca942d06bf08c | 66o=13db253eae8c47413
-# time=930 | DESCRAMBLER | 64i=3db253eae8c47413 | 64o=7878787878787878
-# time=940 | DESCRAMBLER | 64i=42d06bf08c469ecb | 64o=7878787878787878
-# time=940 | BUBBLER | 64i=acb5b5c9657ba4e6 | 66o=142d06bf08c469ecb
-# time=940 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=950 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=950 | BUBBLER | 64i=d03a1db94114c44b | 66o=172595ee939b4332a
-# time=950 | DESCRAMBLER | 64i=72595ee939b4332a | 64o=7878787878787878
-# time=960 | DESCRAMBLER | 64i=db94114c44bacb5b | 64o=7878787878787878
-# time=960 | BUBBLER | 64i=f16c51af32cef494 | 66o=1db94114c44bacb5b
-# time=960 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=970 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=970 | BUBBLER | 64i=a4edb4334a42da6b | 66o=146bccb3bd25340e8
-# time=970 | DESCRAMBLER | 64i=46bccb3bd25340e8 | 64o=7878787878787878
-# time=980 | DESCRAMBLER | 64i=b4334a42da6bf16c | 64o=7878787878787878
-# time=980 | BUBBLER | 64i=f7763e783a369afb | 66o=1b4334a42da6bf16c
-# time=980 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=990 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=990 | BUBBLER | 64i=4a1a9b0182a85007 | 66o=18f9e0e8da6bee93b
-# time=990 | DESCRAMBLER | 64i=8f9e0e8da6bee93b | 64o=7878787878787878
-# time=1000 | DESCRAMBLER | 64i=a9b0182a85007f77 | 64o=7878787878787878
-# time=1000 | BUBBLER | 64i=a27b227d37899468 | 66o=1a9b0182a85007f77
-# time=1000 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=1010 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=1010 | DESCRAMBLER | 64i=ec89f4de2651a128 | 64o=7878787878787878
-# time=1020 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
+#      0.00ns INFO     cocotb.regression                  running rx_tb.tb.rx_test.test_lock_and_single_frame (1/4)
+# time=60 | BUBBLER | 64i=98888a9999faaaa0 | 66o=00
+# time=70 | BUBBLER | 64i=f5f9f1e0a1221e36 | 66o=00
+# time=80 | DESCRAMBLER | 64i=98888a9999faaaa0 | 64o=00
+# time=80 | BUBBLER | 64i=48f77d91986b2a8a | 66o=298888a9999faaaa0
+# time=90 | BUBBLER | 64i=69fb5ba0dece162d | 66o=2bd7e7c782848878d
+# time=90 | DESCRAMBLER | 64i=bd7e7c782848878d | 64o=00
+# time=100 | DESCRAMBLER | 64i=d48f77d91986b2a8 | 64o=1e
+# time=100 | BUBBLER | 64i=24a016de03b62093 | 66o=2d48f77d91986b2a8
+# time=110 | BUBBLER | 64i=8d69997baab8ceff | 66o=24da7ed6e837b3858
+# time=110 | DESCRAMBLER | 64i=4da7ed6e837b3858 | 64o=1e
+# time=120 | DESCRAMBLER | 64i=ff24a016de03b620 | 64o=1e
+# time=120 | BUBBLER | 64i=cad1f5f721e19988 | 66o=2ff24a016de03b620
+# time=130 | BUBBLER | 64i=1c36a245be6ceb0a | 66o=262235a665eeaae33
+# time=130 | DESCRAMBLER | 64i=62235a665eeaae33 | 64o=1e
+# time=140 | DESCRAMBLER | 64i=b0acad1f5f721e19 | 64o=1e
+# time=140 | BUBBLER | 64i=4e542d2fc7778126 | 66o=2b0acad1f5f721e19
+# time=150 | BUBBLER | 64i=de296627baa6a33e | 66o=2049870da8916f9b3
+# time=150 | DESCRAMBLER | 64i=49870da8916f9b3 | 64o=1e
+# time=160 | DESCRAMBLER | 64i=a33e4e542d2fc777 | 64o=1e
+# time=160 | BUBBLER | 64i=e5d4a2e7de78a18d | 66o=2a33e4e542d2fc777
+# time=170 | BUBBLER | 64i=11a3d32e4765cb39 | 66o=22863778a5989eea9
+# time=170 | DESCRAMBLER | 64i=2863778a5989eea9 | 64o=1e
+# time=180 | DESCRAMBLER | 64i=5cb39e5d4a2e7de7 | 64o=1e
+# time=180 | BUBBLER | 64i=d95e16be23af09eb | 66o=25cb39e5d4a2e7de7
+# time=190 | BUBBLER | 64i=5f100e132048ca0 | 66o=2bc27ac468f4cb91d
+# time=190 | DESCRAMBLER | 64i=bc27ac468f4cb91d | 64o=1e
+# time=200 | DESCRAMBLER | 64i=48ca0d95e16be23 | 64o=1e
+# time=200 | BUBBLER | 64i=99a46aaecaffcaf0 | 66o=2048ca0d95e16be23
+# time=210 | BUBBLER | 64i=938a9b49eeb7763d | 66o=2bff2bc017c40384c
+# time=210 | DESCRAMBLER | 64i=bff2bc017c40384c | 64o=1e
+# time=220 | DESCRAMBLER | 64i=eb7763d99a46aaec | 64o=1e
+# time=220 | BUBBLER | 64i=6d9e0b6a8871798 | 66o=2eb7763d99a46aaec
+# time=230 | BUBBLER | 64i=2b05f7d23860248a | 66o=2a21c5e624e2a6d27
+# time=230 | DESCRAMBLER | 64i=a21c5e624e2a6d27 | 64o=1e
+# time=240 | DESCRAMBLER | 64i=3860248a06d9e0b6 | 64o=1e
+# time=240 | BUBBLER | 64i=6d403b7b01319035 | 66o=23860248a06d9e0b6
+# time=250 | BUBBLER | 64i=705aa923bff24c01 | 66o=2c04c640d4ac17df4
+# time=250 | DESCRAMBLER | 64i=c04c640d4ac17df4 | 64o=1e
+# time=260 | DESCRAMBLER | 64i=3bff24c016d403b7 | 64o=1e
+# time=260 | BUBBLER | 64i=2ea9278feddd0366 | 66o=23bff24c016d403b7
+# time=270 | BUBBLER | 64i=cd1e265c885e598e | 66o=23fb7740d99c16aa4
+# time=270 | DESCRAMBLER | 64i=3fb7740d99c16aa4 | 64o=1e
+# time=280 | DESCRAMBLER | 64i=5c885e598e2ea927 | 64o=1e
+# time=280 | BUBBLER | 64i=9c02869060bb0a1 | 66o=25c885e598e2ea927
+# time=290 | BUBBLER | 64i=b35e6357955f8bfe | 66o=21a4182ec28734789
+# time=290 | DESCRAMBLER | 64i=1a4182ec28734789 | 64o=1e
+# time=300 | DESCRAMBLER | 64i=357955f8bfe09c02 | 64o=1e
+# time=300 | BUBBLER | 64i=127aa0da4616eca3 | 66o=2357955f8bfe09c02
+# time=310 | BUBBLER | 64i=55aa87fa1880e298 | 66o=28369185bb28ecd79
+# time=310 | DESCRAMBLER | 64i=8369185bb28ecd79 | 64o=1e
+# time=320 | DESCRAMBLER | 64i=87fa1880e298127a | 64o=1e
+# time=320 | BUBBLER | 64i=250879bb88acc99f | 66o=287fa1880e298127a
+# time=330 | BUBBLER | 64i=b025575eff9e300a | 66o=21e6ee22b3267d56a
+# time=330 | DESCRAMBLER | 64i=1e6ee22b3267d56a | 64o=1e
+# time=340 | DESCRAMBLER | 64i=5575eff9e300a250 | 64o=1e
+# time=340 | BUBBLER | 64i=94aa968ffbb900cc | 66o=25575eff9e300a250
+# time=350 | BUBBLER | 64i=7af2d3d17747399c | 66o=2aa5a3feee40332c0
+# time=350 | DESCRAMBLER | 64i=aa5a3feee40332c0 | 64o=1e
+# time=360 | DESCRAMBLER | 64i=f2d3d17747399c94 | 64o=1e
+# time=360 | BUBBLER | 64i=a8841c18c242946c | 66o=2f2d3d17747399c94
+# time=370 | BUBBLER | 64i=2860338a0549e0fd | 66o=22107063090a51b1e
+# time=370 | DESCRAMBLER | 64i=2107063090a51b1e | 64o=1e
+# time=380 | DESCRAMBLER | 64i=860338a0549e0fda | 64o=1e
+# time=380 | BUBBLER | 64i=b064cd0ad571f7f9 | 66o=2860338a0549e0fda
+# time=390 | BUBBLER | 64i=3ea8343f85c408e4 | 66o=2c193342b55c7dfe4
+# time=390 | DESCRAMBLER | 64i=c193342b55c7dfe4 | 64o=1e
+# time=400 | BUBBLER | 64i=ebb4a3cdde45662e | 66o=00
+# time=410 | DESCRAMBLER | 64i=3ea8343f85c408e4 | 64o=00
+# time=410 | BUBBLER | 64i=a2debe763c29a449 | 66o=23ea8343f85c408e4
+# time=420 | BUBBLER | 64i=e1855228ff679026 | 66o=27aed28f37791598b
+# time=420 | DESCRAMBLER | 64i=7aed28f37791598b | 64o=1e
+# time=430 | DESCRAMBLER | 64i=6a2debe763c29a44 | 64o=1e
+# time=430 | BUBBLER | 64i=51910f2b3117d58c | 66o=26a2debe763c29a44
+# time=440 | BUBBLER | 64i=a9573fbf940c0af0 | 66o=233861548a3fd9e40
+# time=440 | DESCRAMBLER | 64i=33861548a3fd9e40 | 64o=1e
+# time=450 | DESCRAMBLER | 64i=f051910f2b3117d5 | 64o=1e
+# time=450 | BUBBLER | 64i=2d1c277246996b2e | 66o=2f051910f2b3117d5
+# time=460 | BUBBLER | 64i=8140983c1a8460be | 66o=2cbaa55cfefe50302
+# time=460 | DESCRAMBLER | 64i=cbaa55cfefe50302 | 64o=1e
+# time=470 | DESCRAMBLER | 64i=be2d1c277246996 | 64o=1e
+# time=470 | BUBBLER | 64i=fb9660cbaa15b3f8 | 66o=20be2d1c277246996
+# time=480 | BUBBLER | 64i=66df1ab612fe68dd | 66o=2cfe2050260f06a11
+# time=480 | DESCRAMBLER | 64i=cfe2050260f06a11 | 64o=1e
+# time=490 | DESCRAMBLER | 64i=68ddfb9660cbaa15 | 64o=1e
+# time=490 | BUBBLER | 64i=c82f758719ea24af | 66o=268ddfb9660cbaa15
+# time=500 | BUBBLER | 64i=532f0f571247e52 | 66o=2892bd9b7c6ad84bf
+# time=500 | DESCRAMBLER | 64i=892bd9b7c6ad84bf | 64o=1e
+# time=510 | DESCRAMBLER | 64i=47e52c82f758719e | 64o=1e
+# time=510 | BUBBLER | 64i=59a74eae9d8fcee5 | 66o=247e52c82f758719e
+# time=520 | BUBBLER | 64i=fc6cf04b5243762c | 66o=23f3b9414cbc3d5c4
+# time=520 | DESCRAMBLER | 64i=3f3b9414cbc3d5c4 | 64o=1e
+# time=530 | DESCRAMBLER | 64i=43762c59a74eae9d | 64o=1e
+# time=530 | BUBBLER | 64i=b7629d9a7a9abdba | 66o=243762c59a74eae9d
+# time=540 | BUBBLER | 64i=70fe0912086d218 | 66o=2a6af6ebf1b3c12d4
+# time=540 | DESCRAMBLER | 64i=a6af6ebf1b3c12d4 | 64o=1e
+# time=550 | DESCRAMBLER | 64i=86d218b7629d9a7 | 64o=1e
+# time=550 | BUBBLER | 64i=d51377f396602faa | 66o=2086d218b7629d9a7
+# time=560 | BUBBLER | 64i=2e8c173a50e4cf12 | 66o=25980bea81c3f8244
+# time=560 | DESCRAMBLER | 64i=5980bea81c3f8244 | 64o=1e
+# time=570 | DESCRAMBLER | 64i=50e4cf12d51377f3 | 64o=1e
+# time=570 | BUBBLER | 64i=1286337a2951a7bf | 66o=250e4cf12d51377f3
+# time=580 | BUBBLER | 64i=beb57c2f7e0f1821 | 66o=28a5469efcba305ce
+# time=580 | DESCRAMBLER | 64i=8a5469efcba305ce | 64o=1e
+# time=590 | DESCRAMBLER | 64i=f7e0f18211286337 | 64o=1e
+# time=590 | BUBBLER | 64i=2bb437b371195932 | 66o=2f7e0f18211286337
+# time=600 | BUBBLER | 64i=be127e08dbf196c1 | 66o=2cdc46564cafad5f0
+# time=600 | DESCRAMBLER | 64i=cdc46564cafad5f0 | 64o=1e
+# time=610 | DESCRAMBLER | 64i=8dbf196c12bb437 | 64o=1e
+# time=610 | BUBBLER | 64i=877f8a2605e6a0e2 | 66o=208dbf196c12bb437
+# time=620 | BUBBLER | 64i=2026e181b3282d57 | 66o=2898179a838af849f
+# time=620 | DESCRAMBLER | 64i=898179a838af849f | 64o=1e
+# time=630 | DESCRAMBLER | 64i=181b3282d57877f8 | 64o=1e
+# time=630 | BUBBLER | 64i=fe6db40aa1c1fe24 | 66o=2181b3282d57877f8
+# time=640 | BUBBLER | 64i=5132dbccb6c55db4 | 66o=2d02a8707f890809b
+# time=640 | DESCRAMBLER | 64i=d02a8707f890809b | 64o=1e
+# time=650 | DESCRAMBLER | 64i=dbccb6c55db4fe6d | 64o=1e
+# time=650 | BUBBLER | 64i=4f9baf450f1cf112 | 66o=2dbccb6c55db4fe6d
+# time=660 | BUBBLER | 64i=f2e1b8432c8c5759 | 66o=2ebd143c73c44944c
+# time=660 | DESCRAMBLER | 64i=ebd143c73c44944c | 64o=1e
+# time=670 | DESCRAMBLER | 64i=1b8432c8c57594f9 | 64o=1e
+# time=670 | BUBBLER | 64i=fd8bf465c1cae425 | 66o=21b8432c8c57594f9
+# time=680 | BUBBLER | 64i=86bcbbcc5cc54e54 | 66o=22fd197072b9097cb
+# time=680 | DESCRAMBLER | 64i=2fd197072b9097cb | 64o=1e
+# time=690 | DESCRAMBLER | 64i=bcbbcc5cc54e54fd | 64o=1e
+# time=690 | BUBBLER | 64i=cb389ed49a37dae5 | 66o=2bcbbcc5cc54e54fd
+# time=700 | BUBBLER | 64i=e72753969f4bba1d | 66o=2ce27b5268df6b961
+# time=700 | DESCRAMBLER | 64i=ce27b5268df6b961 | 64o=1e
+# time=710 | DESCRAMBLER | 64i=72753969f4bba1dc | 64o=1e
+# time=710 | BUBBLER | 64i=adbe436c2c5b474e | 66o=272753969f4bba1dc
+# time=720 | BUBBLER | 64i=14dc2f1dfdbfbca7 | 66o=2b6f90db0b16d1d3b
+# time=720 | DESCRAMBLER | 64i=b6f90db0b16d1d3b | 64o=1e
+# time=730 | BUBBLER | 64i=7e3dab0a85668bd6 | 66o=00
+# time=740 | DESCRAMBLER | 64i=14dc2f1dfdbfbca7 | 64o=00
+# time=740 | BUBBLER | 64i=8a06f55b1b231e67 | 66o=214dc2f1dfdbfbca7
+# time=750 | BUBBLER | 64i=6a602904acc7ed9e | 66o=1df8f6ac2a159a2f5
+# time=750 | DESCRAMBLER | 64i=df8f6ac2a159a2f5 | 64o=ccbbaaddccbbaa78
+# time=760 | DESCRAMBLER | 64i=e8a06f55b1b231e6 | 64o=ccbbaaddccbbaadd
+# time=760 | BUBBLER | 64i=9557e0452fd03c6f | 66o=1e8a06f55b1b231e6
+# time=770 | BUBBLER | 64i=323c5b8ef9ba1d91 | 66o=1bda980a412b31fb6
+# time=770 | DESCRAMBLER | 64i=bda980a412b31fb6 | 64o=ccbbaaddccbbaadd
+# time=780 | DESCRAMBLER | 64i=919557e0452fd03c | 64o=ccbbaaddccbbaadd
+# time=780 | BUBBLER | 64i=df2a4dbd30a0c7ad | 66o=1919557e0452fd03c
+# time=790 | BUBBLER | 64i=308abbb28bff95da | 66o=1eb4c8f16e3be6e87
+# time=790 | DESCRAMBLER | 64i=eb4c8f16e3be6e87 | 64o=ccbbaaddccbbaadd
+# time=800 | DESCRAMBLER | 64i=5dadf2a4dbd30a0c | 64o=ccbbaaddccbbaadd
+# time=800 | BUBBLER | 64i=f1191132b335683 | 66o=15dadf2a4dbd30a0c
+# time=810 | BUBBLER | 64i=1d159273eb6a50f7 | 66o=15a0cc22aeeca2ffe
+# time=810 | DESCRAMBLER | 64i=5a0cc22aeeca2ffe | 64o=ccbbaaddccbbaadd
+# time=820 | DESCRAMBLER | 64i=50f70f1191132b33 | 64o=ccbbaaddccbbaadd
+# time=820 | BUBBLER | 64i=6f3c0b1441b4f37 | 66o=250f70f1191132b33
+# time=830 | BUBBLER | 64i=d57bf7f8c1a02514 | 66o=2d3cdc745649cfada
+# time=830 | DESCRAMBLER | 64i=d3cdc745649cfada | 64o=dd99
+# time=840 | DESCRAMBLER | 64i=251406f3c0b1441 | 64o=1e
+# time=840 | BUBBLER | 64i=7a5be8eec3a4cd6a | 66o=20251406f3c0b1441
+# time=850 | BUBBLER | 64i=4ed75d379e9d636a | 66o=29335ab55efdfe306
+# time=850 | DESCRAMBLER | 64i=9335ab55efdfe306 | 64o=1e
+# time=860 | DESCRAMBLER | 64i=9d636a7a5be8eec3 | 64o=1e
+# time=860 | BUBBLER | 64i=bc83bc584b13a4d3 | 66o=29d636a7a5be8eec3
+# time=870 | BUBBLER | 64i=d22d47676f26b816 | 66o=2c4e934d3b5d74de7
+# time=870 | DESCRAMBLER | 64i=c4e934d3b5d74de7 | 64o=1e
+# time=880 | DESCRAMBLER | 64i=f26b816bc83bc584 | 64o=1e
+# time=880 | BUBBLER | 64i=ba1e3ce28914e1b3 | 66o=2f26b816bc83bc584
+# time=890 | BUBBLER | 64i=2c66e74aaca69f5e | 66o=2245386cf48b51d9d
+# time=890 | DESCRAMBLER | 64i=245386cf48b51d9d | 64o=1e
+# time=900 | DESCRAMBLER | 64i=aca69f5eba1e3ce2 | 64o=1e
+# time=900 | BUBBLER | 64i=87ce48894b61bdda | 66o=2aca69f5eba1e3ce2
+# time=910 | BUBBLER | 64i=6d762b6e69e82ba3 | 66o=252d86f768b19b9d2
+# time=910 | DESCRAMBLER | 64i=52d86f768b19b9d2 | 64o=1e
+# time=920 | DESCRAMBLER | 64i=e69e82ba387ce488 | 64o=1e
+# time=920 | BUBBLER | 64i=d1c247891b5db2de | 66o=2e69e82ba387ce488
+# time=930 | BUBBLER | 64i=f6a3026f95eb0be3 | 66o=2246d76cb79b5d8ad
+# time=930 | DESCRAMBLER | 64i=246d76cb79b5d8ad | 64o=1e
+# time=940 | DESCRAMBLER | 64i=6f95eb0be3d1c247 | 64o=1e
+# time=940 | BUBBLER | 64i=224b899b75aad9ef | 66o=26f95eb0be3d1c247
+# time=950 | BUBBLER | 64i=32b2ed5f427e1c68 | 66o=266dd6ab67bfda8c0
+# time=950 | DESCRAMBLER | 64i=66dd6ab67bfda8c0 | 64o=1e
+# time=960 | DESCRAMBLER | 64i=d5f427e1c68224b8 | 64o=1e
+# time=960 | BUBBLER | 64i=f272b45a25cee6e5 | 66o=2d5f427e1c68224b8
+# time=970 | BUBBLER | 64i=9daa9e9a1a3ae2e4 | 66o=2d168973b9b94cacb
+# time=970 | DESCRAMBLER | 64i=d168973b9b94cacb | 64o=1e
+# time=980 | DESCRAMBLER | 64i=9e9a1a3ae2e4f272 | 64o=1e
+# time=980 | BUBBLER | 64i=4a9a1f792218b662 | 66o=29e9a1a3ae2e4f272
+# time=990 | BUBBLER | 64i=f2ee4c422d4c677d | 66o=287de48862d98a76a
+# time=990 | DESCRAMBLER | 64i=87de48862d98a76a | 64o=1e
+# time=1000 | DESCRAMBLER | 64i=e4c422d4c677d4a9 | 64o=1e
+# time=1000 | BUBBLER | 64i=db9229cf67a51a8e | 66o=2e4c422d4c677d4a9
+# time=1010 | DESCRAMBLER | 64i=48a73d9e946a3bcb | 64o=1e
 #   9060.00ns INFO     cocotb.regression                  rx_tb.tb.rx_test.test_lock_and_single_frame passed
-#   9060.00ns INFO     cocotb.regression                  running rx_tb.tb.rx_test.test_back_to_back_frames (2/2)
-# time=9131 | BUBBLER | 64i=5929293030328282 | 66o=00
-# time=9141 | BUBBLER | 64i=faeddeed782d6699 | 66o=00
-# time=9151 | DESCRAMBLER | 64i=5929293030328282 | 64o=00
-# time=9151 | BUBBLER | 64i=c7f8ecf8eb28eba7 | 66o=15929293030328282
-# time=9161 | BUBBLER | 64i=f486a0395fe55fd8 | 66o=1febb77bb5e0b59a6
-# time=9161 | DESCRAMBLER | 64i=febb77bb5e0b59a6 | 64o=00
-# time=9171 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9171 | DESCRAMBLER | 64i=8c7f8ecf8eb28eba | 64o=7878787878787878
-# time=9171 | BUBBLER | 64i=83f2bfc6fb833753 | 66o=18c7f8ecf8eb28eba
-# time=9181 | BUBBLER | 64i=aa5b01f0ce3f09ce | 66o=14fd21a80e57f957f
-# time=9181 | DESCRAMBLER | 64i=4fd21a80e57f957f | 64o=7878787878787878
-# time=9181 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9191 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9191 | DESCRAMBLER | 64i=ce83f2bfc6fb8337 | 64o=7878787878787878
-# time=9191 | BUBBLER | 64i=7bfff0b87964f430 | 66o=1ce83f2bfc6fb8337
-# time=9201 | BUBBLER | 64i=f3e0e0a3f3ff9828 | 66o=10c2a96c07c338fc2
-# time=9201 | DESCRAMBLER | 64i=c2a96c07c338fc2 | 64o=7878787878787878
-# time=9201 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9211 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9211 | DESCRAMBLER | 64i=8287bfff0b87964f | 64o=7878787878787878
-# time=9211 | BUBBLER | 64i=297cf03fd683600f | 66o=18287bfff0b87964f
-# time=9221 | BUBBLER | 64i=477782879665a56d | 66o=1803fcf83828fcffe
-# time=9221 | DESCRAMBLER | 64i=803fcf83828fcffe | 64o=7878787878787878
-# time=9221 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9231 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9231 | DESCRAMBLER | 64i=a56d297cf03fd683 | 64o=7878787878787878
-# time=9231 | BUBBLER | 64i=a6f2f6c909c77277 | 66o=1a56d297cf03fd683
-# time=9241 | BUBBLER | 64i=1c8a13b8029b5867 | 66o=1dc9dd1dde0a1e599
-# time=9241 | DESCRAMBLER | 64i=dc9dd1dde0a1e599 | 64o=7878787878787878
-# time=9241 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9251 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9251 | DESCRAMBLER | 64i=b5867a6f2f6c909c | 64o=7878787878787878
-# time=9251 | BUBBLER | 64i=75847190b454d95 | 66o=1b5867a6f2f6c909c
-# time=9261 | BUBBLER | 64i=e0c51c0aed17fb54 | 66o=115365472284ee00a
-# time=9261 | DESCRAMBLER | 64i=15365472284ee00a | 64o=7878787878787878
-# time=9261 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9271 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9271 | DESCRAMBLER | 64i=17fb54075847190b | 64o=7878787878787878
-# time=9271 | BUBBLER | 64i=b86e9b0c6f55b6f | 66o=117fb54075847190b
-# time=9281 | BUBBLER | 64i=82b7b99c5b52eaa7 | 66o=1bd56dbf8314702bb
-# time=9281 | DESCRAMBLER | 64i=bd56dbf8314702bb | 64o=7878787878787878
-# time=9281 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9291 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9291 | DESCRAMBLER | 64i=b52eaa70b86e9b0c | 64o=7878787878787878
-# time=9291 | BUBBLER | 64i=d73e6fe714decdc | 66o=1b52eaa70b86e9b0c
-# time=9301 | BUBBLER | 64i=35ee5bfd4c379ac2 | 66o=1c537b3720adee671
-# time=9301 | DESCRAMBLER | 64i=c537b3720adee671 | 64o=7878787878787878
-# time=9301 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9311 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9311 | DESCRAMBLER | 64i=4c379ac20d73e6fe | 64o=7878787878787878
-# time=9311 | BUBBLER | 64i=d7b8fff53a1e6afc | 66o=14c379ac20d73e6fe
-# time=9321 | BUBBLER | 64i=2dd0c691bd565407 | 66o=14e879abf0d7b96ff
-# time=9321 | DESCRAMBLER | 64i=4e879abf0d7b96ff | 64o=7878787878787878
-# time=9321 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9331 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9331 | DESCRAMBLER | 64i=1bd565407d7b8fff | 64o=7878787878787878
-# time=9331 | BUBBLER | 64i=46025b49fa54410e | 66o=11bd565407d7b8fff
-# time=9341 | BUBBLER | 64i=3a60f9bd03bbf7cb | 66o=127e9510438b7431a
-# time=9341 | DESCRAMBLER | 64i=27e9510438b7431a | 64o=7878787878787878
-# time=9341 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9351 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9351 | DESCRAMBLER | 64i=bd03bbf7cb46025b | 64o=7878787878787878
-# time=9351 | BUBBLER | 64i=fd547601ec3e3d5a | 66o=1bd03bbf7cb46025b
-# time=9361 | BUBBLER | 64i=e0fedcfc742831bf | 66o=1807b0f8f568e983e
-# time=9361 | DESCRAMBLER | 64i=807b0f8f568e983e | 64o=7878787878787878
-# time=9361 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9371 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9371 | DESCRAMBLER | 64i=cfc742831bffd547 | 64o=7878787878787878
-# time=9371 | BUBBLER | 64i=c30f50f5a6f00f50 | 66o=1cfc742831bffd547
-# time=9381 | BUBBLER | 64i=3c394e96aabc387b | 66o=143d69bc03d4383fb
-# time=9381 | DESCRAMBLER | 64i=43d69bc03d4383fb | 64o=7878787878787878
-# time=9381 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9391 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9391 | DESCRAMBLER | 64i=4e96aabc387bc30f | 64o=7878787878787878
-# time=9391 | BUBBLER | 64i=a82605fffefe1e2e | 66o=14e96aabc387bc30f
-# time=9401 | BUBBLER | 64i=afdc03b83834fcfd | 66o=1817fffbf878b8f0e
-# time=9401 | DESCRAMBLER | 64i=817fffbf878b8f0e | 64o=7878787878787878
-# time=9401 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9411 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9411 | DESCRAMBLER | 64i=c03b83834fcfda82 | 64o=7878787878787878
-# time=9411 | BUBBLER | 64i=ff60f1e3f0c3a0f5 | 66o=1c03b83834fcfda82
-# time=9421 | BUBBLER | 64i=95e569657c3d7fc3 | 66o=183c78fc30e83d6bf
-# time=9421 | DESCRAMBLER | 64i=83c78fc30e83d6bf | 64o=7878787878787878
-# time=9421 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9431 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9431 | DESCRAMBLER | 64i=e569657c3d7fc3ff | 64o=7878787878787878
-# time=9431 | BUBBLER | 64i=a7e8dddd88787796 | 66o=1e569657c3d7fc3ff
-# time=9441 | BUBBLER | 64i=d8c72cecef2b2b6f | 66o=1fa3777621e1de5a5
-# time=9441 | DESCRAMBLER | 64i=fa3777621e1de5a5 | 64o=7878787878787878
-# time=9441 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9451 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9451 | DESCRAMBLER | 64i=8c72cecef2b2b6fa | 64o=7878787878787878
-# time=9451 | BUBBLER | 64i=56a1d65fc64fe54c | 66o=18c72cecef2b2b6fa
-# time=9461 | BUBBLER | 64i=8ebfcebb82bb4ffb | 66o=15a87597f193f9533
-# time=9461 | DESCRAMBLER | 64i=5a87597f193f9533 | 64o=7878787878787878
-# time=9461 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9471 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9471 | BUBBLER | 64i=c0ab5a01c0fe3a0d | 66o=00
-# time=9481 | DESCRAMBLER | 64i=8ebfcebb82bb4ffb | 64o=00
-# time=9481 | BUBBLER | 64i=6c7bf330b92d64c7 | 66o=18ebfcebb82bb4ffb
-# time=9491 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9491 | BUBBLER | 64i=cf3e0b0a3fcff98 | 66o=1f02ad680703f8e83
-# time=9491 | DESCRAMBLER | 64i=f02ad680703f8e83 | 64o=7878787878787878
-# time=9501 | DESCRAMBLER | 64i=86c7bf330b92d64c | 64o=7878787878787878
-# time=9501 | BUBBLER | 64i=c796830c3fd6c360 | 66o=186c7bf330b92d64c
-# time=9501 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9511 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9511 | BUBBLER | 64i=f3fff0a1e0ffd0f | 66o=18033cf82c28ff3fe
-# time=9511 | DESCRAMBLER | 64i=8033cf82c28ff3fe | 64o=7878787878787878
-# time=9521 | DESCRAMBLER | 64i=fc796830c3fd6c3 | 64o=7878787878787878
-# time=9521 | BUBBLER | 64i=5697c7c3fcfc360a | 66o=10fc796830c3fd6c3
-# time=9521 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9531 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9531 | BUBBLER | 64i=feeee1d2d3c695a9 | 66o=18283cfffc28783ff
-# time=9531 | DESCRAMBLER | 64i=8283cfffc28783ff | 64o=7878787878787878
-# time=9541 | DESCRAMBLER | 64i=5a95697c7c3fcfc3 | 64o=7878787878787878
-# time=9541 | BUBBLER | 64i=838f8fce8e826faf | 66o=15a95697c7c3fcfc3
-# time=9541 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9551 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9551 | BUBBLER | 64i=3f0c6a0f55fdc07f | 66o=1bebffbbb874b4f1a
-# time=9551 | DESCRAMBLER | 64i=bebffbbb874b4f1a | 64o=7878787878787878
-# time=9561 | DESCRAMBLER | 64i=c07f838f8fce8e82 | 64o=7878787878787878
-# time=9561 | BUBBLER | 64i=e83c2bfc3fb60f1d | 66o=1c07f838f8fce8e82
-# time=9561 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9571 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9571 | BUBBLER | 64i=a00f0fe0f0d8fc3c | 66o=183c74fc31a83d57f
-# time=9571 | DESCRAMBLER | 64i=83c74fc31a83d57f | 64o=7878787878787878
-# time=9581 | DESCRAMBLER | 64i=8fc3ce83c2bfc3fb | 64o=7878787878787878
-# time=9581 | BUBBLER | 64i=ffc787830f43f5a5 | 66o=18fc3ce83c2bfc3fb
-# time=9581 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9591 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9591 | BUBBLER | 64i=e0f3f3f098283ff | 66o=10fd696803c3f83c3
-# time=9591 | DESCRAMBLER | 64i=fd696803c3f83c3 | 64o=7878787878787878
-# time=9601 | DESCRAMBLER | 64i=8283ffffc787830f | 64o=7878787878787878
-# time=9601 | BUBBLER | 64i=30fc3d683700ff0e | 66o=18283ffffc787830f
-# time=9601 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9611 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9611 | BUBBLER | 64i=f0a0f0ffdc3c783c | 66o=1c03fc38383cfcfc2
-# time=9611 | DESCRAMBLER | 64i=c03fc38383cfcfc2 | 64o=7878787878787878
-# time=9621 | DESCRAMBLER | 64i=c3c783c30fc3d683 | 64o=7878787878787878
-# time=9621 | BUBBLER | 64i=3c3fc3c360f0f3f0 | 66o=1c3c783c30fc3d683
-# time=9621 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9631 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9631 | BUBBLER | 64i=87879695a569697c | 66o=183c3cfc3c283c3ff
-# time=9631 | DESCRAMBLER | 64i=83c3cfc3c283c3ff | 64o=7878787878787878
-# time=9641 | DESCRAMBLER | 64i=a569697c3c3fc3c3 | 64o=7878787878787878
-# time=9641 | BUBBLER | 64i=90909c672777777 | 66o=1a569697c3c3fc3c3
-# time=9641 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9651 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9651 | BUBBLER | 64i=9b319b1d32cd0d0d | 66o=19c9ddddde1e1e5a5
-# time=9651 | DESCRAMBLER | 64i=9c9ddddde1e1e5a5 | 64o=7878787878787878
-# time=9661 | DESCRAMBLER | 64i=d32cd0d0d090909c | 64o=7878787878787878
-# time=9661 | BUBBLER | 64i=144a54529a129b02 | 66o=1d32cd0d0d090909c
-# time=9661 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9671 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9671 | BUBBLER | 64i=a01c51071447144b | 66o=14a684a6c0a6cc66c
-# time=9671 | DESCRAMBLER | 64i=4a684a6c0a6cc66c | 64o=7878787878787878
-# time=9681 | DESCRAMBLER | 64i=71447144b144a54 | 64o=7878787878787878
-# time=9681 | BUBBLER | 64i=9129b4d3f5495fe3 | 66o=1071447144b144a54
-# time=9681 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9691 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9691 | BUBBLER | 64i=48a9971f92ea730b | 66o=134fd5257f8e80714
-# time=9691 | DESCRAMBLER | 64i=34fd5257f8e80714 | 64o=7878787878787878
-# time=9701 | DESCRAMBLER | 64i=71f92ea730b9129b | 64o=7878787878787878
-# time=9701 | BUBBLER | 64i=37a64c8248b98c7d | 66o=171f92ea730b9129b
-# time=9701 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9711 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9711 | BUBBLER | 64i=de69fe0d77a6fe09 | 66o=1320922e631f522a6
-# time=9711 | DESCRAMBLER | 64i=320922e631f522a6 | 64o=7878787878787878
-# time=9721 | DESCRAMBLER | 64i=fe0d77a6fe0937a6 | 64o=7878787878787878
-# time=9721 | BUBBLER | 64i=b9a6fd35ee6bfd35 | 66o=1fe0d77a6fe0937a6
-# time=9721 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9731 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9731 | BUBBLER | 64i=d0d261bd12540b17 | 66o=1bf4d7b9aff4d779a
-# time=9731 | DESCRAMBLER | 64i=bf4d7b9aff4d779a | 64o=7878787878787878
-# time=9741 | DESCRAMBLER | 64i=261bd12540b17b9a | 64o=7878787878787878
-# time=9741 | BUBBLER | 64i=256d9fa57410e7d | 66o=1261bd12540b17b9a
-# time=9741 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9751 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9751 | BUBBLER | 64i=f958dba9114834ba | 66o=15b67e95d0439f743
-# time=9751 | DESCRAMBLER | 64i=5b67e95d0439f743 | 64o=7878787878787878
-# time=9761 | DESCRAMBLER | 64i=58dba9114834ba02 | 64o=7878787878787878
-# time=9761 | BUBBLER | 64i=64637c944645d2b2 | 66o=158dba9114834ba02
-# time=9761 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9771 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9771 | BUBBLER | 64i=954df28519008ac8 | 66o=118df25119174acbe
-# time=9771 | DESCRAMBLER | 64i=18df25119174acbe | 64o=7878787878787878
-# time=9781 | DESCRAMBLER | 64i=54df28519008ac86 | 64o=7878787878787878
-# time=9781 | BUBBLER | 64i=66329f449bfd3b21 | 66o=154df28519008ac86
-# time=9781 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9791 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9791 | BUBBLER | 64i=c637954583f8e442 | 66o=198ca7d126ff4ec86
-# time=9791 | DESCRAMBLER | 64i=98ca7d126ff4ec86 | 64o=7878787878787878
-# time=9801 | BUBBLER | 64i=6b97a3cfaa513be1 | 66o=00
-# time=9801 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9811 | DESCRAMBLER | 64i=c637954583f8e442 | 64o=00
-# time=9811 | BUBBLER | 64i=2b7ce7d0dacfdedb | 66o=1c637954583f8e442
-# time=9821 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=78 | data=1e008040c020a060
-# time=9821 | BUBBLER | 64i=ee8a151ff5c40ef | 66o=2dae5e8f3ea944ef8
-# time=9821 | DESCRAMBLER | 64i=dae5e8f3ea944ef8 | 64o=1e008040c020a060
-# time=9831 | DESCRAMBLER | 64i=f2b7ce7d0dacfded | 64o=e0109050d030b070
-# time=9831 | BUBBLER | 64i=397e94f07f9d4a90 | 66o=2f2b7ce7d0dacfded
-# time=9831 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=07 | data=e0109050d030b070
-# time=9831 | ASSEMBLER OUT | valid=1 | data=7800010203040506 | bytes_valid=01111111
-# time=9841 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=0f | data=f0088848c828a868
-# time=9841 | ASSEMBLER OUT | valid=1 | data=0708090a0b0c0d0e | bytes_valid=11111111
-# time=9841 | BUBBLER | 64i=c2e761578f0a860f | 66o=2403ba28547fd7103
-# time=9841 | DESCRAMBLER | 64i=403ba28547fd7103 | 64o=f0088848c828a868
-# time=9851 | DESCRAMBLER | 64i=f397e94f07f9d4a | 64o=e8189858d838b878
-# time=9851 | BUBBLER | 64i=ab16835ff4922b5d | 66o=20f397e94f07f9d4a
-# time=9851 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=17 | data=e8189858d838b878
-# time=9851 | ASSEMBLER OUT | valid=1 | data=0f10111213141516 | bytes_valid=11111111
-# time=9861 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=1f | data=f8048444c424a464
-# time=9861 | ASSEMBLER OUT | valid=1 | data=1718191a1b1c1d1e | bytes_valid=11111111
-# time=9861 | BUBBLER | 64i=422c0e16325365e7 | 66o=2d770b9d855e3c2a1
-# time=9861 | DESCRAMBLER | 64i=d770b9d855e3c2a1 | 64o=f8048444c424a464
-# time=9871 | DESCRAMBLER | 64i=5e7ab16835ff4922 | 64o=e4149454d434b474
-# time=9871 | BUBBLER | 64i=51a398a9cd1888bd | 66o=25e7ab16835ff4922
-# time=9871 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=27 | data=e4149454d434b474
-# time=9871 | ASSEMBLER OUT | valid=1 | data=1f20212223242526 | bytes_valid=11111111
-# time=9881 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=2f | data=f40c8c4ccc2cac6c
-# time=9881 | ASSEMBLER OUT | valid=1 | data=2728292a2b2c2d2e | bytes_valid=11111111
-# time=9881 | BUBBLER | 64i=b62473b8d751a260 | 66o=222f508b03858c94d
-# time=9881 | DESCRAMBLER | 64i=22f508b03858c94d | 64o=f40c8c4ccc2cac6c
-# time=9891 | DESCRAMBLER | 64i=a26051a398a9cd18 | 64o=ec1c9c5cdc3cbc7c
-# time=9891 | BUBBLER | 64i=77a881f7e0567e9d | 66o=1a26051a398a9cd18
-# time=9891 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=37 | data=ec1c9c5cdc3cbc7c
-# time=9891 | ASSEMBLER OUT | valid=1 | data=2f30313233343536 | bytes_valid=11111111
-# time=9901 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=3f | data=fc99787878787878
-# time=9901 | ASSEMBLER OUT | valid=1 | data=3738393a3b3c3d3e | bytes_valid=11111111
-# time=9901 | BUBBLER | 64i=66e33b53b51fab05 | 66o=19fa76d891cee35d4
-# time=9901 | DESCRAMBLER | 64i=9fa76d891cee35d4 | 64o=fc99787878787878
-# time=9911 | DESCRAMBLER | 64i=fab0577a881f7e05 | 64o=7878787878787878
-# time=9911 | BUBBLER | 64i=85431f7bd567d01b | 66o=1fab0577a881f7e05
-# time=9911 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9911 | ASSEMBLER OUT | valid=1 | data=3f991e1e1e1e1e1e | bytes_valid=10000000
-# time=9921 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9921 | BUBBLER | 64i=e8887ce455afe438 | 66o=19f406d9b8ced4ed4
-# time=9921 | DESCRAMBLER | 64i=9f406d9b8ced4ed4 | 64o=7878787878787878
-# time=9931 | DESCRAMBLER | 64i=afe43885431f7bd5 | 64o=7878787878787878
-# time=9931 | BUBBLER | 64i=7549040ac6dd2231 | 66o=1afe43885431f7bd5
-# time=9931 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9941 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=9941 | BUBBLER | 64i=3a335338ac605abd | 66o=1b7488c7a221f3915
-# time=9941 | DESCRAMBLER | 64i=b7488c7a221f3915 | 64o=7878787878787878
-# time=9951 | DESCRAMBLER | 64i=c605abd7549040ac | 64o=1e7bb57df77bb57d
-# time=9951 | BUBBLER | 64i=608da56eb56b3a26 | 66o=2c605abd7549040ac
-# time=9951 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=78 | data=1e7bb57df77bb57d
-# time=9961 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ef | data=f77bb57df77bb57d
-# time=9961 | ASSEMBLER OUT | valid=1 | data=78deadbeefdeadbe | bytes_valid=01111111
-# time=9961 | BUBBLER | 64i=ddac3bb26a64949d | 66o=2d5ace898e8cd4ce2
-# time=9961 | DESCRAMBLER | 64i=d5ace898e8cd4ce2 | 64o=f77bb57df77bb57d
-# time=9971 | DESCRAMBLER | 64i=6a64949d608da56e | 64o=f77bb57df77bb57d
-# time=9971 | BUBBLER | 64i=5fa369797bb10513 | 66o=26a64949d608da56e
-# time=9971 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ef | data=f77bb57df77bb57d
-# time=9971 | ASSEMBLER OUT | valid=1 | data=efdeadbeefdeadbe | bytes_valid=11111111
-# time=9981 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ef | data=f77bb57df77bb57d
-# time=9981 | ASSEMBLER OUT | valid=1 | data=efdeadbeefdeadbe | bytes_valid=11111111
-# time=9981 | BUBBLER | 64i=19182f6714ba64a7 | 66o=25eec4144f76b0eec
-# time=9981 | DESCRAMBLER | 64i=5eec4144f76b0eec | 64o=f77bb57df77bb57d
-# time=9991 | DESCRAMBLER | 64i=714ba64a75fa3697 | 64o=f77bb57df77bb57d
-# time=9991 | BUBBLER | 64i=99151d82296bba55 | 66o=2714ba64a75fa3697
-# time=9991 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ef | data=f77bb57df77bb57d
-# time=9991 | ASSEMBLER OUT | valid=1 | data=efdeadbeefdeadbe | bytes_valid=11111111
-# time=10001 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ef | data=f77bb57df77bb57d
-# time=10001 | ASSEMBLER OUT | valid=1 | data=efdeadbeefdeadbe | bytes_valid=11111111
-# time=10001 | BUBBLER | 64i=39962a91be245b9d | 66o=208a5aee9546460bd
-# time=10001 | DESCRAMBLER | 64i=8a5aee9546460bd | 64o=f77bb57df77bb57d
-# time=10011 | DESCRAMBLER | 64i=91be245b9d99151d | 64o=f77bb57df77bb57d
-# time=10011 | BUBBLER | 64i=e4e11aaa92822595 | 66o=291be245b9d99151d
-# time=10011 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ef | data=f77bb57df77bb57d
-# time=10011 | ASSEMBLER OUT | valid=1 | data=efdeadbeefdeadbe | bytes_valid=11111111
-# time=10021 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ef | data=f77bb57df77bb57d
-# time=10021 | ASSEMBLER OUT | valid=1 | data=efdeadbeefdeadbe | bytes_valid=11111111
-# time=10021 | BUBBLER | 64i=93745eae0ac8b88d | 66o=2aaa4a089654e658a
-# time=10021 | DESCRAMBLER | 64i=aaa4a089654e658a | 64o=f77bb57df77bb57d
-# time=10031 | DESCRAMBLER | 64i=eae0ac8b88de4e11 | 64o=f77bb57df77bb57d
-# time=10031 | BUBBLER | 64i=a71c4245718d18c8 | 66o=1eae0ac8b88de4e11
-# time=10031 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ef | data=f77bb57df77bb57d
-# time=10031 | ASSEMBLER OUT | valid=1 | data=efdeadbeefdeadbe | bytes_valid=11111111
-# time=10041 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=ef | data=f799787878787878
-# time=10041 | ASSEMBLER OUT | valid=1 | data=efdeadbeefdeadbe | bytes_valid=11111111
-# time=10041 | BUBBLER | 64i=a7397822af01f897 | 66o=10915c63463224dd1
-# time=10041 | DESCRAMBLER | 64i=915c63463224dd1 | 64o=f799787878787878
-# time=10051 | DESCRAMBLER | 64i=7822af01f897a71c | 64o=7878787878787878
-# time=10051 | BUBBLER | 64i=c895fb78fec68e2a | 66o=17822af01f897a71c
-# time=10051 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10051 | ASSEMBLER OUT | valid=1 | data=ef991e1e1e1e1e1e | bytes_valid=10000000
-# time=10061 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10061 | BUBBLER | 64i=fed447f2b4f905a8 | 66o=17ede3fb1a38aa9ce
-# time=10061 | DESCRAMBLER | 64i=7ede3fb1a38aa9ce | 64o=7878787878787878
-# time=10071 | DESCRAMBLER | 64i=447f2b4f905a8c89 | 64o=7878787878787878
-# time=10071 | BUBBLER | 64i=d541d2005c9ff1a5 | 66o=1447f2b4f905a8c89
-# time=10071 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10081 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10081 | BUBBLER | 64i=a6e1185dcd719a86 | 66o=1074801727fc697fb
-# time=10081 | DESCRAMBLER | 64i=74801727fc697fb | 64o=7878787878787878
-# time=10091 | DESCRAMBLER | 64i=e1185dcd719a86d5 | 64o=1effffffffffffff
-# time=10091 | BUBBLER | 64i=8bd5d1b818d37d68 | 66o=2e1185dcd719a86d5
-# time=10091 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=78 | data=1effffffffffffff
-# time=10101 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ff | data=ffffffffffffffff
-# time=10101 | ASSEMBLER OUT | valid=1 | data=78ffffffffffffff | bytes_valid=01111111
-# time=10101 | BUBBLER | 64i=66fe184fdd72f986 | 66o=2f5746e0634df5a29
-# time=10101 | DESCRAMBLER | 64i=f5746e0634df5a29 | 64o=ffffffffffffffff
-# time=10111 | DESCRAMBLER | 64i=6fe184fdd72f9868 | 64o=ffffffffffffffff
-# time=10111 | BUBBLER | 64i=a7955d7401863fd7 | 66o=26fe184fdd72f9868
-# time=10111 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ff | data=ffffffffffffffff
-# time=10111 | ASSEMBLER OUT | valid=1 | data=ffffffffffffffff | bytes_valid=11111111
-# time=10121 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ff | data=ffffffffffffffff
-# time=10121 | ASSEMBLER OUT | valid=1 | data=ffffffffffffffff | bytes_valid=11111111
-# time=10121 | BUBBLER | 64i=7f5787e0777df667 | 66o=29e5575d00618ff5d
-# time=10121 | DESCRAMBLER | 64i=9e5575d00618ff5d | 64o=ffffffffffffffff
-# time=10131 | BUBBLER | 64i=d334a8aa206019f6 | 66o=00
-# time=10131 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ff | data=ffffffffffffffff
-# time=10131 | ASSEMBLER OUT | valid=1 | data=ffffffffffffffff | bytes_valid=11111111
-# time=10141 | DESCRAMBLER | 64i=7f5787e0777df667 | 64o=00
-# time=10141 | ASSEMBLER OUT | valid=1 | data=ffffffffffffffff | bytes_valid=11111111
-# time=10141 | BUBBLER | 64i=149cbc25a3b911b8 | 66o=27f5787e0777df667
-# time=10151 | BUBBLER | 64i=44bd432383a9b7ac | 66o=234cd2a2a8818067d
-# time=10151 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ff | data=ffffffffffffffff
-# time=10151 | DESCRAMBLER | 64i=34cd2a2a8818067d | 64o=ffffffffffffffff
-# time=10161 | DESCRAMBLER | 64i=c149cbc25a3b911b | 64o=ffffffffffffffff
-# time=10161 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ff | data=ffffffffffffffff
-# time=10161 | ASSEMBLER OUT | valid=1 | data=ffffffffffffffff | bytes_valid=11111111
-# time=10161 | BUBBLER | 64i=d216789c5765b099 | 66o=2c149cbc25a3b911b
-# time=10171 | BUBBLER | 64i=fe3b5fdb21f92a77 | 66o=26512f50c8e0ea6de
-# time=10171 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ff | data=ffffffffffffffff
-# time=10171 | ASSEMBLER OUT | valid=1 | data=ffffffffffffffff | bytes_valid=11111111
-# time=10171 | DESCRAMBLER | 64i=6512f50c8e0ea6de | 64o=ffffffffffffffff
-# time=10181 | DESCRAMBLER | 64i=77d216789c5765b0 | 64o=ffffffffffffffff
-# time=10181 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ff | data=ffffffffffffffff
-# time=10181 | ASSEMBLER OUT | valid=1 | data=ffffffffffffffff | bytes_valid=11111111
-# time=10181 | BUBBLER | 64i=d55cf801af7fd839 | 66o=277d216789c5765b0
-# time=10191 | BUBBLER | 64i=987815777c0669ef | 66o=20e7f8ed7f6c87e4a
-# time=10191 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ff | data=ffffffffffffffff
-# time=10191 | ASSEMBLER OUT | valid=1 | data=ffffffffffffffff | bytes_valid=11111111
-# time=10191 | DESCRAMBLER | 64i=e7f8ed7f6c87e4a | 64o=ffffffffffffffff
-# time=10201 | DESCRAMBLER | 64i=9efd55cf801af7fd | 64o=ffffffffffffffff
-# time=10201 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ff | data=ffffffffffffffff
-# time=10201 | ASSEMBLER OUT | valid=1 | data=ffffffffffffffff | bytes_valid=11111111
-# time=10201 | BUBBLER | 64i=7d757786067797d5 | 66o=29efd55cf801af7fd
-# time=10211 | BUBBLER | 64i=dfe079fdf75ee798 | 66o=25f5661e055ddf019
-# time=10211 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ff | data=ffffffffffffffff
-# time=10211 | ASSEMBLER OUT | valid=1 | data=ffffffffffffffff | bytes_valid=11111111
-# time=10211 | DESCRAMBLER | 64i=5f5661e055ddf019 | 64o=ffffffffffffffff
-# time=10221 | DESCRAMBLER | 64i=e7987d7577860677 | 64o=ffffffffffffffff
-# time=10221 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ff | data=ffffffffffffffff
-# time=10221 | ASSEMBLER OUT | valid=1 | data=ffffffffffffffff | bytes_valid=11111111
-# time=10221 | BUBBLER | 64i=67ff757fe609ff57 | 66o=2e7987d7577860677
-# time=10231 | BUBBLER | 64i=39f3f540a0277ff8 | 66o=27fd5f7f81e7f7dd7
-# time=10231 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ff | data=ffffffffffffffff
-# time=10231 | ASSEMBLER OUT | valid=1 | data=ffffffffffffffff | bytes_valid=11111111
-# time=10231 | DESCRAMBLER | 64i=7fd5f7f81e7f7dd7 | 64o=ffffffffffffffff
-# time=10241 | DESCRAMBLER | 64i=77ff867ff757fe60 | 64o=ffffffffffffffff
-# time=10241 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ff | data=ffffffffffffffff
-# time=10241 | ASSEMBLER OUT | valid=1 | data=ffffffffffffffff | bytes_valid=11111111
-# time=10241 | BUBBLER | 64i=acdc18d1c54428df | 66o=277ff867ff757fe60
-# time=10251 | BUBBLER | 64i=b21ad37ce9519368 | 66o=110a37ce7cfd50280
-# time=10251 | ASSEMBLER IN | locked=1 | hdr=10 | ctrl=ff | data=ffffffffffffffff
-# time=10251 | ASSEMBLER OUT | valid=1 | data=ffffffffffffffff | bytes_valid=11111111
-# time=10251 | DESCRAMBLER | 64i=10a37ce7cfd50280 | 64o=ffffffffffffffff
-# time=10261 | DESCRAMBLER | 64i=519368acdc18d1c5 | 64o=ff99787878787878
-# time=10261 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=ff | data=ff99787878787878
-# time=10261 | ASSEMBLER OUT | valid=1 | data=ffffffffffffffff | bytes_valid=11111111
-# time=10261 | BUBBLER | 64i=5d30060d7636403b | 66o=1519368acdc18d1c5
-# time=10271 | BUBBLER | 64i=165f1db1031cc7d | 66o=18d900eec86b4df3a
-# time=10271 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10271 | ASSEMBLER OUT | valid=1 | data=ff991e1e1e1e1e1e | bytes_valid=10000000
-# time=10271 | DESCRAMBLER | 64i=8d900eec86b4df3a | 64o=7878787878787878
-# time=10281 | DESCRAMBLER | 64i=31cc7d5d30060d7 | 64o=7878787878787878
-# time=10281 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10281 | BUBBLER | 64i=2d6330fd74a5f83f | 66o=1031cc7d5d30060d7
-# time=10291 | BUBBLER | 64i=12116d7d49599a39 | 66o=1d297e0fc0597c76c
-# time=10291 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10291 | DESCRAMBLER | 64i=d297e0fc0597c76c | 64o=7878787878787878
-# time=10301 | DESCRAMBLER | 64i=49599a392d6330fd | 64o=7878787878787878
-# time=10301 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10301 | BUBBLER | 64i=43561425f6efbfad | 66o=149599a392d6330fd
-# time=10311 | BUBBLER | 64i=2781175a749e91a2 | 66o=17dbbefeb44845b5f
-# time=10311 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10311 | DESCRAMBLER | 64i=7dbbefeb44845b5f | 64o=7878787878787878
-# time=10321 | DESCRAMBLER | 64i=a749e91a24356142 | 64o=7878787878787878
-# time=10321 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10321 | BUBBLER | 64i=acd4f87415c42205 | 66o=1a749e91a24356142
-# time=10331 | BUBBLER | 64i=674fe520c7319312 | 66o=1d0571088149e045d
-# time=10331 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10331 | DESCRAMBLER | 64i=d0571088149e045d | 64o=7878787878787878
-# time=10341 | DESCRAMBLER | 64i=20c7319312acd4f8 | 64o=7878787878787878
-# time=10341 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10341 | BUBBLER | 64i=276a57b8e5928cf5 | 66o=120c7319312acd4f8
-# time=10351 | BUBBLER | 64i=704cd63b2ddcaf1e | 66o=1ee3964a33d59d3f9
-# time=10351 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10351 | DESCRAMBLER | 64i=ee3964a33d59d3f9 | 64o=7878787878787878
-# time=10361 | DESCRAMBLER | 64i=63b2ddcaf1e276a5 | 64o=7878787878787878
-# time=10361 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10361 | BUBBLER | 64i=af085a25830709b1 | 66o=163b2ddcaf1e276a5
-# time=10371 | BUBBLER | 64i=bec5b88aab1e7855 | 66o=168960c1c26c5c133
-# time=10371 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10371 | DESCRAMBLER | 64i=68960c1c26c5c133 | 64o=7878787878787878
-# time=10381 | DESCRAMBLER | 64i=b88aab1e7855af08 | 64o=7878787878787878
-# time=10381 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10381 | BUBBLER | 64i=fb05be2a3239fb7a | 66o=1b88aab1e7855af08
-# time=10391 | BUBBLER | 64i=b590bb0264a812a7 | 66o=16f8a8c8e7edeafb1
-# time=10391 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10391 | DESCRAMBLER | 64i=6f8a8c8e7edeafb1 | 64o=7878787878787878
-# time=10401 | DESCRAMBLER | 64i=bb0264a812a7fb0 | 64o=7878787878787878
-# time=10401 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10401 | BUBBLER | 64i=7f4ca3e4bfa33def | 66o=10bb0264a812a7fb0
-# time=10411 | BUBBLER | 64i=e1b1f31aa6d57930 | 66o=1328f92fe8cf7bed6
-# time=10411 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10411 | DESCRAMBLER | 64i=328f92fe8cf7bed6 | 64o=7878787878787878
-# time=10421 | DESCRAMBLER | 64i=b1f31aa6d579307f | 64o=7878787878787878
-# time=10421 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10421 | BUBBLER | 64i=85d4e839cd9abb74 | 66o=1b1f31aa6d579307f
-# time=10431 | BUBBLER | 64i=94751eb18a455194 | 66o=1753a0e7366aedd38
-# time=10431 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10431 | DESCRAMBLER | 64i=753a0e7366aedd38 | 64o=7878787878787878
-# time=10441 | DESCRAMBLER | 64i=4751eb18a4551948 | 64o=7878787878787878
-# time=10441 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10441 | BUBBLER | 64i=650c5710ae72fec8 | 66o=14751eb18a4551948
-# time=10451 | BUBBLER | 64i=661f72da610e924 | 66o=194315c42b9cbfb22
-# time=10451 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10451 | DESCRAMBLER | 64i=94315c42b9cbfb22 | 64o=7878787878787878
-# time=10461 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10461 | BUBBLER | 64i=20c8e80b8d9fd775 | 66o=00
-# time=10471 | DESCRAMBLER | 64i=661f72da610e924 | 64o=00
-# time=10471 | BUBBLER | 64i=8ed3e14f3a456c95 | 66o=10661f72da610e924
-# time=10481 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10481 | BUBBLER | 64i=6e474acd7c149998 | 66o=148323a02e367f5dd
-# time=10481 | DESCRAMBLER | 64i=48323a02e367f5dd | 64o=7878787878787878
-# time=10491 | DESCRAMBLER | 64i=88ed3e14f3a456c9 | 64o=7878787878787878
-# time=10491 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
-# time=10501 | ASSEMBLER IN | locked=1 | hdr=01 | ctrl=1e | data=7878787878787878
+#   9060.00ns INFO     cocotb.regression                  running rx_tb.tb.rx_test.test_back_to_back_frames (2/4)
+# time=9131 | BUBBLER | 64i=98888a9999faaaa0 | 66o=00
+# time=9141 | BUBBLER | 64i=f5f9f1e0a1221e36 | 66o=00
+# time=9151 | DESCRAMBLER | 64i=98888a9999faaaa0 | 64o=00
+# time=9151 | BUBBLER | 64i=48f77d91986b2a8a | 66o=298888a9999faaaa0
+# time=9161 | BUBBLER | 64i=69fb5ba0dece162d | 66o=2bd7e7c782848878d
+# time=9161 | DESCRAMBLER | 64i=bd7e7c782848878d | 64o=00
+# time=9171 | DESCRAMBLER | 64i=d48f77d91986b2a8 | 64o=1e
+# time=9171 | BUBBLER | 64i=24a016de03b62093 | 66o=2d48f77d91986b2a8
+# time=9181 | BUBBLER | 64i=8d69997baab8ceff | 66o=24da7ed6e837b3858
+# time=9181 | DESCRAMBLER | 64i=4da7ed6e837b3858 | 64o=1e
+# time=9191 | DESCRAMBLER | 64i=ff24a016de03b620 | 64o=1e
+# time=9191 | BUBBLER | 64i=cad1f5f721e19988 | 66o=2ff24a016de03b620
+# time=9201 | BUBBLER | 64i=1c36a245be6ceb0a | 66o=262235a665eeaae33
+# time=9201 | DESCRAMBLER | 64i=62235a665eeaae33 | 64o=1e
+# time=9211 | DESCRAMBLER | 64i=b0acad1f5f721e19 | 64o=1e
+# time=9211 | BUBBLER | 64i=4e542d2fc7778126 | 66o=2b0acad1f5f721e19
+# time=9221 | BUBBLER | 64i=de296627baa6a33e | 66o=2049870da8916f9b3
+# time=9221 | DESCRAMBLER | 64i=49870da8916f9b3 | 64o=1e
+# time=9231 | DESCRAMBLER | 64i=a33e4e542d2fc777 | 64o=1e
+# time=9231 | BUBBLER | 64i=e5d4a2e7de78a18d | 66o=2a33e4e542d2fc777
+# time=9241 | BUBBLER | 64i=11a3d32e4765cb39 | 66o=22863778a5989eea9
+# time=9241 | DESCRAMBLER | 64i=2863778a5989eea9 | 64o=1e
+# time=9251 | DESCRAMBLER | 64i=5cb39e5d4a2e7de7 | 64o=1e
+# time=9251 | BUBBLER | 64i=d95e16be23af09eb | 66o=25cb39e5d4a2e7de7
+# time=9261 | BUBBLER | 64i=5f100e132048ca0 | 66o=2bc27ac468f4cb91d
+# time=9261 | DESCRAMBLER | 64i=bc27ac468f4cb91d | 64o=1e
+# time=9271 | DESCRAMBLER | 64i=48ca0d95e16be23 | 64o=1e
+# time=9271 | BUBBLER | 64i=99a46aaecaffcaf0 | 66o=2048ca0d95e16be23
+# time=9281 | BUBBLER | 64i=938a9b49eeb7763d | 66o=2bff2bc017c40384c
+# time=9281 | DESCRAMBLER | 64i=bff2bc017c40384c | 64o=1e
+# time=9291 | DESCRAMBLER | 64i=eb7763d99a46aaec | 64o=1e
+# time=9291 | BUBBLER | 64i=6d9e0b6a8871798 | 66o=2eb7763d99a46aaec
+# time=9301 | BUBBLER | 64i=2b05f7d23860248a | 66o=2a21c5e624e2a6d27
+# time=9301 | DESCRAMBLER | 64i=a21c5e624e2a6d27 | 64o=1e
+# time=9311 | DESCRAMBLER | 64i=3860248a06d9e0b6 | 64o=1e
+# time=9311 | BUBBLER | 64i=6d403b7b01319035 | 66o=23860248a06d9e0b6
+# time=9321 | BUBBLER | 64i=705aa923bff24c01 | 66o=2c04c640d4ac17df4
+# time=9321 | DESCRAMBLER | 64i=c04c640d4ac17df4 | 64o=1e
+# time=9331 | DESCRAMBLER | 64i=3bff24c016d403b7 | 64o=1e
+# time=9331 | BUBBLER | 64i=2ea9278feddd0366 | 66o=23bff24c016d403b7
+# time=9341 | BUBBLER | 64i=cd1e265c885e598e | 66o=23fb7740d99c16aa4
+# time=9341 | DESCRAMBLER | 64i=3fb7740d99c16aa4 | 64o=1e
+# time=9351 | DESCRAMBLER | 64i=5c885e598e2ea927 | 64o=1e
+# time=9351 | BUBBLER | 64i=9c02869060bb0a1 | 66o=25c885e598e2ea927
+# time=9361 | BUBBLER | 64i=b35e6357955f8bfe | 66o=21a4182ec28734789
+# time=9361 | DESCRAMBLER | 64i=1a4182ec28734789 | 64o=1e
+# time=9371 | DESCRAMBLER | 64i=357955f8bfe09c02 | 64o=1e
+# time=9371 | BUBBLER | 64i=127aa0da4616eca3 | 66o=2357955f8bfe09c02
+# time=9381 | BUBBLER | 64i=55aa87fa1880e298 | 66o=28369185bb28ecd79
+# time=9381 | DESCRAMBLER | 64i=8369185bb28ecd79 | 64o=1e
+# time=9391 | DESCRAMBLER | 64i=87fa1880e298127a | 64o=1e
+# time=9391 | BUBBLER | 64i=250879bb88acc99f | 66o=287fa1880e298127a
+# time=9401 | BUBBLER | 64i=b025575eff9e300a | 66o=21e6ee22b3267d56a
+# time=9401 | DESCRAMBLER | 64i=1e6ee22b3267d56a | 64o=1e
+# time=9411 | DESCRAMBLER | 64i=5575eff9e300a250 | 64o=1e
+# time=9411 | BUBBLER | 64i=94aa968ffbb900cc | 66o=25575eff9e300a250
+# time=9421 | BUBBLER | 64i=7af2d3d17747399c | 66o=2aa5a3feee40332c0
+# time=9421 | DESCRAMBLER | 64i=aa5a3feee40332c0 | 64o=1e
+# time=9431 | DESCRAMBLER | 64i=f2d3d17747399c94 | 64o=1e
+# time=9431 | BUBBLER | 64i=a8841c18c242946c | 66o=2f2d3d17747399c94
+# time=9441 | BUBBLER | 64i=2860338a0549e0fd | 66o=22107063090a51b1e
+# time=9441 | DESCRAMBLER | 64i=2107063090a51b1e | 64o=1e
+# time=9451 | DESCRAMBLER | 64i=860338a0549e0fda | 64o=1e
+# time=9451 | BUBBLER | 64i=b064cd0ad571f7f9 | 66o=2860338a0549e0fda
+# time=9461 | BUBBLER | 64i=3ea8343f85c408e4 | 66o=2c193342b55c7dfe4
+# time=9461 | DESCRAMBLER | 64i=c193342b55c7dfe4 | 64o=1e
+# time=9471 | BUBBLER | 64i=ebb4a3cdde45662e | 66o=00
+# time=9481 | DESCRAMBLER | 64i=3ea8343f85c408e4 | 64o=00
+# time=9481 | BUBBLER | 64i=a2debe763c29a449 | 66o=23ea8343f85c408e4
+# time=9491 | BUBBLER | 64i=e1855228ff679026 | 66o=27aed28f37791598b
+# time=9491 | DESCRAMBLER | 64i=7aed28f37791598b | 64o=1e
+# time=9501 | DESCRAMBLER | 64i=6a2debe763c29a44 | 64o=1e
+# time=9501 | BUBBLER | 64i=51910f2b3117d58c | 66o=26a2debe763c29a44
+# time=9511 | BUBBLER | 64i=a9573fbf940c0af0 | 66o=233861548a3fd9e40
+# time=9511 | DESCRAMBLER | 64i=33861548a3fd9e40 | 64o=1e
+# time=9521 | DESCRAMBLER | 64i=f051910f2b3117d5 | 64o=1e
+# time=9521 | BUBBLER | 64i=2d1c277246996b2e | 66o=2f051910f2b3117d5
+# time=9531 | BUBBLER | 64i=8140983c1a8460be | 66o=2cbaa55cfefe50302
+# time=9531 | DESCRAMBLER | 64i=cbaa55cfefe50302 | 64o=1e
+# time=9541 | DESCRAMBLER | 64i=be2d1c277246996 | 64o=1e
+# time=9541 | BUBBLER | 64i=fb9660cbaa15b3f8 | 66o=20be2d1c277246996
+# time=9551 | BUBBLER | 64i=66df1ab612fe68dd | 66o=2cfe2050260f06a11
+# time=9551 | DESCRAMBLER | 64i=cfe2050260f06a11 | 64o=1e
+# time=9561 | DESCRAMBLER | 64i=68ddfb9660cbaa15 | 64o=1e
+# time=9561 | BUBBLER | 64i=c82f758719ea24af | 66o=268ddfb9660cbaa15
+# time=9571 | BUBBLER | 64i=532f0f571247e52 | 66o=2892bd9b7c6ad84bf
+# time=9571 | DESCRAMBLER | 64i=892bd9b7c6ad84bf | 64o=1e
+# time=9581 | DESCRAMBLER | 64i=47e52c82f758719e | 64o=1e
+# time=9581 | BUBBLER | 64i=59a74eae9d8fcee5 | 66o=247e52c82f758719e
+# time=9591 | BUBBLER | 64i=fc6cf04b5243762c | 66o=23f3b9414cbc3d5c4
+# time=9591 | DESCRAMBLER | 64i=3f3b9414cbc3d5c4 | 64o=1e
+# time=9601 | DESCRAMBLER | 64i=43762c59a74eae9d | 64o=1e
+# time=9601 | BUBBLER | 64i=b7629d9a7a9abdba | 66o=243762c59a74eae9d
+# time=9611 | BUBBLER | 64i=70fe0912086d218 | 66o=2a6af6ebf1b3c12d4
+# time=9611 | DESCRAMBLER | 64i=a6af6ebf1b3c12d4 | 64o=1e
+# time=9621 | DESCRAMBLER | 64i=86d218b7629d9a7 | 64o=1e
+# time=9621 | BUBBLER | 64i=d51377f396602faa | 66o=2086d218b7629d9a7
+# time=9631 | BUBBLER | 64i=2e8c173a50e4cf12 | 66o=25980bea81c3f8244
+# time=9631 | DESCRAMBLER | 64i=5980bea81c3f8244 | 64o=1e
+# time=9641 | DESCRAMBLER | 64i=50e4cf12d51377f3 | 64o=1e
+# time=9641 | BUBBLER | 64i=1286337a2951a7bf | 66o=250e4cf12d51377f3
+# time=9651 | BUBBLER | 64i=beb57c2f7e0f1821 | 66o=28a5469efcba305ce
+# time=9651 | DESCRAMBLER | 64i=8a5469efcba305ce | 64o=1e
+# time=9661 | DESCRAMBLER | 64i=f7e0f18211286337 | 64o=1e
+# time=9661 | BUBBLER | 64i=2bb437b371195932 | 66o=2f7e0f18211286337
+# time=9671 | BUBBLER | 64i=be127e08dbf196c1 | 66o=2cdc46564cafad5f0
+# time=9671 | DESCRAMBLER | 64i=cdc46564cafad5f0 | 64o=1e
+# time=9681 | DESCRAMBLER | 64i=8dbf196c12bb437 | 64o=1e
+# time=9681 | BUBBLER | 64i=877f8a2605e6a0e2 | 66o=208dbf196c12bb437
+# time=9691 | BUBBLER | 64i=2026e181b3282d57 | 66o=2898179a838af849f
+# time=9691 | DESCRAMBLER | 64i=898179a838af849f | 64o=1e
+# time=9701 | DESCRAMBLER | 64i=181b3282d57877f8 | 64o=1e
+# time=9701 | BUBBLER | 64i=fe6db40aa1c1fe24 | 66o=2181b3282d57877f8
+# time=9711 | BUBBLER | 64i=5132dbccb6c55db4 | 66o=2d02a8707f890809b
+# time=9711 | DESCRAMBLER | 64i=d02a8707f890809b | 64o=1e
+# time=9721 | DESCRAMBLER | 64i=dbccb6c55db4fe6d | 64o=1e
+# time=9721 | BUBBLER | 64i=4f9baf450f1cf112 | 66o=2dbccb6c55db4fe6d
+# time=9731 | BUBBLER | 64i=f2e1b8432c8c5759 | 66o=2ebd143c73c44944c
+# time=9731 | DESCRAMBLER | 64i=ebd143c73c44944c | 64o=1e
+# time=9741 | DESCRAMBLER | 64i=1b8432c8c57594f9 | 64o=1e
+# time=9741 | BUBBLER | 64i=fd8bf465c1cae425 | 66o=21b8432c8c57594f9
+# time=9751 | BUBBLER | 64i=86bcbbcc5cc54e54 | 66o=22fd197072b9097cb
+# time=9751 | DESCRAMBLER | 64i=2fd197072b9097cb | 64o=1e
+# time=9761 | DESCRAMBLER | 64i=bcbbcc5cc54e54fd | 64o=1e
+# time=9761 | BUBBLER | 64i=cb389ed49a37dae5 | 66o=2bcbbcc5cc54e54fd
+# time=9771 | BUBBLER | 64i=e72753969f4bba1d | 66o=2ce27b5268df6b961
+# time=9771 | DESCRAMBLER | 64i=ce27b5268df6b961 | 64o=1e
+# time=9781 | DESCRAMBLER | 64i=72753969f4bba1dc | 64o=1e
+# time=9781 | BUBBLER | 64i=adbe436c2c5b474e | 66o=272753969f4bba1dc
+# time=9791 | BUBBLER | 64i=e0cb82759829daa7 | 66o=2b6f90db0b16d1d3b
+# time=9791 | DESCRAMBLER | 64i=b6f90db0b16d1d3b | 64o=1e
+# time=9801 | BUBBLER | 64i=6ae31871118bf1aa | 66o=00
+# time=9811 | DESCRAMBLER | 64i=e0cb82759829daa7 | 64o=00
+# time=9811 | BUBBLER | 64i=9b4e0cc8354697e7 | 66o=2e0cb82759829daa7
+# time=9821 | BUBBLER | 64i=6b9c23be36204dd0 | 66o=1dab8c61c4462fc6a
+# time=9821 | DESCRAMBLER | 64i=dab8c61c4462fc6a | 64o=605040302010078
+# time=9831 | DESCRAMBLER | 64i=9b4e0cc8354697e | 64o=e0d0c0b0a090807
+# time=9831 | BUBBLER | 64i=3161e76860a9a843 | 66o=109b4e0cc8354697e
+# time=9841 | BUBBLER | 64i=b0f8065b8a6441e8 | 66o=10dae708ef8d88137
+# time=9841 | DESCRAMBLER | 64i=dae708ef8d88137 | 64o=161514131211100f
+# time=9851 | DESCRAMBLER | 64i=e83161e76860a9a8 | 64o=1e1d1c1b1a191817
+# time=9851 | BUBBLER | 64i=d38ff27d325a4517 | 66o=1e83161e76860a9a8
+# time=9861 | BUBBLER | 64i=e36386aaa457168b | 66o=145ec3e0196e29910
+# time=9861 | DESCRAMBLER | 64i=45ec3e0196e29910 | 64o=262524232221201f
+# time=9871 | DESCRAMBLER | 64i=68bd38ff27d325a4 | 64o=2e2d2c2b2a292827
+# time=9871 | BUBBLER | 64i=357525f9f6e06892 | 66o=168bd38ff27d325a4
+# time=9881 | BUBBLER | 64i=dc3da6446eae32ce | 66o=1a24b8d8e1aaa915c
+# time=9881 | DESCRAMBLER | 64i=a24b8d8e1aaa915c | 64o=363534333231302f
+# time=9891 | DESCRAMBLER | 64i=32ce357525f9f6e0 | 64o=3e3d3c3b3a393837
+# time=9891 | BUBBLER | 64i=7c54584fce8b4149 | 66o=232ce357525f9f6e0
+# time=9901 | BUBBLER | 64i=c230e46512e2bcc3 | 66o=2d052770f69911bab
+# time=9901 | DESCRAMBLER | 64i=d052770f69911bab | 64o=3f99
+# time=9911 | DESCRAMBLER | 64i=2bcc37c54584fce8 | 64o=1e
+# time=9911 | BUBBLER | 64i=98131a8358be105 | 66o=22bcc37c54584fce8
+# time=9921 | BUBBLER | 64i=b11606dc0af077f1 | 66o=22f841708c391944b
+# time=9921 | DESCRAMBLER | 64i=2f841708c391944b | 64o=1e
+# time=9931 | DESCRAMBLER | 64i=f077f1098131a835 | 64o=1e
+# time=9931 | BUBBLER | 64i=574ff477b709df6 | 66o=2f077f1098131a835
+# time=9941 | BUBBLER | 64i=7a21061c91f6799f | 66o=2dc277dac4581b702
+# time=9941 | DESCRAMBLER | 64i=dc277dac4581b702 | 64o=1e
+# time=9951 | DESCRAMBLER | 64i=1f6799f0574ff477 | 64o=beaddeefbeadde78
+# time=9951 | BUBBLER | 64i=b3f336ab62144c99 | 66o=11f6799f0574ff477
+# time=9961 | BUBBLER | 64i=e6e8fd1939f25f4b | 66o=188513265e8841872
+# time=9961 | DESCRAMBLER | 64i=88513265e8841872 | 64o=beaddeefbeaddeef
+# time=9971 | DESCRAMBLER | 64i=39f25f4bb3f336ab | 64o=beaddeefbeaddeef
+# time=9971 | BUBBLER | 64i=1a516c44b968f310 | 66o=139f25f4bb3f336ab
+# time=9981 | BUBBLER | 64i=c581ae57d524395b | 66o=12e5a3cc439ba3f46
+# time=9981 | DESCRAMBLER | 64i=2e5a3cc439ba3f46 | 64o=beaddeefbeaddeef
+# time=9991 | DESCRAMBLER | 64i=7d524395b1a516c4 | 64o=beaddeefbeaddeef
+# time=9991 | BUBBLER | 64i=77cf13563f695eac | 66o=17d524395b1a516c4
+# time=10001 | BUBBLER | 64i=6eac21123f788ec5 | 66o=158fda57ab31606b9
+# time=10001 | DESCRAMBLER | 64i=58fda57ab31606b9 | 64o=beaddeefbeaddeef
+# time=10011 | DESCRAMBLER | 64i=123f788ec577cf13 | 64o=beaddeefbeaddeef
+# time=10011 | BUBBLER | 64i=551d67c778ab33e8 | 66o=1123f788ec577cf13
+# time=10021 | BUBBLER | 64i=7c3dea1106e330b2 | 66o=1f1de2accfa1bab08
+# time=10021 | DESCRAMBLER | 64i=f1de2accfa1bab08 | 64o=beaddeefbeaddeef
+# time=10031 | DESCRAMBLER | 64i=a1106e330b2551d6 | 64o=beaddeefbeaddeef
+# time=10031 | BUBBLER | 64i=1ba1a8b3f39d414a | 66o=2a1106e330b2551d6
+# time=10041 | BUBBLER | 64i=190a64ad8adf69f6 | 66o=2a2cfce750529f0f7
+# time=10041 | DESCRAMBLER | 64i=a2cfce750529f0f7 | 64o=ef99
+# time=10051 | DESCRAMBLER | 64i=64ad8adf69f61ba1 | 64o=1e
+# time=10051 | BUBBLER | 64i=73394e52fd2f7077 | 66o=264ad8adf69f61ba1
+# time=10061 | BUBBLER | 64i=ee250fb0f10d1131 | 66o=25394bf4bdc1dc642
+# time=10061 | DESCRAMBLER | 64i=5394bf4bdc1dc642 | 64o=1e
+# time=10071 | DESCRAMBLER | 64i=50fb0f10d1131733 | 64o=1e
+# time=10071 | BUBBLER | 64i=aa9b8405373f0a6b | 66o=250fb0f10d1131733
+# time=10081 | BUBBLER | 64i=295b02112f9cc8f5 | 66o=26e1014dcfc29afb8
+# time=10081 | DESCRAMBLER | 64i=6e1014dcfc29afb8 | 64o=1e
+# time=10091 | DESCRAMBLER | 64i=5b02112f9cc8f5aa | 64o=ffffffffffffff78
+# time=10091 | BUBBLER | 64i=76929dc4859b2715 | 66o=15b02112f9cc8f5aa
+# time=10101 | BUBBLER | 64i=5197a4d4712836c8 | 66o=1a4a7712166c9c54a
+# time=10101 | DESCRAMBLER | 64i=a4a7712166c9c54a | 64o=ffffffffffffffff
+# time=10111 | DESCRAMBLER | 64i=197a4d4712836c87 | 64o=ffffffffffffffff
+# time=10111 | BUBBLER | 64i=57b1fc72dfb689f2 | 66o=1197a4d4712836c87
+# time=10121 | BUBBLER | 64i=779ae6750d560e80 | 66o=15ec7f1cb7eda27c9
+# time=10121 | DESCRAMBLER | 64i=5ec7f1cb7eda27c9 | 64o=ffffffffffffffff
+# time=10131 | BUBBLER | 64i=5357c0a07be1f73d | 66o=00
+# time=10141 | DESCRAMBLER | 64i=779ae6750d560e80 | 64o=00
+# time=10141 | BUBBLER | 64i=2d07988f7566e605 | 66o=1779ae6750d560e80
+# time=10151 | BUBBLER | 64i=3a7b9b17352c6a12 | 66o=154d5f0281ef87dcf
+# time=10151 | DESCRAMBLER | 64i=54d5f0281ef87dcf | 64o=ffffffffffffffff
+# time=10161 | DESCRAMBLER | 64i=22d07988f7566e60 | 64o=ffffffffffffffff
+# time=10161 | BUBBLER | 64i=f65fce51fad0df42 | 66o=122d07988f7566e60
+# time=10171 | BUBBLER | 64i=3f92abf4803e25fe | 66o=108e9ee6c5cd4b1a8
+# time=10171 | DESCRAMBLER | 64i=8e9ee6c5cd4b1a8 | 64o=ffffffffffffffff
+# time=10181 | DESCRAMBLER | 64i=fef65fce51fad0df | 64o=ffffffffffffffff
+# time=10181 | BUBBLER | 64i=5002f0ff8eeff5b3 | 66o=1fef65fce51fad0df
+# time=10191 | BUBBLER | 64i=ed110c8ccea69ab0 | 66o=16ccfe4aafd200f89
+# time=10191 | DESCRAMBLER | 64i=6ccfe4aafd200f89 | 64o=ffffffffffffffff
+# time=10201 | DESCRAMBLER | 64i=ab05002f0ff8eeff | 64o=ffffffffffffffff
+# time=10201 | BUBBLER | 64i=95848417273c5a5a | 66o=1ab05002f0ff8eeff
+# time=10211 | BUBBLER | 64i=e1b8edd36c96292 | 66o=1696bb44432333a9a
+# time=10211 | DESCRAMBLER | 64i=696bb44432333a9a | 64o=ffffffffffffffff
+# time=10221 | DESCRAMBLER | 64i=629295848417273c | 64o=ffffffffffffffff
+# time=10221 | BUBBLER | 64i=b73b026b2f950a3d | 66o=1629295848417273c
+# time=10231 | BUBBLER | 64i=bc637c4a5853843a | 66o=1428f4386e3b74db2
+# time=10231 | DESCRAMBLER | 64i=428f4386e3b74db2 | 64o=ffffffffffffffff
+# time=10241 | DESCRAMBLER | 64i=3843ab73b026b2f9 | 64o=ffffffffffffffff
+# time=10241 | BUBBLER | 64i=1efd223076994212 | 66o=13843ab73b026b2f9
+# time=10251 | BUBBLER | 64i=8085d818e6a0a54e | 66o=265084af18df12961
+# time=10251 | DESCRAMBLER | 64i=65084af18df12961 | 64o=ffffffffffffffff
+# time=10261 | DESCRAMBLER | 64i=a0a54e1efd223076 | 64o=ff99
+# time=10261 | BUBBLER | 64i=53336f555ac7f834 | 66o=2a0a54e1efd223076
+# time=10271 | BUBBLER | 64i=83f3e84160e31112 | 66o=2b1fe0d2021760639
+# time=10271 | DESCRAMBLER | 64i=b1fe0d2021760639 | 64o=1e
+# time=10281 | DESCRAMBLER | 64i=e3111253336f555 | 64o=1e
+# time=10281 | BUBBLER | 64i=f52411f6b0c81515 | 66o=20e3111253336f555
+# time=10291 | BUBBLER | 64i=af14ff12f40531c0 | 66o=2c32054560fcfa105
+# time=10291 | DESCRAMBLER | 64i=c32054560fcfa105 | 64o=1e
+# time=10301 | DESCRAMBLER | 64i=f40531c0f52411f6 | 64o=1e
+# time=10301 | BUBBLER | 64i=e7d96289ae99af3a | 66o=2f40531c0f52411f6
+# time=10311 | BUBBLER | 64i=2310a664c7b5d48d | 66o=26ba66bceabc53fc4
+# time=10311 | DESCRAMBLER | 64i=6ba66bceabc53fc4 | 64o=1e
+# time=10321 | DESCRAMBLER | 64i=4c7b5d48de7d9628 | 64o=1e
+# time=10321 | BUBBLER | 64i=1e73f28a5021ef06 | 66o=24c7b5d48de7d9628
+# time=10331 | BUBBLER | 64i=d91bc6acb0cf5d15 | 66o=2294087bc188c4299
+# time=10331 | DESCRAMBLER | 64i=294087bc188c4299 | 64o=1e
+# time=10341 | DESCRAMBLER | 64i=acb0cf5d151e73f2 | 64o=1e
+# time=10341 | BUBBLER | 64i=ef5988c7ad948f6b | 66o=2acb0cf5d151e73f2
+# time=10351 | BUBBLER | 64i=dd14619ced2a5377 | 66o=231eb6523daf646f1
+# time=10351 | DESCRAMBLER | 64i=31eb6523daf646f1 | 64o=1e
+# time=10361 | DESCRAMBLER | 64i=19ced2a5377ef598 | 64o=1e
+# time=10361 | BUBBLER | 64i=45cabf390414b0c3 | 66o=219ced2a5377ef598
+# time=10371 | BUBBLER | 64i=f012b4413dcc3465 | 66o=2fce41052c30f7451
+# time=10371 | DESCRAMBLER | 64i=fce41052c30f7451 | 64o=1e
+# time=10381 | DESCRAMBLER | 64i=b4413dcc346545ca | 64o=1e
+# time=10381 | BUBBLER | 64i=4a8343005c500e4 | 66o=2b4413dcc346545ca
+# time=10391 | BUBBLER | 64i=e82798fe8a9039fb | 66o=20d0c017140393c04
+# time=10391 | DESCRAMBLER | 64i=d0c017140393c04 | 64o=1e
+# time=10401 | DESCRAMBLER | 64i=798fe8a9039fb04a | 64o=1e
+# time=10401 | BUBBLER | 64i=a8b3139d534a7f5d | 66o=2798fe8a9039fb04a
+# time=10411 | BUBBLER | 64i=5e2bea77c3e98443 | 66o=2cc4e754d29fd77a0
+# time=10411 | DESCRAMBLER | 64i=cc4e754d29fd77a0 | 64o=1e
+# time=10421 | DESCRAMBLER | 64i=2bea77c3e98443a8 | 64o=1e
+# time=10421 | BUBBLER | 64i=79be11ec23234656 | 66o=22bea77c3e98443a8
+# time=10431 | BUBBLER | 64i=6a3880e49812da83 | 66o=26f847b08c8d19597
+# time=10431 | DESCRAMBLER | 64i=6f847b08c8d19597 | 64o=1e
+# time=10441 | DESCRAMBLER | 64i=a3880e49812da837 | 64o=1e
+# time=10441 | BUBBLER | 64i=8f4df91d60b27a1d | 66o=2a3880e49812da837
+# time=10451 | BUBBLER | 64i=66250aa6f1feb120 | 66o=23d37e47582c9e875
+# time=10451 | DESCRAMBLER | 64i=3d37e47582c9e875 | 64o=1e
+# time=10461 | BUBBLER | 64i=b1b29d2d7a7778ea | 66o=00
+# time=10471 | DESCRAMBLER | 64i=66250aa6f1feb120 | 64o=00
+# time=10471 | BUBBLER | 64i=9ea16a3e3be424c8 | 66o=266250aa6f1feb120
+# time=10481 | BUBBLER | 64i=5f788e1899229aad | 66o=22c6ca74b5e9dde3a
+# time=10481 | DESCRAMBLER | 64i=2c6ca74b5e9dde3a | 64o=1e
+# time=10491 | DESCRAMBLER | 64i=d9ea16a3e3be424c | 64o=1e
 #  18131.00ns INFO     cocotb.regression                  rx_tb.tb.rx_test.test_back_to_back_frames passed
-#  18131.00ns INFO     cocotb.regression                  *****************************************************************************************************
-#                                                         ** TEST                                         STATUS  SIM TIME (ns)  REAL TIME (s)  RATIO (ns/s) **
-#                                                         *****************************************************************************************************
-#                                                         ** rx_tb.tb.rx_test.test_lock_and_single_frame   PASS        9060.00           0.11      78884.33  **
-#                                                         ** rx_tb.tb.rx_test.test_back_to_back_frames     PASS        9070.00           0.12      74740.98  **
-#                                                         *****************************************************************************************************
-#                                                         ** TESTS=2 PASS=2 FAIL=0 SKIP=0                             18131.00           0.24      75721.78  **
-#                                                         *****************************************************************************************************
-# ** Note: $finish    : /home/lvr4818/ieee/ChipTeam2026/ethernet_assembler/rtl/ethernet_assembler.sv(183)
-#    Time: 18131 ns  Iteration: 2  Instance: /rx_top File: /home/lvr4818/ieee/ChipTeam2026/rx_tb/rtl/rx_top.sv
-# End time: 12:03:11 on Apr 12,2026, Elapsed time: 0:00:01
+#  18131.00ns INFO     cocotb.regression                  running rx_tb.tb.rx_test.test_frame_lengths (3/4)
+# time=18202 | BUBBLER | 64i=98888a9999faaaa0 | 66o=00
+# time=18212 | BUBBLER | 64i=f5f9f1e0a1221e36 | 66o=00
+# time=18222 | DESCRAMBLER | 64i=98888a9999faaaa0 | 64o=00
+# time=18222 | BUBBLER | 64i=48f77d91986b2a8a | 66o=298888a9999faaaa0
+# time=18232 | BUBBLER | 64i=69fb5ba0dece162d | 66o=2bd7e7c782848878d
+# time=18232 | DESCRAMBLER | 64i=bd7e7c782848878d | 64o=00
+# time=18242 | DESCRAMBLER | 64i=d48f77d91986b2a8 | 64o=1e
+# time=18242 | BUBBLER | 64i=24a016de03b62093 | 66o=2d48f77d91986b2a8
+# time=18252 | BUBBLER | 64i=8d69997baab8ceff | 66o=24da7ed6e837b3858
+# time=18252 | DESCRAMBLER | 64i=4da7ed6e837b3858 | 64o=1e
+# time=18262 | DESCRAMBLER | 64i=ff24a016de03b620 | 64o=1e
+# time=18262 | BUBBLER | 64i=cad1f5f721e19988 | 66o=2ff24a016de03b620
+# time=18272 | BUBBLER | 64i=1c36a245be6ceb0a | 66o=262235a665eeaae33
+# time=18272 | DESCRAMBLER | 64i=62235a665eeaae33 | 64o=1e
+# time=18282 | DESCRAMBLER | 64i=b0acad1f5f721e19 | 64o=1e
+# time=18282 | BUBBLER | 64i=4e542d2fc7778126 | 66o=2b0acad1f5f721e19
+# time=18292 | BUBBLER | 64i=de296627baa6a33e | 66o=2049870da8916f9b3
+# time=18292 | DESCRAMBLER | 64i=49870da8916f9b3 | 64o=1e
+# time=18302 | DESCRAMBLER | 64i=a33e4e542d2fc777 | 64o=1e
+# time=18302 | BUBBLER | 64i=e5d4a2e7de78a18d | 66o=2a33e4e542d2fc777
+# time=18312 | BUBBLER | 64i=11a3d32e4765cb39 | 66o=22863778a5989eea9
+# time=18312 | DESCRAMBLER | 64i=2863778a5989eea9 | 64o=1e
+# time=18322 | DESCRAMBLER | 64i=5cb39e5d4a2e7de7 | 64o=1e
+# time=18322 | BUBBLER | 64i=d95e16be23af09eb | 66o=25cb39e5d4a2e7de7
+# time=18332 | BUBBLER | 64i=5f100e132048ca0 | 66o=2bc27ac468f4cb91d
+# time=18332 | DESCRAMBLER | 64i=bc27ac468f4cb91d | 64o=1e
+# time=18342 | DESCRAMBLER | 64i=48ca0d95e16be23 | 64o=1e
+# time=18342 | BUBBLER | 64i=99a46aaecaffcaf0 | 66o=2048ca0d95e16be23
+# time=18352 | BUBBLER | 64i=938a9b49eeb7763d | 66o=2bff2bc017c40384c
+# time=18352 | DESCRAMBLER | 64i=bff2bc017c40384c | 64o=1e
+# time=18362 | DESCRAMBLER | 64i=eb7763d99a46aaec | 64o=1e
+# time=18362 | BUBBLER | 64i=6d9e0b6a8871798 | 66o=2eb7763d99a46aaec
+# time=18372 | BUBBLER | 64i=2b05f7d23860248a | 66o=2a21c5e624e2a6d27
+# time=18372 | DESCRAMBLER | 64i=a21c5e624e2a6d27 | 64o=1e
+# time=18382 | DESCRAMBLER | 64i=3860248a06d9e0b6 | 64o=1e
+# time=18382 | BUBBLER | 64i=6d403b7b01319035 | 66o=23860248a06d9e0b6
+# time=18392 | BUBBLER | 64i=705aa923bff24c01 | 66o=2c04c640d4ac17df4
+# time=18392 | DESCRAMBLER | 64i=c04c640d4ac17df4 | 64o=1e
+# time=18402 | DESCRAMBLER | 64i=3bff24c016d403b7 | 64o=1e
+# time=18402 | BUBBLER | 64i=2ea9278feddd0366 | 66o=23bff24c016d403b7
+# time=18412 | BUBBLER | 64i=cd1e265c885e598e | 66o=23fb7740d99c16aa4
+# time=18412 | DESCRAMBLER | 64i=3fb7740d99c16aa4 | 64o=1e
+# time=18422 | DESCRAMBLER | 64i=5c885e598e2ea927 | 64o=1e
+# time=18422 | BUBBLER | 64i=9c02869060bb0a1 | 66o=25c885e598e2ea927
+# time=18432 | BUBBLER | 64i=b35e6357955f8bfe | 66o=21a4182ec28734789
+# time=18432 | DESCRAMBLER | 64i=1a4182ec28734789 | 64o=1e
+# time=18442 | DESCRAMBLER | 64i=357955f8bfe09c02 | 64o=1e
+# time=18442 | BUBBLER | 64i=127aa0da4616eca3 | 66o=2357955f8bfe09c02
+# time=18452 | BUBBLER | 64i=55aa87fa1880e298 | 66o=28369185bb28ecd79
+# time=18452 | DESCRAMBLER | 64i=8369185bb28ecd79 | 64o=1e
+# time=18462 | DESCRAMBLER | 64i=87fa1880e298127a | 64o=1e
+# time=18462 | BUBBLER | 64i=250879bb88acc99f | 66o=287fa1880e298127a
+# time=18472 | BUBBLER | 64i=b025575eff9e300a | 66o=21e6ee22b3267d56a
+# time=18472 | DESCRAMBLER | 64i=1e6ee22b3267d56a | 64o=1e
+# time=18482 | DESCRAMBLER | 64i=5575eff9e300a250 | 64o=1e
+# time=18482 | BUBBLER | 64i=94aa968ffbb900cc | 66o=25575eff9e300a250
+# time=18492 | BUBBLER | 64i=7af2d3d17747399c | 66o=2aa5a3feee40332c0
+# time=18492 | DESCRAMBLER | 64i=aa5a3feee40332c0 | 64o=1e
+# time=18502 | DESCRAMBLER | 64i=f2d3d17747399c94 | 64o=1e
+# time=18502 | BUBBLER | 64i=a8841c18c242946c | 66o=2f2d3d17747399c94
+# time=18512 | BUBBLER | 64i=2860338a0549e0fd | 66o=22107063090a51b1e
+# time=18512 | DESCRAMBLER | 64i=2107063090a51b1e | 64o=1e
+# time=18522 | DESCRAMBLER | 64i=860338a0549e0fda | 64o=1e
+# time=18522 | BUBBLER | 64i=b064cd0ad571f7f9 | 66o=2860338a0549e0fda
+# time=18532 | BUBBLER | 64i=3ea8343f85c408e4 | 66o=2c193342b55c7dfe4
+# time=18532 | DESCRAMBLER | 64i=c193342b55c7dfe4 | 64o=1e
+# time=18542 | BUBBLER | 64i=ebb4a3cdde45662e | 66o=00
+# time=18552 | DESCRAMBLER | 64i=3ea8343f85c408e4 | 64o=00
+# time=18552 | BUBBLER | 64i=a2debe763c29a449 | 66o=23ea8343f85c408e4
+# time=18562 | BUBBLER | 64i=e1855228ff679026 | 66o=27aed28f37791598b
+# time=18562 | DESCRAMBLER | 64i=7aed28f37791598b | 64o=1e
+# time=18572 | DESCRAMBLER | 64i=6a2debe763c29a44 | 64o=1e
+# time=18572 | BUBBLER | 64i=51910f2b3117d58c | 66o=26a2debe763c29a44
+# time=18582 | BUBBLER | 64i=a9573fbf940c0af0 | 66o=233861548a3fd9e40
+# time=18582 | DESCRAMBLER | 64i=33861548a3fd9e40 | 64o=1e
+# time=18592 | DESCRAMBLER | 64i=f051910f2b3117d5 | 64o=1e
+# time=18592 | BUBBLER | 64i=2d1c277246996b2e | 66o=2f051910f2b3117d5
+# time=18602 | BUBBLER | 64i=8140983c1a8460be | 66o=2cbaa55cfefe50302
+# time=18602 | DESCRAMBLER | 64i=cbaa55cfefe50302 | 64o=1e
+# time=18612 | DESCRAMBLER | 64i=be2d1c277246996 | 64o=1e
+# time=18612 | BUBBLER | 64i=fb9660cbaa15b3f8 | 66o=20be2d1c277246996
+# time=18622 | BUBBLER | 64i=66df1ab612fe68dd | 66o=2cfe2050260f06a11
+# time=18622 | DESCRAMBLER | 64i=cfe2050260f06a11 | 64o=1e
+# time=18632 | DESCRAMBLER | 64i=68ddfb9660cbaa15 | 64o=1e
+# time=18632 | BUBBLER | 64i=c82f758719ea24af | 66o=268ddfb9660cbaa15
+# time=18642 | BUBBLER | 64i=532f0f571247e52 | 66o=2892bd9b7c6ad84bf
+# time=18642 | DESCRAMBLER | 64i=892bd9b7c6ad84bf | 64o=1e
+# time=18652 | DESCRAMBLER | 64i=47e52c82f758719e | 64o=1e
+# time=18652 | BUBBLER | 64i=59a74eae9d8fcee5 | 66o=247e52c82f758719e
+# time=18662 | BUBBLER | 64i=fc6cf04b5243762c | 66o=23f3b9414cbc3d5c4
+# time=18662 | DESCRAMBLER | 64i=3f3b9414cbc3d5c4 | 64o=1e
+# time=18672 | DESCRAMBLER | 64i=43762c59a74eae9d | 64o=1e
+# time=18672 | BUBBLER | 64i=b7629d9a7a9abdba | 66o=243762c59a74eae9d
+# time=18682 | BUBBLER | 64i=70fe0912086d218 | 66o=2a6af6ebf1b3c12d4
+# time=18682 | DESCRAMBLER | 64i=a6af6ebf1b3c12d4 | 64o=1e
+# time=18692 | DESCRAMBLER | 64i=86d218b7629d9a7 | 64o=1e
+# time=18692 | BUBBLER | 64i=d51377f396602faa | 66o=2086d218b7629d9a7
+# time=18702 | BUBBLER | 64i=2e8c173a50e4cf12 | 66o=25980bea81c3f8244
+# time=18702 | DESCRAMBLER | 64i=5980bea81c3f8244 | 64o=1e
+# time=18712 | DESCRAMBLER | 64i=50e4cf12d51377f3 | 64o=1e
+# time=18712 | BUBBLER | 64i=1286337a2951a7bf | 66o=250e4cf12d51377f3
+# time=18722 | BUBBLER | 64i=beb57c2f7e0f1821 | 66o=28a5469efcba305ce
+# time=18722 | DESCRAMBLER | 64i=8a5469efcba305ce | 64o=1e
+# time=18732 | DESCRAMBLER | 64i=f7e0f18211286337 | 64o=1e
+# time=18732 | BUBBLER | 64i=2bb437b371195932 | 66o=2f7e0f18211286337
+# time=18742 | BUBBLER | 64i=be127e08dbf196c1 | 66o=2cdc46564cafad5f0
+# time=18742 | DESCRAMBLER | 64i=cdc46564cafad5f0 | 64o=1e
+# time=18752 | DESCRAMBLER | 64i=8dbf196c12bb437 | 64o=1e
+# time=18752 | BUBBLER | 64i=877f8a2605e6a0e2 | 66o=208dbf196c12bb437
+# time=18762 | BUBBLER | 64i=2026e181b3282d57 | 66o=2898179a838af849f
+# time=18762 | DESCRAMBLER | 64i=898179a838af849f | 64o=1e
+# time=18772 | DESCRAMBLER | 64i=181b3282d57877f8 | 64o=1e
+# time=18772 | BUBBLER | 64i=fe6db40aa1c1fe24 | 66o=2181b3282d57877f8
+# time=18782 | BUBBLER | 64i=5132dbccb6c55db4 | 66o=2d02a8707f890809b
+# time=18782 | DESCRAMBLER | 64i=d02a8707f890809b | 64o=1e
+# time=18792 | DESCRAMBLER | 64i=dbccb6c55db4fe6d | 64o=1e
+# time=18792 | BUBBLER | 64i=4f9baf450f1cf112 | 66o=2dbccb6c55db4fe6d
+# time=18802 | BUBBLER | 64i=f2e1b8432c8c5759 | 66o=2ebd143c73c44944c
+# time=18802 | DESCRAMBLER | 64i=ebd143c73c44944c | 64o=1e
+# time=18812 | DESCRAMBLER | 64i=1b8432c8c57594f9 | 64o=1e
+# time=18812 | BUBBLER | 64i=fd8bf465c1cae425 | 66o=21b8432c8c57594f9
+# time=18822 | BUBBLER | 64i=86bcbbcc5cc54e54 | 66o=22fd197072b9097cb
+# time=18822 | DESCRAMBLER | 64i=2fd197072b9097cb | 64o=1e
+# time=18832 | DESCRAMBLER | 64i=bcbbcc5cc54e54fd | 64o=1e
+# time=18832 | BUBBLER | 64i=cb389ed49a37dae5 | 66o=2bcbbcc5cc54e54fd
+# time=18842 | BUBBLER | 64i=e72753969f4bba1d | 66o=2ce27b5268df6b961
+# time=18842 | DESCRAMBLER | 64i=ce27b5268df6b961 | 64o=1e
+# time=18852 | DESCRAMBLER | 64i=72753969f4bba1dc | 64o=1e
+# time=18852 | BUBBLER | 64i=adbe436c2c5b474e | 66o=272753969f4bba1dc
+# time=18862 | BUBBLER | 64i=f7bf218c162943a7 | 66o=2b6f90db0b16d1d3b
+# time=18862 | DESCRAMBLER | 64i=b6f90db0b16d1d3b | 64o=1e
+# time=18872 | BUBBLER | 64i=42170c63914a4b2 | 66o=00
+# time=18882 | DESCRAMBLER | 64i=f7bf218c162943a7 | 64o=00
+# time=18882 | BUBBLER | 64i=c032840578c0f899 | 66o=2f7bf218c162943a7
+# time=18892 | BUBBLER | 64i=dccd065570aff927 | 66o=241085c318e45292c
+# time=18892 | DESCRAMBLER | 64i=41085c318e45292c | 64o=ab78
+# time=18902 | DESCRAMBLER | 64i=7c032840578c0f89 | 64o=87
+# time=18902 | BUBBLER | 64i=23ada64f6ead1b8f | 66o=27c032840578c0f89
+# time=18912 | BUBBLER | 64i=2b29c7d7a4878eb6 | 66o=23f73341955c2bfe4
+# time=18912 | DESCRAMBLER | 64i=3f73341955c2bfe4 | 64o=1e
+# time=18922 | DESCRAMBLER | 64i=b623ada64f6ead1b | 64o=1e
+# time=18922 | BUBBLER | 64i=67ad3a8f74f91a74 | 66o=2b623ada64f6ead1b
+# time=18932 | BUBBLER | 64i=3df49461dbca29b1 | 66o=29d0aca71f5e921e3
+# time=18932 | DESCRAMBLER | 64i=9d0aca71f5e921e3 | 64o=1e
+# time=18942 | DESCRAMBLER | 64i=9b167ad3a8f74f91 | 64o=1e
+# time=18942 | BUBBLER | 64i=e9a253ae6f4f8ac7 | 66o=29b167ad3a8f74f91
+# time=18952 | BUBBLER | 64i=95381bf482c2761c | 66o=22b1cf7d251876f28
+# time=18952 | DESCRAMBLER | 64i=2b1cf7d251876f28 | 64o=1e
+# time=18962 | DESCRAMBLER | 64i=761ce9a253ae6f4f | 64o=1e
+# time=18962 | BUBBLER | 64i=4052bd1e6d68ce80 | 66o=2761ce9a253ae6f4f
+# time=18972 | BUBBLER | 64i=96a5ebbee3e30c16 | 66o=233a0254e06fd20b0
+# time=18972 | DESCRAMBLER | 64i=33a0254e06fd20b0 | 64o=1e
+# time=18982 | DESCRAMBLER | 64i=30c164052bd1e6d6 | 64o=1e
+# time=18982 | BUBBLER | 64i=c687a4b88eb72635 | 66o=230c164052bd1e6d6
+# time=18992 | BUBBLER | 64i=a31e5e522e8bd829 | 66o=2dc98d65a97aefb8f
+# time=18992 | DESCRAMBLER | 64i=dc98d65a97aefb8f | 64o=1111111111111178
+# time=19002 | DESCRAMBLER | 64i=8bd829c687a4b88e | 64o=87
+# time=19002 | BUBBLER | 64i=cb20e5d618b9ef5c | 66o=28bd829c687a4b88e
+# time=19012 | BUBBLER | 64i=3ac004f420346e05 | 66o=22e7bd728c797948b
+# time=19012 | DESCRAMBLER | 64i=2e7bd728c797948b | 64o=1e
+# time=19022 | DESCRAMBLER | 64i=346e05cb20e5d61 | 64o=1e
+# time=19022 | BUBBLER | 64i=feb0003d80016400 | 66o=20346e05cb20e5d61
+# time=19032 | BUBBLER | 64i=dc52664edaaaa6ff | 66o=200059000eb0013d0
+# time=19032 | DESCRAMBLER | 64i=59000eb0013d0 | 64o=1e
+# time=19042 | DESCRAMBLER | 64i=daaaa6fffeb0003d | 64o=1e
+# time=19042 | BUBBLER | 64i=a5a94eebef4b431d | 66o=2daaaa6fffeb0003d
+# time=19052 | BUBBLER | 64i=a92c1eedd163673 | 66o=2fbd2d0c777149993
+# time=19052 | DESCRAMBLER | 64i=fbd2d0c777149993 | 64o=1e
+# time=19062 | DESCRAMBLER | 64i=edd163673a5a94ee | 64o=1e
+# time=19062 | BUBBLER | 64i=52abad977a3f98e4 | 66o=2edd163673a5a94ee
+# time=19072 | BUBBLER | 64i=f3a80251c99d0788 | 66o=25de8fe63902a4b07
+# time=19072 | DESCRAMBLER | 64i=5de8fe63902a4b07 | 64o=1e
+# time=19082 | DESCRAMBLER | 64i=51c99d078852abad | 64o=1e
+# time=19082 | BUBBLER | 64i=44126b30dd55167f | 66o=251c99d078852abad
+# time=19092 | BUBBLER | 64i=7cfdaa1405e3c0e2 | 66o=2cc3755459ffcea00
+# time=19092 | DESCRAMBLER | 64i=cc3755459ffcea00 | 64o=2222222222222278
+# time=19102 | DESCRAMBLER | 64i=a1405e3c0e244126 | 64o=2299
+# time=19102 | BUBBLER | 64i=2897b1e69922bab6 | 66o=2a1405e3c0e244126
+# time=19112 | BUBBLER | 64i=32e2915d7b3e78d4 | 66o=2c79a648aead9f3f6
+# time=19112 | DESCRAMBLER | 64i=c79a648aead9f3f6 | 64o=1e
+# time=19122 | DESCRAMBLER | 64i=915d7b3e78d42897 | 64o=1e
+# time=19122 | BUBBLER | 64i=54bb53f09f411a1c | 66o=2915d7b3e78d42897
+# time=19132 | BUBBLER | 64i=abe843ee8c43394c | 66o=2d4fc27d046870cb8
+# time=19132 | DESCRAMBLER | 64i=d4fc27d046870cb8 | 64o=1e
+# time=19142 | DESCRAMBLER | 64i=843ee8c43394c54b | 64o=1e
+# time=19142 | BUBBLER | 64i=4da2032260566a0f | 66o=2843ee8c43394c54b
+# time=19152 | BUBBLER | 64i=7e8e7fe92803b780 | 66o=2880c898159a83eaf
+# time=19152 | DESCRAMBLER | 64i=880c898159a83eaf | 64o=1e
+# time=19162 | DESCRAMBLER | 64i=8e7fe92803b7804d | 64o=1e
+# time=19162 | BUBBLER | 64i=ea204ee60d32a175 | 66o=28e7fe92803b7804d
+# time=19172 | BUBBLER | 64i=a09a8129cb0496e3 | 66o=28813b9834ca85d5f
+# time=19172 | DESCRAMBLER | 64i=8813b9834ca85d5f | 64o=1e
+# time=19182 | DESCRAMBLER | 64i=9a8129cb0496e3e | 64o=1e
+# time=19182 | BUBBLER | 64i=4ec015f8cf2c59db | 66o=209a8129cb0496e3e
+# time=19192 | BUBBLER | 64i=b79e4eb91e0f8112 | 66o=13b0057e33cb1676e
+# time=19192 | DESCRAMBLER | 64i=3b0057e33cb1676e | 64o=3333333333333378
+# time=19202 | BUBBLER | 64i=72e645be6020e6c9 | 66o=00
+# time=19212 | DESCRAMBLER | 64i=b79e4eb91e0f8112 | 64o=00
+# time=19212 | BUBBLER | 64i=19600189331a8664 | 66o=1b79e4eb91e0f8112
+# time=19222 | BUBBLER | 64i=35513933f8798c51 | 66o=11cb9916f980839b2
+# time=19222 | DESCRAMBLER | 64i=1cb9916f980839b2 | 64o=3333333333333333
+# time=19232 | DESCRAMBLER | 64i=119600189331a866 | 64o=3333333333333333
+# time=19232 | BUBBLER | 64i=e941708f0a2a2275 | 66o=1119600189331a866
+# time=19242 | BUBBLER | 64i=4eaf51f3d3ed89e3 | 66o=1d4d544e4cfe1e631
+# time=19242 | DESCRAMBLER | 64i=d4d544e4cfe1e631 | 64o=3333333333333333
+# time=19252 | DESCRAMBLER | 64i=e3e941708f0a2a22 | 64o=3333333333333333
+# time=19252 | BUBBLER | 64i=ed37e3758259e617 | 66o=1e3e941708f0a2a22
+# time=19262 | BUBBLER | 64i=f7271196932baed5 | 66o=185d3abd47cf4fb62
+# time=19262 | DESCRAMBLER | 64i=85d3abd47cf4fb62 | 64o=3333333333333333
+# time=19272 | DESCRAMBLER | 64i=ed5ed37e3758259e | 64o=3333333333333333
+# time=19272 | BUBBLER | 64i=caeb15f3d3e191d0 | 66o=2ed5ed37e3758259e
+# time=19282 | BUBBLER | 64i=a784be88dc3a6590 | 66o=24743dc9c465a4cae
+# time=19282 | DESCRAMBLER | 64i=4743dc9c465a4cae | 64o=3399
+# time=19292 | DESCRAMBLER | 64i=6590caeb15f3d3e1 | 64o=1e
+# time=19292 | BUBBLER | 64i=3e46542cafc9d7c6 | 66o=26590caeb15f3d3e1
+# time=19302 | BUBBLER | 64i=3ee56432fae15c23 | 66o=275f1a9e12fa2370e
+# time=19302 | DESCRAMBLER | 64i=75f1a9e12fa2370e | 64o=1e
+# time=19312 | DESCRAMBLER | 64i=15c233e46542cafc | 64o=1e
+# time=19312 | BUBBLER | 64i=811d083271a15a32 | 66o=215c233e46542cafc
+# time=19322 | BUBBLER | 64i=dff2260166a80f4f | 66o=28568c8fb9590cbeb
+# time=19322 | DESCRAMBLER | 64i=8568c8fb9590cbeb | 64o=1e
+# time=19332 | DESCRAMBLER | 64i=a80f4f811d083271 | 64o=1e
+# time=19332 | BUBBLER | 64i=6f712b1939f4aae1 | 66o=2a80f4f811d083271
+# time=19342 | BUBBLER | 64i=4e3c0d24605dad0e | 66o=27d2ab877fc898059
+# time=19342 | DESCRAMBLER | 64i=7d2ab877fc898059 | 64o=1e
+# time=19352 | DESCRAMBLER | 64i=5dad0e6f712b193 | 64o=1e
+# time=19352 | BUBBLER | 64i=fce100528c03a140 | 66o=205dad0e6f712b193
+# time=19362 | BUBBLER | 64i=891d59b29faaba0f | 66o=2300e850138f03491
+# time=19362 | DESCRAMBLER | 64i=300e850138f03491 | 64o=1e
+# time=19372 | DESCRAMBLER | 64i=9faaba0ffce10052 | 64o=1e
+# time=19372 | BUBBLER | 64i=55590ffbac478f4c | 66o=29faaba0ffce10052
+# time=19382 | BUBBLER | 64i=b1693d2eed033370 | 66o=2eb11e3d32247566c
+# time=19382 | DESCRAMBLER | 64i=eb11e3d32247566c | 64o=1e
+# time=19392 | DESCRAMBLER | 64i=eed03337055590ff | 64o=1e
+# time=19392 | BUBBLER | 64i=d40e07b048590d8e | 66o=2eed03337055590ff
+# time=19402 | BUBBLER | 64i=90ff9ac40354c05f | 66o=2c12164363ac5a4f4
+# time=19402 | DESCRAMBLER | 64i=c12164363ac5a4f4 | 64o=1e
+# time=19412 | DESCRAMBLER | 64i=c40354c05fd40e07 | 64o=1e
+# time=19412 | BUBBLER | 64i=60c82a856678faa8 | 66o=2c40354c05fd40e07
+# time=19422 | BUBBLER | 64i=82ad261fc2a2047e | 66o=2a1599e3eaa243fe6
+# time=19422 | DESCRAMBLER | 64i=a1599e3eaa243fe6 | 64o=1e
+# time=19432 | DESCRAMBLER | 64i=61fc2a2047e60c82 | 64o=1e
+# time=19432 | BUBBLER | 64i=cabea57f76f819b0 | 66o=261fc2a2047e60c82
+# time=19442 | BUBBLER | 64i=9c9e1297737b9958 | 66o=295fddbe066c20ab4
+# time=19442 | DESCRAMBLER | 64i=95fddbe066c20ab4 | 64o=1e
+# time=19452 | DESCRAMBLER | 64i=1297737b9958cabe | 64o=1e
+# time=19452 | BUBBLER | 64i=b9a9bf2c2c174743 | 66o=21297737b9958cabe
+# time=19462 | BUBBLER | 64i=85e792278b6689da | 66o=26fcb0b05d1d0e727
+# time=19462 | DESCRAMBLER | 64i=6fcb0b05d1d0e727 | 64o=1e
+# time=19472 | DESCRAMBLER | 64i=792278b6689dab9a | 64o=1e
+# time=19472 | BUBBLER | 64i=d5b1758139e834a3 | 66o=2792278b6689dab9a
+# time=19482 | BUBBLER | 64i=e25bf16ec13b3434 | 66o=2c5d604e7a0d28e17
+# time=19482 | DESCRAMBLER | 64i=c5d604e7a0d28e17 | 64o=1e
+# time=19492 | DESCRAMBLER | 64i=5bf16ec13b3434d5 | 64o=1e
+# time=19492 | BUBBLER | 64i=7b56dd9fb66a0dab | 66o=25bf16ec13b3434d5
+# time=19502 | BUBBLER | 64i=e3bc2f4c471d4c92 | 66o=2d5b767ed9a836af8
+# time=19502 | DESCRAMBLER | 64i=d5b767ed9a836af8 | 64o=1e
+# time=19512 | DESCRAMBLER | 64i=3bc2f4c471d4c927 | 64o=1e
+# time=19512 | BUBBLER | 64i=9147673c9a945afb | 66o=23bc2f4c471d4c927
+# time=19522 | BUBBLER | 64i=16a573bef94c30bd | 66o=2451d9cf26a516bef
+# time=19522 | DESCRAMBLER | 64i=451d9cf26a516bef | 64o=1e
+# time=19532 | BUBBLER | 64i=40e1ac122f43671e | 66o=00
+# time=19542 | DESCRAMBLER | 64i=16a573bef94c30bd | 64o=00
+# time=19542 | BUBBLER | 64i=e551b2ff2d70177a | 66o=216a573bef94c30bd
+# time=19552 | DESCRAMBLER | 64i=90386b048bd0d9c7 | 64o=1e
+#  27202.00ns INFO     cocotb.regression                  rx_tb.tb.rx_test.test_frame_lengths passed
+#  27202.00ns INFO     cocotb.regression                  running rx_tb.tb.rx_test.test_invalid_blocks_ignored (4/4)
+# time=27273 | BUBBLER | 64i=98888a9999faaaa0 | 66o=00
+# time=27283 | BUBBLER | 64i=f5f9f1e0a1221e36 | 66o=00
+# time=27293 | DESCRAMBLER | 64i=98888a9999faaaa0 | 64o=00
+# time=27293 | BUBBLER | 64i=48f77d91986b2a8a | 66o=298888a9999faaaa0
+# time=27303 | BUBBLER | 64i=69fb5ba0dece162d | 66o=2bd7e7c782848878d
+# time=27303 | DESCRAMBLER | 64i=bd7e7c782848878d | 64o=00
+# time=27313 | DESCRAMBLER | 64i=d48f77d91986b2a8 | 64o=1e
+# time=27313 | BUBBLER | 64i=24a016de03b62093 | 66o=2d48f77d91986b2a8
+# time=27323 | BUBBLER | 64i=8d69997baab8ceff | 66o=24da7ed6e837b3858
+# time=27323 | DESCRAMBLER | 64i=4da7ed6e837b3858 | 64o=1e
+# time=27333 | DESCRAMBLER | 64i=ff24a016de03b620 | 64o=1e
+# time=27333 | BUBBLER | 64i=cad1f5f721e19988 | 66o=2ff24a016de03b620
+# time=27343 | BUBBLER | 64i=1c36a245be6ceb0a | 66o=262235a665eeaae33
+# time=27343 | DESCRAMBLER | 64i=62235a665eeaae33 | 64o=1e
+# time=27353 | DESCRAMBLER | 64i=b0acad1f5f721e19 | 64o=1e
+# time=27353 | BUBBLER | 64i=4e542d2fc7778126 | 66o=2b0acad1f5f721e19
+# time=27363 | BUBBLER | 64i=de296627baa6a33e | 66o=2049870da8916f9b3
+# time=27363 | DESCRAMBLER | 64i=49870da8916f9b3 | 64o=1e
+# time=27373 | DESCRAMBLER | 64i=a33e4e542d2fc777 | 64o=1e
+# time=27373 | BUBBLER | 64i=e5d4a2e7de78a18d | 66o=2a33e4e542d2fc777
+# time=27383 | BUBBLER | 64i=11a3d32e4765cb39 | 66o=22863778a5989eea9
+# time=27383 | DESCRAMBLER | 64i=2863778a5989eea9 | 64o=1e
+# time=27393 | DESCRAMBLER | 64i=5cb39e5d4a2e7de7 | 64o=1e
+# time=27393 | BUBBLER | 64i=d95e16be23af09eb | 66o=25cb39e5d4a2e7de7
+# time=27403 | BUBBLER | 64i=5f100e132048ca0 | 66o=2bc27ac468f4cb91d
+# time=27403 | DESCRAMBLER | 64i=bc27ac468f4cb91d | 64o=1e
+# time=27413 | DESCRAMBLER | 64i=48ca0d95e16be23 | 64o=1e
+# time=27413 | BUBBLER | 64i=99a46aaecaffcaf0 | 66o=2048ca0d95e16be23
+# time=27423 | BUBBLER | 64i=938a9b49eeb7763d | 66o=2bff2bc017c40384c
+# time=27423 | DESCRAMBLER | 64i=bff2bc017c40384c | 64o=1e
+# time=27433 | DESCRAMBLER | 64i=eb7763d99a46aaec | 64o=1e
+# time=27433 | BUBBLER | 64i=6d9e0b6a8871798 | 66o=2eb7763d99a46aaec
+# time=27443 | BUBBLER | 64i=2b05f7d23860248a | 66o=2a21c5e624e2a6d27
+# time=27443 | DESCRAMBLER | 64i=a21c5e624e2a6d27 | 64o=1e
+# time=27453 | DESCRAMBLER | 64i=3860248a06d9e0b6 | 64o=1e
+# time=27453 | BUBBLER | 64i=6d403b7b01319035 | 66o=23860248a06d9e0b6
+# time=27463 | BUBBLER | 64i=705aa923bff24c01 | 66o=2c04c640d4ac17df4
+# time=27463 | DESCRAMBLER | 64i=c04c640d4ac17df4 | 64o=1e
+# time=27473 | DESCRAMBLER | 64i=3bff24c016d403b7 | 64o=1e
+# time=27473 | BUBBLER | 64i=3a72bb8feddd0366 | 66o=23bff24c016d403b7
+# time=27483 | BUBBLER | 64i=f396f09f0ae85ea5 | 66o=23fb7740d99c16aa4
+# time=27483 | DESCRAMBLER | 64i=3fb7740d99c16aa4 | 64o=1e
+# time=27493 | DESCRAMBLER | 64i=9f0ae85ea53a72bb | 64o=1e
+# time=27493 | BUBBLER | 64i=70e1b00177d6ca9a | 66o=9f0ae85ea53a72bb
+# time=27503 | BUBBLER | 64i=d44d83879d69e9ef | 66o=5df5b2a6bce5bc
+# time=27503 | DESCRAMBLER | 64i=5df5b2a6bce5bc | 64o=24f56b44c4fd6cba
+# time=27513 | DESCRAMBLER | 64i=3879d69e9ef70e1b | 64o=5bcc7519b00cde6b
+# time=27513 | BUBBLER | 64i=b75c15ce17e06d13 | 66o=3879d69e9ef70e1b
+# time=27523 | BUBBLER | 64i=ff7063f4722427b3 | 66o=57385f81b44f5136
+# time=27523 | DESCRAMBLER | 64i=57385f81b44f5136 | 64o=216394d342a917f2
+# time=27533 | DESCRAMBLER | 64i=63f4722427b3b75c | 64o=153a477cfb274c7
+# time=27533 | BUBBLER | 64i=b34791bc045e26 | 66o=63f4722427b3b75c
+# time=27543 | BUBBLER | 64i=200e6a6a923e00d0 | 66o=d1e46f011789bfdc
+# time=27543 | DESCRAMBLER | 64i=d1e46f011789bfdc | 64o=865eed571d11aa61
+# time=27553 | DESCRAMBLER | 64i=e6a6a923e00d000b | 64o=823dc998c55cff23
+# time=27553 | BUBBLER | 64i=3c26978b318eb0b4 | 66o=e6a6a923e00d000b
+# time=27563 | BUBBLER | 64i=dc9df8832ccac400 | 66o=9a5e2cc63ac2d080
+# time=27563 | DESCRAMBLER | 64i=9a5e2cc63ac2d080 | 64o=b9d5fbb420aa1e5a
+# time=27573 | DESCRAMBLER | 64i=9df8832ccac4003c | 64o=6281d96747491beb
+# time=27573 | BUBBLER | 64i=3364cd8ad452fa72 | 66o=9df8832ccac4003c
+# time=27583 | BUBBLER | 64i=9c51a34b72f93ff | 66o=d93362b514be9cb7
+# time=27583 | DESCRAMBLER | 64i=d93362b514be9cb7 | 64o=94c529355c85a5a7
+# time=27593 | DESCRAMBLER | 64i=9c51a34b72f93ff3 | 64o=4004ec36f6ba7a50
+# time=27593 | BUBBLER | 64i=39c5e414b613f11c | 66o=9c51a34b72f93ff3
+# time=27603 | BUBBLER | 64i=4122bd4ccd87e7cf | 66o=e7179052d84fc470
+# time=27603 | DESCRAMBLER | 64i=e7179052d84fc470 | 64o=9045ca4e6836d322
+# time=27613 | BUBBLER | 64i=f9b428ecc5b888 | 66o=00
+# time=27623 | DESCRAMBLER | 64i=4122bd4ccd87e7cf | 64o=00
+# time=27623 | BUBBLER | 64i=905d3e831b6ca8a2 | 66o=4122bd4ccd87e7cf
+# time=27633 | BUBBLER | 64i=2f9d989c070979c9 | 66o=803e6d0a3b316e22
+# time=27633 | DESCRAMBLER | 64i=803e6d0a3b316e22 | 64o=17ab1fab2a765929
+# time=27643 | DESCRAMBLER | 64i=9905d3e831b6ca8a | 64o=50e10408af77a04d
+# time=27643 | BUBBLER | 64i=d37d49bceb7a6a37 | 66o=9905d3e831b6ca8a
+# time=27653 | BUBBLER | 64i=9d4c6f19f2f7141a | 66o=dcbe7662701c25e7
+# time=27653 | DESCRAMBLER | 64i=dcbe7662701c25e7 | 64o=958d6f54fa735c79
+# time=27663 | DESCRAMBLER | 64i=1ad37d49bceb7a6a | 64o=3e59b64ce5dfe75
+# time=27663 | BUBBLER | 64i=7f31380df6c9210e | 66o=1ad37d49bceb7a6a
+# time=27673 | BUBBLER | 64i=deb104c2399145b9 | 66o=43a7531bc67cbdc5
+# time=27673 | DESCRAMBLER | 64i=43a7531bc67cbdc5 | 64o=fbee496d63904558
+# time=27683 | DESCRAMBLER | 64i=5b97f31380df6c92 | 64o=f55592e796d46b78
+# time=27683 | BUBBLER | 64i=5e598e2ea9272d8d | 66o=5b97f31380df6c92
+# time=27693 | BUBBLER | 64i=bb0a1cd1e265c88 | 66o=b6377ac41308e645
+# time=27693 | DESCRAMBLER | 64i=b6377ac41308e645 | 64o=dd8018c248458fc3
+# time=27703 | DESCRAMBLER | 64i=5c885e598e2ea927 | 64o=7618bfc2514c93b0
+# time=27703 | BUBBLER | 64i=5f8bfe09c0286906 | 66o=25c885e598e2ea927
+# time=27713 | BUBBLER | 64i=16eca3b35e635795 | 66o=21a4182ec28734789
+# time=27713 | DESCRAMBLER | 64i=1a4182ec28734789 | 64o=8981f
+# time=27723 | DESCRAMBLER | 64i=357955f8bfe09c02 | 64o=1e
+# time=27723 | BUBBLER | 64i=80e298127aa0da46 | 66o=2357955f8bfe09c02
+# time=27733 | BUBBLER | 64i=acc99f55aa87fa18 | 66o=28369185bb28ecd79
+# time=27733 | DESCRAMBLER | 64i=8369185bb28ecd79 | 64o=1e
+# time=27743 | DESCRAMBLER | 64i=87fa1880e298127a | 64o=1e
+# time=27743 | BUBBLER | 64i=9e300a250879bb88 | 66o=287fa1880e298127a
+# time=27753 | BUBBLER | 64i=b900ccb025575eff | 66o=21e6ee22b3267d56a
+# time=27753 | DESCRAMBLER | 64i=1e6ee22b3267d56a | 64o=1e
+# time=27763 | DESCRAMBLER | 64i=5575eff9e300a250 | 64o=1e
+# time=27763 | BUBBLER | 64i=47399c94aa968ffb | 66o=25575eff9e300a250
+# time=27773 | BUBBLER | 64i=42946c7af2d3d177 | 66o=2aa5a3feee40332c0
+# time=27773 | DESCRAMBLER | 64i=aa5a3feee40332c0 | 64o=1e
+# time=27783 | DESCRAMBLER | 64i=f2d3d17747399c94 | 64o=1e
+# time=27783 | BUBBLER | 64i=49e0fda8841c18c2 | 66o=2f2d3d17747399c94
+# time=27793 | BUBBLER | 64i=71f7f92860338a05 | 66o=22107063090a51b1e
+# time=27793 | DESCRAMBLER | 64i=2107063090a51b1e | 64o=1e
+# time=27803 | DESCRAMBLER | 64i=860338a0549e0fda | 64o=1e
+# time=27803 | BUBBLER | 64i=c408e4b064cd0ad5 | 66o=2860338a0549e0fda
+# time=27813 | BUBBLER | 64i=45662e3ea8343f85 | 66o=2c193342b55c7dfe4
+# time=27813 | DESCRAMBLER | 64i=c193342b55c7dfe4 | 64o=1e
+# time=27823 | DESCRAMBLER | 64i=3ea8343f85c408e4 | 64o=1e
+# time=27823 | BUBBLER | 64i=29a449ebb4a3cdde | 66o=23ea8343f85c408e4
+# time=27833 | BUBBLER | 64i=679026a2debe763c | 66o=27aed28f37791598b
+# time=27833 | DESCRAMBLER | 64i=7aed28f37791598b | 64o=1e
+# time=27843 | DESCRAMBLER | 64i=6a2debe763c29a44 | 64o=1e
+# time=27843 | BUBBLER | 64i=17d58ce1855228ff | 66o=26a2debe763c29a44
+# time=27853 | BUBBLER | 64i=c0af051910f2b31 | 66o=233861548a3fd9e40
+# time=27853 | DESCRAMBLER | 64i=33861548a3fd9e40 | 64o=1e
+# time=27863 | DESCRAMBLER | 64i=f051910f2b3117d5 | 64o=1e
+# time=27863 | BUBBLER | 64i=996b2ea9573fbf94 | 66o=2f051910f2b3117d5
+# time=27873 | BUBBLER | 64i=8460be2d1c277246 | 66o=2cbaa55cfefe50302
+# time=27873 | DESCRAMBLER | 64i=cbaa55cfefe50302 | 64o=1e
+# time=27883 | DESCRAMBLER | 64i=be2d1c277246996 | 64o=1e
+# time=27883 | BUBBLER | 64i=37b3f88140983c1a | 66o=20be2d1c277246996
+# time=27893 | BUBBLER | 64i=ae34543e602881ec | 66o=2cfe2050260f06a11
+# time=27893 | DESCRAMBLER | 64i=cfe2050260f06a11 | 64o=1e
+# time=27903 | DESCRAMBLER | 64i=34543e602881ec37 | 64o=1e
+# time=27903 | BUBBLER | 64i=c7b342e3e3c0edea | 66o=234543e602881ec37
+# time=27913 | BUBBLER | 64i=57daed3c0dbeffd6 | 66o=1ecd0b8f8f03b7aab
+# time=27913 | DESCRAMBLER | 64i=ecd0b8f8f03b7aab | 64o=bafecabebafeca78
+# time=27923 | DESCRAMBLER | 64i=7daed3c0dbeffd6c | 64o=bafecabebafecabe
+# time=27923 | BUBBLER | 64i=5654a54425d63c0c | 66o=17daed3c0dbeffd6c
+# time=27933 | BUBBLER | 64i=80a0b3b1f1e6ca8d | 66o=1595295109758f031
+# time=27933 | DESCRAMBLER | 64i=595295109758f031 | 64o=bafecabebafecabe
+# time=27943 | BUBBLER | 64i=388a1a26504901b1 | 66o=00
+# time=27953 | DESCRAMBLER | 64i=80a0b3b1f1e6ca8d | 64o=00
+# time=27953 | BUBBLER | 64i=9a80b514b618725 | 66o=180a0b3b1f1e6ca8d
+# time=27963 | BUBBLER | 64i=1de6499987504359 | 66o=14e2286899412406c
+# time=27963 | DESCRAMBLER | 64i=4e2286899412406c | 64o=bafecabebafecabe
+# time=27973 | DESCRAMBLER | 64i=909a80b514b61872 | 64o=bafecabebafecabe
+# time=27973 | BUBBLER | 64i=c820058600e8a046 | 66o=1909a80b514b61872
+# time=27983 | BUBBLER | 64i=760999a1aaae2eff | 66o=118779926661d410d
+# time=27983 | DESCRAMBLER | 64i=18779926661d410d | 64o=bafecabebafecabe
+# time=27993 | DESCRAMBLER | 64i=ffc820058600e8a0 | 64o=bafecabebafecabe
+# time=27993 | BUBBLER | 64i=240ac6c1f4b42877 | 66o=2ffc820058600e8a0
+# time=28003 | BUBBLER | 64i=12ad037f705a064 | 66o=21ddd8266686aab8b
+# time=28003 | DESCRAMBLER | 64i=1ddd8266686aab8b | 64o=be99
+# time=28013 | DESCRAMBLER | 64i=64240ac6c1f4b42 | 64o=1e
+# time=28013 | BUBBLER | 64i=db94b6cbddb5b19b | 66o=2064240ac6c1f4b42
+# time=28023 | BUBBLER | 64i=eb8a53c9ef4668c6 | 66o=2c66c04ab40dfdc16
+# time=28023 | DESCRAMBLER | 64i=c66c04ab40dfdc16 | 64o=1e
+# time=28033 | DESCRAMBLER | 64i=68c6db94b6cbddb5 | 64o=1e
+# time=28033 | BUBBLER | 64i=8e1349235db9979c | 66o=268c6db94b6cbddb5
+# time=28043 | BUBBLER | 64i=a04c0e0d41285f13 | 66o=265e73ae294f27bd1
+# time=28043 | DESCRAMBLER | 64i=65e73ae294f27bd1 | 64o=1e
+# time=28053 | DESCRAMBLER | 64i=85f138e1349235db | 64o=1e
+# time=28053 | BUBBLER | 64i=ed56537faf9603bf | 66o=285f138e1349235db
+# time=28063 | BUBBLER | 64i=9d0e9a713aba4cdc | 66o=2580efe8130383504
+# time=28063 | DESCRAMBLER | 64i=580efe8130383504 | 64o=1e
+# time=28073 | DESCRAMBLER | 64i=ba4cdced56537faf | 64o=1e
+# time=28073 | BUBBLER | 64i=ca39b5e4ab78b058 | 66o=2ba4cdced56537faf
+# time=28083 | BUBBLER | 64i=d066c70aad246176 | 66o=2de2c162743a69c4e
+# time=28083 | DESCRAMBLER | 64i=de2c162743a69c4e | 64o=1e
+# time=28093 | DESCRAMBLER | 64i=d246176ca39b5e4a | 64o=1e
+# time=28093 | BUBBLER | 64i=45fb1ce0b494fddb | 66o=2d246176ca39b5e4a
+# time=28103 | BUBBLER | 64i=db1126d2cdac356f | 66o=2d253f76f419b1c2a
+# time=28103 | DESCRAMBLER | 64i=d253f76f419b1c2a | 64o=1e
+# time=28113 | DESCRAMBLER | 64i=cdac356f45fb1ce0 | 64o=1e
+# time=28113 | BUBBLER | 64i=3c159448faf490f1 | 66o=2cdac356f45fb1ce0
+# time=28123 | BUBBLER | 64i=95cc3be9512ebf37 | 66o=23ebd243c76c449b4
+# time=28123 | DESCRAMBLER | 64i=3ebd243c76c449b4 | 64o=1e
+# time=28133 | DESCRAMBLER | 64i=9512ebf373c15944 | 64o=1e
+# time=28133 | BUBBLER | 64i=80f638846958cbbe | 66o=29512ebf373c15944
+# time=28143 | BUBBLER | 64i=acc8ced564a7fade | 66o=211a5632efa5730ef
+# time=28143 | DESCRAMBLER | 64i=11a5632efa5730ef | 64o=1e
+# time=28153 | DESCRAMBLER | 64i=d564a7fade80f638 | 64o=1e
+# time=28153 | BUBBLER | 64i=47af3b23c296447b | 66o=2d564a7fade80f638
+# time=28163 | BUBBLER | 64i=3cefa514dcf3d651 | 66o=2c8f0a5911eeb3233
+# time=28163 | DESCRAMBLER | 64i=c8f0a5911eeb3233 | 64o=1e
+# time=28173 | DESCRAMBLER | 64i=514dcf3d65147af3 | 64o=1e
+# time=28173 | BUBBLER | 64i=723dae59632eba57 | 66o=2514dcf3d65147af3
+# time=28183 | DESCRAMBLER | 64i=b9658cbae95cf3be | 64o=1e
+#  36273.00ns INFO     cocotb.regression                  rx_tb.tb.rx_test.test_invalid_blocks_ignored passed
+#  36273.00ns INFO     cocotb.regression                  ******************************************************************************************************
+#                                                         ** TEST                                          STATUS  SIM TIME (ns)  REAL TIME (s)  RATIO (ns/s) **
+#                                                         ******************************************************************************************************
+#                                                         ** rx_tb.tb.rx_test.test_lock_and_single_frame    PASS        9060.00           0.14      63078.84  **
+#                                                         ** rx_tb.tb.rx_test.test_back_to_back_frames      PASS        9070.00           0.17      51915.72  **
+#                                                         ** rx_tb.tb.rx_test.test_frame_lengths            PASS        9070.00           0.17      52198.81  **
+#                                                         ** rx_tb.tb.rx_test.test_invalid_blocks_ignored   PASS        9070.00           0.14      64499.09  **
+#                                                         ******************************************************************************************************
+#                                                         ** TESTS=4 PASS=4 FAIL=0 SKIP=0                              36273.00           0.64      56779.16  **
+#                                                         ******************************************************************************************************
+# ** Note: $finish    : /home/lvr4818/ieee/ChipTeam2026/descrambler/rtl/descrambler.sv(67)
+#    Time: 36273 ns  Iteration: 2  Instance: /rx_top File: /home/lvr4818/ieee/ChipTeam2026/rx_tb/rtl/rx_top.sv
+# End time: 21:16:38 on Apr 14,2026, Elapsed time: 0:00:02
 # Errors: 0, Warnings: 1

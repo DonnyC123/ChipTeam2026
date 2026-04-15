@@ -1,3 +1,4 @@
+from itertools import count
 from tb_utils.generic_sequence import GenericSequence
 from rx_tb.tb.rx_sequence_item import RxSequenceItem
 import random
@@ -34,6 +35,7 @@ class RxSequence(GenericSequence):
 
     # nic_global_pkg constants
     IDLE_BLK = 0x1E
+    IDLE_BLK_C = 0x00
     SOF_L0   = 0x78
     SOF_L4   = 0x33
     TERM_CODES = [
@@ -47,8 +49,8 @@ class RxSequence(GenericSequence):
         0xFF,  # TERM_L7: 7 valid data bytes
     ]
 
-    CTRL_HDR = 0b01
-    DATA_HDR = 0b10
+    CTRL_HDR = 0b10
+    DATA_HDR = 0b01
 
     def __init__(self, driver):
         super().__init__(driver)
@@ -82,17 +84,6 @@ class RxSequence(GenericSequence):
         await self._flush_stream()
         await self._drive_64b(0, valid=False)
 
-    def bit_reverse_old(self, word):
-        payload2 = 0
-        for i in range(8):
-            byte = (word >> (i * 8)) & 0xFF
-            out_byte = 0
-            for j in range(8):
-                bit = (byte >> j) & 1
-                out_byte |= bit << (7-j)
-            payload2 |= out_byte << (i * 8)
-        return payload2
-
     def bit_reverse(self, word):
         payload2 = 0
         for i in range(64):
@@ -102,30 +93,24 @@ class RxSequence(GenericSequence):
 
     async def send_idles(self, count: int):
         idle_payload = self._build_ctrl_payload(
-            self.IDLE_BLK, [self.IDLE_BLK] * 7
+            self.IDLE_BLK, [self.IDLE_BLK_C] * 7
         )
         for _ in range(count):
-            # Scramble the idle payload just like data words
-            await self._push_word(self.CTRL_HDR, self.scramble_64b(self.bit_reverse(idle_payload)))
-
+            await self._push_word(self.CTRL_HDR, self.scramble_64b(idle_payload))
 
     async def send_ethernet_frame(self, frame_bytes: list[int]):
-        # SOF — scrambled
         sof_raw = self._build_ctrl_payload(self.SOF_L0, frame_bytes[:7])
-        await self._push_word(self.CTRL_HDR, self.scramble_64b(self.bit_reverse(sof_raw)))
+        await self._push_word(self.CTRL_HDR, self.scramble_64b(sof_raw))
 
-        # Data words — scrambled (already correct)
         remaining = frame_bytes[7:]
         while len(remaining) > 7:
             word = int.from_bytes(remaining[:8], "little")
-            await self._push_word(self.DATA_HDR, self.scramble_64b(self.bit_reverse(word)))
+            await self._push_word(self.DATA_HDR, self.scramble_64b(word))
             remaining = remaining[8:]
 
-        # TERM — scrambled
         n_valid  = len(remaining)
-
         term_raw = self._build_ctrl_payload(self.TERM_CODES[n_valid], remaining)
-        await self._push_word(self.CTRL_HDR, self.scramble_64b(self.bit_reverse(term_raw)))
+        await self._push_word(self.CTRL_HDR, self.scramble_64b(term_raw))
 
     async def send_back_to_back_frames(
         self,
@@ -135,19 +120,6 @@ class RxSequence(GenericSequence):
         for frame in frames:
             await self.send_ethernet_frame(frame)
             await self.send_idles(gap_idles)
-
-    async def send_corrupted_frame(self, frame_bytes: list[int]):
-        await self.send_ethernet_frame(frame_bytes)
-        for _ in range(10):
-            await self._push_word(0b00, 0xDEADBEEFDEADBEEF)
-
-    async def send_random_bubbles(self, cycles: int, bubble_prob: float = 0.1):
-        for _ in range(cycles):
-            if random.random() < bubble_prob:
-                await self.send_bubble()
-            else:
-                hdr = random.choice([self.CTRL_HDR, self.DATA_HDR])
-                await self._push_word(hdr, random.getrandbits(64))
 
     def scramble_64b(self, input_word: int) -> int:
         scrambled = 0
@@ -160,3 +132,7 @@ class RxSequence(GenericSequence):
             state    = ((state << 1) | out_bit) & ((1 << self.SCRAMBLER_STATE_W) - 1)
         self.scrambler_state = state
         return scrambled
+    
+    async def send_invalid_blocks(self, count: int = 10):
+        for _ in range(count):
+            await self._push_word(0b00, random.getrandbits(64))

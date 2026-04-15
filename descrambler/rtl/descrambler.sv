@@ -34,7 +34,6 @@ always_comb begin
         valid_o_d     = 1'b1;
         valid_state_d = 1'b1;
     end else if (valid_i) begin
-        // First valid word — absorb into state but don't output yet
         state_intermediate = state_q;
         for (int i = 0; i < BIT_W; i++) begin
             state_intermediate = {state_intermediate[STATE_W-2:0], _64b_i[i]};
@@ -48,7 +47,7 @@ end
 always_ff @(posedge clk) begin
     if (rst == 1'b1) begin
         descrambled_q        <= '0;
-        state_q            <= '1; // MUST BE NON-ZERO (OR XOR WILL FREEZE)
+        state_q            <= '1; 
         valid_state_q      <= '0;
         valid_o_q          <= '0;
     end else begin
@@ -62,6 +61,7 @@ end
 assign valid_o       = valid_o_q;
 assign _64b_o        = descrambled_q;
 
+//debugging
 always_ff @(posedge clk) begin
     if(valid_i) begin
         $display("time=%0t | DESCRAMBLER | 64i=%02h | 64o=%02h",

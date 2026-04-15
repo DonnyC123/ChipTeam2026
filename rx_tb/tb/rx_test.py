@@ -95,61 +95,40 @@ async def test_back_to_back_frames(dut):
     await drain_and_check(dut, monitor, scoreboard)
 
 
-# @cocotb.test()
-# async def test_frame_lengths(dut):
-#     seq, monitor, scoreboard = await init_dut(dut)
+@cocotb.test()
+async def test_frame_lengths(dut):
+    seq, monitor, scoreboard = await init_dut(dut)
 
-#     test_frames = [
-#         [0xAB],
-#         [0x11] * 7,
-#         [0x22] * 8,
-#         [0x33] * 64,
-#     ]
-#     for f in test_frames:
-#         scoreboard.add_expected(f)
+    test_frames = [
+        [0xAB],
+        [0x11] * 7,
+        [0x22] * 8,
+        [0x33] * 64,
+    ]
+    for f in test_frames:
+        scoreboard.add_expected(f)
 
-#     await seq.send_idles(LOCK_IDLES)
-#     for frame in test_frames:
-#         await seq.send_ethernet_frame(frame)
-#         await seq.send_idles(8)
+    await seq.send_idles(LOCK_IDLES)
+    for frame in test_frames:
+        await seq.send_ethernet_frame(frame)
+        await seq.send_idles(8)
 
-#     await seq.send_idles(20)
-#     await drain_and_check(dut, monitor, scoreboard)
+    await seq.send_idles(20)
+    await drain_and_check(dut, monitor, scoreboard)
 
+@cocotb.test()
+async def test_invalid_blocks_ignored(dut):
+    seq, monitor, scoreboard = await init_dut(dut)
 
-# @cocotb.test()
-# async def test_lock_loss_recovery(dut):
-#     seq, monitor, scoreboard = await init_dut(dut)
+    good_frame = [0xCA, 0xFE, 0xBA, 0xBE] * 16
+    scoreboard.add_expected(good_frame)
 
-#     good_frame = [0xCA, 0xFE, 0xBA, 0xBE] * 16
-#     scoreboard.add_expected(good_frame)
+    await seq.send_idles(20)
+    await seq.send_invalid_blocks(20)
+    await seq.send_idles(20)
+    await seq.send_ethernet_frame(good_frame)
+    await seq.send_idles(20)
+    await drain_and_check(dut, monitor, scoreboard)
 
-#     await seq.send_idles(LOCK_IDLES)
-#     await seq.send_corrupted_frame([0xDE] * 32)
-#     await seq.send_idles(LOCK_IDLES)
-#     await seq.send_ethernet_frame(good_frame)
-#     await seq.send_idles(20)
-
-#     await drain_and_check(dut, monitor, scoreboard)
-
-#     assert scoreboard.bitslip_count > 0 or scoreboard.lock_loss_count > 0, \
-#         "Expected at least one bitslip or lock-loss event during corruption"
-
-
-# @cocotb.test()
-# async def test_bubble_insertion(dut):
-#     seq, monitor, scoreboard = await init_dut(dut)
-
-#     gold = [0x55] * 64
-#     scoreboard.add_expected(gold)
-
-#     await seq.send_idles(LOCK_IDLES)
-#     await seq.send_idles(4)
-#     await seq.send_bubble()
-#     await seq.send_bubble()
-#     await seq.send_ethernet_frame(gold)
-#     await seq.send_bubble()
-#     await seq.send_bubble()
-#     await seq.send_idles(20)
-
-#     await drain_and_check(dut, monitor, scoreboard)
+    assert scoreboard.match_count == 1
+    assert scoreboard.error_count == 0
