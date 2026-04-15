@@ -55,6 +55,7 @@ module tx_fifo #(
   logic                rd_last_word_has_valid;
   logic                head_pop;
 
+`ifndef SYNTHESIS
   initial begin
     if ((DMA_DATA_W % PCS_DATA_W) != 0) begin
       $fatal(1, "tx_fifo: DMA_DATA_W must be an integer multiple of PCS_DATA_W");
@@ -69,6 +70,7 @@ module tx_fifo #(
       $fatal(1, "tx_fifo: DEPTH must be a power of 2 and >= 2");
     end
   end
+`endif
 
   always_comb begin
     empty = (wr_ptr_q == rd_ptr_q);

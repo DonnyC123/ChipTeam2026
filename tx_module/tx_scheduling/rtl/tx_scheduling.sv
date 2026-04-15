@@ -28,13 +28,15 @@ module tx_scheduling #(
 
   state_t           state_d, state_q;
   logic [QID_W-1:0] last_served_d, last_served_q;
-  logic             dma_read_en_d, dma_read_en_q;
+  logic             dma_read_en_d;
   logic [QID_W-1:0] queue_sel_d, queue_sel_q;
   logic             fifo_req_next;
   logic [BURST_CNT_W-1:0] burst_cnt_d, burst_cnt_q;
 
   logic [QID_W-1:0] next_queue;
-  logic              next_found;
+  logic             next_found;
+  int unsigned      rr_raw_idx;
+  logic [QID_W-1:0] rr_cand;
 
   initial begin
     if (MAX_BURST_BEATS < 1) begin
@@ -44,16 +46,13 @@ module tx_scheduling #(
 
   // Round-robin priority scan starting from last_served + 1
   always_comb begin : rr_arbiter
-    int unsigned raw_idx;
-    logic [QID_W-1:0] cand;
-
     next_found = 1'b0;
     next_queue = '0;
     for (int unsigned i = 0; i < NUM_QUEUES; i++) begin
-      raw_idx = (unsigned'(last_served_q) + 1 + i) % NUM_QUEUES;
-      cand    = raw_idx[QID_W-1:0];
-      if (!next_found && q_valid_i[cand]) begin
-        next_queue = cand;
+      rr_raw_idx = (unsigned'(last_served_q) + 1 + i) % NUM_QUEUES;
+      rr_cand    = rr_raw_idx[QID_W-1:0];
+      if (!next_found && q_valid_i[rr_cand]) begin
+        next_queue = rr_cand;
         next_found = 1'b1;
       end
     end
@@ -93,12 +92,8 @@ module tx_scheduling #(
           queue_sel_d = queue_sel_q;
           if (fifo_grant_i) begin
             dma_read_en_d = 1'b1;
-            if (q_last_i[queue_sel_q]) begin
-              state_d       = IDLE;
-              last_served_d = queue_sel_q;
-              burst_cnt_d   = '0;
-            end else if (burst_cnt_q == (MAX_BURST_BEATS - 1)) begin
-              // Safety valve: force queue rotation when q_last is missing.
+            if (q_last_i[queue_sel_q] || (burst_cnt_q == (MAX_BURST_BEATS - 1))) begin
+              // Safety valve: also force queue rotation when q_last is missing.
               state_d       = IDLE;
               last_served_d = queue_sel_q;
               burst_cnt_d   = '0;
@@ -122,13 +117,11 @@ module tx_scheduling #(
     if (rst) begin
       state_q       <= IDLE;
       last_served_q <= QID_W'(NUM_QUEUES - 1);
-      dma_read_en_q <= 1'b0;
       queue_sel_q   <= '0;
       burst_cnt_q   <= '0;
     end else begin
       state_q       <= state_d;
       last_served_q <= last_served_d;
-      dma_read_en_q <= dma_read_en_d;
       queue_sel_q   <= queue_sel_d;
       burst_cnt_q   <= burst_cnt_d;
     end

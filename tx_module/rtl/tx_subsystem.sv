@@ -19,14 +19,12 @@ module tx_subsystem #(
   logic [PCS_VALID_W-1:0] queue_pcs_valid[NUM_QUEUES];
   logic                   queue_pcs_last[NUM_QUEUES];
   logic                   queue_empty[NUM_QUEUES];
-  logic                   queue_full[NUM_QUEUES];
-  logic                   queue_overflow[NUM_QUEUES];
   logic                   queue_wr_en[NUM_QUEUES];
   logic                   queue_read[NUM_QUEUES];
+  logic [NUM_QUEUES-1:0]  queue_sched_grant;
   logic [NUM_QUEUES-1:0]  sched_q_valid;
   logic [NUM_QUEUES-1:0]  sched_q_last;
 
-  logic             sched_fifo_req;
   logic             sched_read_en;
   logic [QID_W-1:0] sched_queue_sel;
 
@@ -54,7 +52,7 @@ module tx_subsystem #(
   always_comb begin
     ingress_target_full = 1'b1;
     if (ingress_tdest_in_range) begin
-      ingress_target_full = queue_full[s_axis_dma_if.tdest];
+      ingress_target_full = !queue_sched_grant[s_axis_dma_if.tdest];
     end
   end
 
@@ -67,12 +65,10 @@ module tx_subsystem #(
   // - q_last_i[q]:  the CURRENT head beat in queue q is end-of-packet.
   generate
     for (genvar q = 0; q < NUM_QUEUES; q++) begin : gen_queue_bank
-      localparam logic [QID_W-1:0] THIS_Q = QID_W'(q);
-
-      assign queue_wr_en[q]   = axis_accept && (s_axis_dma_if.tdest == THIS_Q);
+      assign queue_wr_en[q]   = axis_accept && (s_axis_dma_if.tdest == QID_W'(q));
       assign sched_q_valid[q] = !queue_empty[q];
       assign sched_q_last[q]  = (!queue_empty[q]) && queue_pcs_last[q];
-      assign queue_read[q]    = sched_read_en && (sched_queue_sel == THIS_Q);
+      assign queue_read[q]    = sched_read_en && (sched_queue_sel == QID_W'(q));
 
       tx_fifo #(
           .DEPTH(FIFO_DEPTH)
@@ -88,10 +84,10 @@ module tx_subsystem #(
           .pcs_last_o  (queue_pcs_last[q]),
           .pcs_read_i  (queue_read[q]),
           .empty_o     (queue_empty[q]),
-          .full_o      (queue_full[q]),
-          .overflow_o  (queue_overflow[q]),
-          .sched_req_i (1'b0),
-          .sched_grant_o()
+          .full_o      (),
+          .overflow_o  (),
+          .sched_req_i (1'b1),
+          .sched_grant_o(queue_sched_grant[q])
       );
     end
   endgenerate
@@ -148,7 +144,7 @@ module tx_subsystem #(
       .fifo_grant_i  (m_axis_accept_new),
       .dma_read_en_o (sched_read_en),
       .dma_queue_sel_o(sched_queue_sel),
-      .fifo_req_o    (sched_fifo_req)
+      .fifo_req_o    ()
   );
 
   always_comb begin
