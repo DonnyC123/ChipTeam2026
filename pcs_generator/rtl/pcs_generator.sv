@@ -58,25 +58,13 @@ module pcs_generator #()
 //TODO: Cleanup the file, put some stuff in packages
 //TODO: implement the ready_o functionality with out_ready_i backpropigation
 //TODO: Finish the FSM
-//TODO: talk to michael abotu the bit mask (can we have something like 0011100)? (i doubt it)
+//TODO: talk to michael abotu the bit mask 
+// Answer: we always start from the right and go left
 //TODO: Verify that we actually need to put the data in network order
 //TODO: Figure out the packed struct ordering, might not even need to be a packed struct.
 
-function automatic logic [DATA_W-1:0] to_network_order(input logic [DATA_W-1:0] DATA_IN);
-    integer byte_idx;
-    integer bit_idx;
-    localparam BYTES_OUT = DATA_W / NUM_BYTES;
-    begin
-        for (byte_idx = 0; byte_idx < BYTES_OUT; byte_idx = byte_idx + 1) begin
-            for (bit_idx = 0; bit_idx < 8; bit_idx = bit_idx + 1) begin
-                bit_reverse[byte_idx*8 + bit_idx] = DATA_IN[byte_idx*8 + (7-bit_idx)];
-            end
-        end
-    end
-endfunction
-
 typedef struct packed { // I don't think there is every a reason to store 8 bytes, max = 7
-    logic [BYTE_W-1:0] byte0; //I hope this is the leftmost 8 bits, idk tho, ask
+    logic [BYTE_W-1:0] byte0; //63-56
     logic [BYTE_W-1:0] byte1;
     logic [BYTE_W-1:0] byte2;
     logic [BYTE_W-1:0] byte3;
@@ -94,6 +82,7 @@ typedef struct packed {
     logic [DATA_W-1:0]    data;
     logic [NUM_BYTES-1:0] valid_bytes_mask;
     logic                 last_byte;
+    logic                 valid_data_i;
 } skid_entry_t; 
 
 skid_entry_t              skid_value_q;

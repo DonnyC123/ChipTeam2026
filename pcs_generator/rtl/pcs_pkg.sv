@@ -25,4 +25,17 @@ localparam int BYTE_W    = 8;
 localparam int CONTROL_W = 2;
 localparam int NUM_BYTES = 8; 
 
+// function automatic logic [DATA_W-1:0] to_network_order(input logic [DATA_W-1:0] DATA_IN);
+//     integer byte_idx;
+//     integer bit_idx;
+//     localparam BYTES_OUT = DATA_W / NUM_BYTES;
+//     begin
+//         for (byte_idx = 0; byte_idx < BYTES_OUT; byte_idx = byte_idx + 1) begin
+//             for (bit_idx = 0; bit_idx < 8; bit_idx = bit_idx + 1) begin
+//                 bit_reverse[byte_idx*8 + bit_idx] = DATA_IN[byte_idx*8 + (7-bit_idx)];
+//             end
+//         end
+//     end
+// endfunction
+
 endpackage
