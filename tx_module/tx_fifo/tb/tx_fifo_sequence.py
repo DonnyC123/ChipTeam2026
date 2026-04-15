@@ -1,13 +1,28 @@
 from cocotb.types import Logic, LogicArray
 
-from tx_fifo.tb.tx_fifo_sequence_item import TxFifoSequenceItem
+from tx_fifo_sequence_item import TxFifoSequenceItem
 from tb_utils.generic_sequence import GenericSequence
 
 DMA_DATA_W = TxFifoSequenceItem.DMA_DATA_W
 DMA_VALID_W = TxFifoSequenceItem.DMA_VALID_W
+PCS_VALID_W = 8
+BEATS_PER_WORD = 4
 
 
 class TxFifoSequence(GenericSequence):
+
+    @staticmethod
+    def _beats_to_read(valid_mask: int, last: int) -> int:
+        if not last:
+            return BEATS_PER_WORD
+
+        terminal = 0
+        lane_mask = (1 << PCS_VALID_W) - 1
+        for beat in range(BEATS_PER_WORD):
+            lane_valid = (valid_mask >> (beat * PCS_VALID_W)) & lane_mask
+            if lane_valid != 0:
+                terminal = beat
+        return terminal + 1
 
     async def add_cycle(
         self,
@@ -65,17 +80,19 @@ class TxFifoSequence(GenericSequence):
     async def add_write_and_readout(
         self, data: int, valid_mask: int = 0xFFFF_FFFF, last: int = 0
     ):
-        """Write one 256-bit word, then read all 4 PCS beats."""
+        """Write one 256-bit word, then read its terminal beat span."""
         await self.add_write(data, valid_mask, last)
-        for _ in range(4):
+        for _ in range(self._beats_to_read(valid_mask, last)):
             await self.add_read()
 
     async def add_burst_write_then_read(
         self, words: list[int], valid_mask: int = 0xFFFF_FFFF, last_idx: int | None = None
     ):
         """Write multiple 256-bit words, then read all beats out."""
+        total_reads = 0
         for idx, w in enumerate(words):
             is_last = int(last_idx is not None and idx == last_idx)
             await self.add_write(w, valid_mask, is_last)
-        for _ in range(len(words) * 4):
+            total_reads += self._beats_to_read(valid_mask, is_last)
+        for _ in range(total_reads):
             await self.add_read()

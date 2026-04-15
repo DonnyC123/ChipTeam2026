@@ -36,8 +36,32 @@ class TxSchedulingSequenceItem(AbstractTransaction):
 
     @property
     def to_data(self):
-        pass
+        try:
+            q_valid = self.q_valid_i.to_unsigned()
+        except (TypeError, ValueError):
+            q_valid = 0
+        try:
+            q_last = self.q_last_i.to_unsigned()
+        except (TypeError, ValueError):
+            q_last = 0
+        try:
+            fifo_full = 1 if bool(self.fifo_full_i) else 0
+        except (TypeError, ValueError):
+            fifo_full = 0
+        try:
+            fifo_grant = 1 if bool(self.fifo_grant_i) else 0
+        except (TypeError, ValueError):
+            fifo_grant = 0
+        return {
+            "q_valid": q_valid,
+            "q_last": q_last,
+            "fifo_full": fifo_full,
+            "fifo_grant": fifo_grant,
+        }
 
     @valid.setter
     def valid(self, value: bool):
-        pass
+        if not value:
+            self.q_valid_i = LogicArray(0, self.NUM_QUEUES)
+        elif self.q_valid_i.to_unsigned() == 0:
+            self.q_valid_i = LogicArray.from_unsigned(1, self.NUM_QUEUES)
