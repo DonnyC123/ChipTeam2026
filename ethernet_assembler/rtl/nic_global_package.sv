@@ -19,6 +19,8 @@ localparam logic [7:0] OS_D6    = 8'h66; // O0 D1..D3 O4 D5..D7 (2 Ordered Set, 
 localparam logic [7:0] OS_D5    = 8'h55; // O0 D1..D3 O4 O5 D6..D7 (3 Ordered Set, 5 data lanes)
 localparam logic [7:0] OS_D3T   = 8'h4B; // O0 D1..D3 O4 C5..C7
 localparam logic [7:0] OS_D3B   = 8'h2D; // C0..C3 O4 D5..D7
+
+
 localparam logic [1:0] CTRL_HDR = 2'b10;
 localparam logic [1:0] DATA_HDR = 2'b01;
 
