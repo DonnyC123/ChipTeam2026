@@ -13,10 +13,12 @@ localparam logic [7:0] TERM_L4 = 8'hCC; // D0..D3 T4 C5..C7
 localparam logic [7:0] TERM_L5 = 8'hD2; // D0..D4 T5 C6..C7
 localparam logic [7:0] TERM_L6 = 8'hE1; // D0..D5 T6 C7
 localparam logic [7:0] TERM_L7 = 8'hFF; // D0..D6 T7
-localparam logic [7:0] OS_D6   = 8'h66; // O0 D1..D3 O4 D5..D7 (2 Ordered Set, 6 data lanes)
-localparam logic [7:0] OS_D5   = 8'h55; // O0 D1..D3 O4 O5 D6..D7 (3 Ordered Set, 5 data lanes)
-localparam logic [7:0] OS_D3T  = 8'h4B; // O0 D1..D3 O4 C5..C7
-localparam logic [7:0] OS_D3B  = 8'h2D; // C0..C3 O4 D5..D7
+
+// These are used for matinence/control between the phy and the pcs, don't even need to use
+localparam logic [7:0] OS_D6  = 8'h66; // O0 D1..D3 O4 D5..D7 (2 Ordered Set, 6 data lanes)
+localparam logic [7:0] OS_D5  = 8'h55; // O0 D1..D3 O4 O5 D6..D7 (3 Ordered Set, 5 data lanes)
+localparam logic [7:0] OS_D3T = 8'h4B; // O0 D1..D3 O4 C5..C7
+localparam logic [7:0] OS_D3B = 8'h2D; // C0..C3 O4 D5..D7
 
 localparam logic [1:0] CTRL_HDR = 2'b10; // 10 is in network order
 localparam logic [1:0] DATA_HDR = 2'b01; // 01 is network order
@@ -24,6 +26,28 @@ localparam logic [1:0] DATA_HDR = 2'b01; // 01 is network order
 localparam int BYTE_W    = 8;
 localparam int CONTROL_W = 2;
 localparam int NUM_BYTES = 8; 
+localparam int DATA_W    = NUM_BYTES * BYTE_W;
+
+typedef struct packed {
+    logic [BYTE_W-1:0] byte6; //63-56
+    logic [BYTE_W-1:0] byte5;
+    logic [BYTE_W-1:0] byte4;
+    logic [BYTE_W-1:0] byte3;
+    logic [BYTE_W-1:0] byte2;
+    logic [BYTE_W-1:0] byte1;
+    logic [BYTE_W-1:0] byte0;
+} leftover_bytes_t;
+
+localparam int LEFTOVER_T_W = $bits(leftover_bytes_t);
+
+typedef struct packed {
+    logic [DATA_W-1:0]    data;
+    logic [NUM_BYTES-1:0] valid_bytes_mask;
+    logic                 last_byte;
+    logic                 valid_data_i;
+} skid_entry_t;
+
+typedef enum logic [2:0] {WAIT_START, DATA, IDLE_OUT} pcs_state_t;
 
 // function automatic logic [DATA_W-1:0] to_network_order(input logic [DATA_W-1:0] DATA_IN);
 //     integer byte_idx;
@@ -37,5 +61,10 @@ localparam int NUM_BYTES = 8;
 //         end
 //     end
 // endfunction
+
+
+// leftover_bytes_d = {{{BYTE_W'd0}}, skid_value_d.data[0 +: BYTE_W]}; //hold 1
+//out_data_d = {skid_value_d.data[0 +: BYTE_W*(NUM_BYTES-held_byte_cnt_q)], leftover_bytes_q[0 +: held_byte_cnt_q*BYTE_W]};
+
 
 endpackage

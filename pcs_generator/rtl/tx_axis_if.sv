@@ -10,7 +10,7 @@ interface tx_axis_if #(
   logic              tlast;
   logic [DEST_W-1:0] tdest;
 
-  modport source (
+  modport master (
       output tdata,
       output tkeep,
       output tvalid,
@@ -19,24 +19,13 @@ interface tx_axis_if #(
       input  tready
   );
 
-  modport sink (
+  modport slave (
       input  tdata,
-      input  tkeep,
+      input  tmask, //this is bytes mask
       input  tvalid,
       input  tlast,
-      input  tdest,
-      output tready
+      input  tdest, //this is tied to nothing
+      output tready //we can get data from FIFO
   );
-
-    input logic [DATA_W-1:0] in_data_i,
-    input logic [KEEP_W-1:0] in_keep_i,
-    input logic              in_last_i,
-    input logic              in_valid_i,
-
-    output logic                 in_ready_o,
-    output logic [DATA_W-1:0]    out_data_o,
-    output logic [CONTROL_W-1:0] out_control_o,
-    output logic                 out_valid_o,
-    input  logic                 out_ready_i
 
 endinterface
