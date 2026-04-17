@@ -50,10 +50,7 @@ module pcs_generator #()
 );
 
 //TODO: Cleanup the file, put some stuff in packages
-//TODO: implement the ready_o functionality with out_ready_i backpropigation
-//TODO: Finish the FSM
-
-//bit mask always starts from the right and go left
+//TODO: Clean up the description in the file header
 
 typedef struct packed { // We would only ever store 5 bytes
     logic [BYTE_W-1:0] byte0; //31-33
@@ -107,6 +104,7 @@ logic [3:0] num_incoming_d, num_incoming_q;
 
 // Clocked port outputs
 logic                 ready_d;
+logic                 get_axi;
 logic [CONTROL_W-1:0] out_control_d;
 logic [DATA_W-1:0]    out_data_d;
 logic                 out_valid_d;
@@ -117,6 +115,7 @@ logic                 tready_d; //I think we are not always ready in the End Fra
 // FSM traversal Flags
 assign can_read     = skid_value_q.valid_data_i  && out_ready_i;
 assign next_is_last = axis_slave_if.tvalid && axis_slave_if.tlast; //means that the thing in the skid buffer is the eof signal
+assign get_axi      = axis_slave_if.tvalid && axis_slave_if.tready;
 
 // Always pack the inputs into the struct
 // TODO: Check that this is correct, we might only want to grab data on tready, maybe we alwyas grab but we only clock it on tready
@@ -148,21 +147,22 @@ always_comb begin
                 // always grab 5 to hold, dosen't matter if we don't use them all
                 leftover_bytes_d = {skid_value_q.data[DATA_W-1 -: (5*BYTE_W)]};
 
-                if(CONDITION) begin //TODO decide condition, should just be a flag? seperate state?? 
-                // bsically we want held_byte_cnt_q = some value (5 or 1), which we can set except for intial boot
+                if(held_byte_cnt_q == 3'd5) begin //
+                // bsically we want held_byte_cnt_q = some value (5 or 1), which we can set except for intial boot (intial boot is the issue)
                     // Output a start chunk (SOF_L4 =  3 Data + 4 IDLE + 1 type)
                     out_data_d      = {skid_value_q.data[(3*BYTE_W)-1:0], {4{8'd0}}, SOF_L4}; //send out 3 data bytes
                     held_byte_cnt_d = 3'd5;
-                end else begin // Output a start chunk (SOF_L0=  7 data + 1 type)
+                end else begin // Output a start chunk (SOF_L0=  7 data + 1 type), 
                     out_data_d      = {skid_value_q.data[(7*BYTE_W)-1:0], SOF_L0}; //send out 7 data bytes
                     held_byte_cnt_d = 3'd1;
                 end
                 out_valid_d = 1'b1;
 
             end else begin // Output an IDLE chunk
-                out_control_d = CTRL_HDR;
-                out_data_d    = {{7{8'd0}}, IDLE_BLK};
-                out_valid_d   = 1'b1;
+                out_control_d   = CTRL_HDR;
+                out_data_d      = {{7{8'd0}}, IDLE_BLK};
+                out_valid_d     = 1'b1;
+                held_byte_cnt_d = 1'b1;
             end
         end
         
@@ -187,43 +187,40 @@ always_comb begin
             end
         end
 
-        //TODO: fix this state. We basiclally need one case statement for when we are holding 5 and one case statemnet for when we are holding 1
         EOF : begin // Frozen here we have some data in the leftover buffer, and out last data in the skid buffer.
             if(can_read) begin
                 if(num_incoming_q + held_byte_cnt_q < 7) begin // We can output all the data
                     out_control_d = CTRL_HDR;
-                    if(num_incoming_q == 0) begin
-                        3'd0 : out_data_d = {{7{8'd0}}, TERM_L0};
-                    end else if(held_byte_cnt_q == 3'd5) begin // TODO: we have some data in the leftover buffer, and out last data in the skid buffer.
+                    if(held_byte_cnt_q == 3'd5) begin // we have some data in the leftover buffer, and out last data in the skid buffer.
                         // this cases pulls all 5 held then, num_in should be between 0-2
-                        //TODO: fix case
                         case(num_incoming_q)
-                                
+                            3'd0 : out_data_d = {{7{8'd0}}, TERM_L0};
+
                             3'd5 : out_data_d = {{2{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*5], TERM_L5};
                 
-                            3'd6 : out_data_d = {{1{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*6], TERM_L6};
+                            3'd6 : out_data_d = {{1{8'd0}}, skid_valid_q.data[0 +: BYTE_W-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*5], TERM_L6};
                 
-                            3'd7 : out_data_d = {leftover_bytes_q, TERM_L7};
+                            3'd7 : out_data_d = {skid_valid_q.data[0 +: (BYTE_W*2)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*5], TERM_L6};
                         endcase
                     end else begin
                         // this case pulls 1 and then num_in should be between 0-6
                         // need to catch the case where we sent out all the data, and have 0 to send out.
-                        //TODO: fix case
                         case(num_incoming_q)
-                
+                            3'd0 : out_data_d = {{7{8'd0}}, TERM_L0};
+
                             3'd1 : out_data_d = {{6{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L1};
                 
-                            3'd2 : out_data_d = {{5{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*2], TERM_L2};
+                            3'd2 : out_data_d = {{5{8'd0}}, skid_valid_q.data[0 +: (BYTE_W*1)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L2};
                 
-                            3'd3 : out_data_d = {{4{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*3], TERM_L3};
+                            3'd3 : out_data_d = {{4{8'd0}}, skid_valid_q.data[0 +: (BYTE_W*2)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L3};
                 
-                            3'd4 : out_data_d = {{3{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*4], TERM_L4};
+                            3'd4 : out_data_d = {{3{8'd0}}, skid_valid_q.data[0 +: (BYTE_W*3)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L4};
                 
-                            3'd5 : out_data_d = {{2{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*5], TERM_L5};
+                            3'd5 : out_data_d = {{2{8'd0}}, skid_valid_q.data[0 +: (BYTE_W*4)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L5};
                 
-                            3'd6 : out_data_d = {{1{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*6], TERM_L6};
+                            3'd6 : out_data_d = {{1{8'd0}}, skid_valid_q.data[0 +: (BYTE_W*5)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L6};
                 
-                            3'd7 : out_data_d = {leftover_bytes_q, TERM_L7};
+                            3'd7 : out_data_d = {skid_valid_q.data[0 +: (BYTE_W*6)-1],  leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L7};
                         endcase
 
                     end
@@ -247,13 +244,13 @@ always_comb begin
             end
         end
 
-        IDLE_OUT : begin // TODO: Add an indicator/logic for what start frame to output (lowkey could just use held_byte_cnt_q/d)
+        IDLE_OUT : begin
             next_state = WAIT_START;
             // Output an IDLE chunk
-            out_control_d = CTRL_HDR;
-            out_data_d    = {{7{8'd0}}, IDLE_BLK};
-            out_valid_d   = 1'b1;
-
+            out_control_d    = CTRL_HDR;
+            out_data_d       = {{7{8'd0}}, IDLE_BLK};
+            out_valid_d      = 1'b1;
+            leftover_bytes_q = (get_axi) ?  3'd5 : 3'd1; //if data right away need SOF_L4, else SOF_L0
         end
         
         default : begin
@@ -272,8 +269,7 @@ always_ff@(posedge clk)begin
         num_incoming_q       <= '0;
     end else begin
         current_state <= next_state;
-        if(axis_slave_if.tready && axis_slave_if.tvalid) begin //TODO figure out the conditon of when we shoul hold vs capture a new skid value
-        // I think its a combo of tvalid && tready && no backpressure
+        if(get_axi == 1'b1) begin
             skid_value_q <= skid_value_d;
         end
         axis_slave_if.tready <= ready_d;
