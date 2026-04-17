@@ -56,11 +56,11 @@ module pcs_generator #()
 //bit mask always starts from the right and go left
 
 typedef struct packed { // We would only ever store 5 bytes
-    logic [BYTE_W-1:0] byte0 //31-33
-    logic [BYTE_W-1:0] byte1
-    logic [BYTE_W-1:0] byte2
-    logic [BYTE_W-1:0] byte3
-    logic [BYTE_W-1:0] byte4 //0-7
+    logic [BYTE_W-1:0] byte0; //31-33
+    logic [BYTE_W-1:0] byte1;
+    logic [BYTE_W-1:0] byte2;
+    logic [BYTE_W-1:0] byte3;
+    logic [BYTE_W-1:0] byte4; //0-7
 } leftover_bytes_t;
 
 function automatic logic [3:0] count_valid (input logic[BYTE_W-1:0] mask);
@@ -110,30 +110,34 @@ logic                 ready_d;
 logic [CONTROL_W-1:0] out_control_d;
 logic [DATA_W-1:0]    out_data_d;
 logic                 out_valid_d;
+logic                 tready_d; //I think we are not always ready in the End Frame State,
+// when are in EOF & we have > 7 data bytes we want to throw out a data chunk, not take in an AXI,
+// throw out the EOF chunk, then take an AXI frame
  
 // FSM traversal Flags
 assign can_read     = skid_value_q.valid_data_i  && out_ready_i;
-assign next_is_last = axis_slave_if.valid_data_i && axis_slave_if.tlast; //means that the thing in the skid buffer is the eof signal
+assign next_is_last = axis_slave_if.tvalid && axis_slave_if.tlast; //means that the thing in the skid buffer is the eof signal
 
 // Always pack the inputs into the struct
 // TODO: Check that this is correct, we might only want to grab data on tready, maybe we alwyas grab but we only clock it on tready
 always_comb begin
-    skid_value_d.data             = in_data_i; //we will put the data in network order here
-    skid_value_d.valid_bytes_mask = valid_bytes_mask_i;
+    skid_value_d.data             = axis_slave_if.tdata; //we will put the data in network order here
+    skid_value_d.valid_bytes_mask = axis_slave_if.tkeep;
     skid_value_d.last_byte        = last_byte_i;
-    skid_value_d.valid_data_i     = valid_data_i;
+    skid_value_d.valid_data_i     = axis_slave_if.valid_data_i;
 end
 
 // FSM combinational block
 always_comb begin
     // defaults
     next_state       = current_state;
-    out_valid_d      = 1'b0;
     out_data_d       = out_data_o;
     out_control_d    = out_control_o;
     held_byte_cnt_d  = held_byte_cnt_q;
     leftover_bytes_d = leftover_bytes_q;
     num_incoming_d   = num_incoming_q;
+    out_valid_d      = 1'b0;
+    tready_d         = 1'b1;
 
     case(current_state) 
         WAIT_START : begin 
@@ -147,7 +151,7 @@ always_comb begin
                 if(CONDITION) begin //TODO decide condition, should just be a flag? seperate state?? 
                 // bsically we want held_byte_cnt_q = some value (5 or 1), which we can set except for intial boot
                     // Output a start chunk (SOF_L4 =  3 Data + 4 IDLE + 1 type)
-                    out_data_d      = {skid_value_q.data[(3*BYTE_W)-1:0], 4{BYTE_W'd0}, SOF_L4}; //send out 3 data bytes
+                    out_data_d      = {skid_value_q.data[(3*BYTE_W)-1:0], {4{8'd0}}, SOF_L4}; //send out 3 data bytes
                     held_byte_cnt_d = 3'd5;
                 end else begin // Output a start chunk (SOF_L0=  7 data + 1 type)
                     out_data_d      = {skid_value_q.data[(7*BYTE_W)-1:0], SOF_L0}; //send out 7 data bytes
@@ -157,13 +161,14 @@ always_comb begin
 
             end else begin // Output an IDLE chunk
                 out_control_d = CTRL_HDR;
-                out_data_d    = {7{8'd0}, IDLE_BLK};
+                out_data_d    = {{7{8'd0}}, IDLE_BLK};
                 out_valid_d   = 1'b1;
             end
         end
         
         DATA : begin
             if(can_read) begin
+                out_control_d    = DATA_HDR;
                 leftover_bytes_d = {skid_value_q.data[DATA_W-1 -: (5*BYTE_W)]}; // always grab 5, even if not used
 
                 if(held_byte_cnt_q == 3'd5) begin //the num of bytes stored will never change as long as valid_mask = '1
@@ -183,37 +188,51 @@ always_comb begin
         end
 
         //TODO: fix this state. We basiclally need one case statement for when we are holding 5 and one case statemnet for when we are holding 1
-        EOF : begin
+        EOF : begin // Frozen here we have some data in the leftover buffer, and out last data in the skid buffer.
             if(can_read) begin
                 if(num_incoming_q + held_byte_cnt_q < 7) begin // We can output all the data
-                if(held_byte_cnt_q == 3'b5) begin
-                    // this cases pulls all 5 held then, in should be between 0-2
-                end else begin
-                    // this case pulls 1 and then in should be between 0-6
-                    // need to catch the case where we sent out all the data, and have 0 to send out.
+                    out_control_d = CTRL_HDR;
+                    if(num_incoming_q == 0) begin
+                        3'd0 : out_data_d = {{7{8'd0}}, TERM_L0};
+                    end else if(held_byte_cnt_q == 3'd5) begin // TODO: we have some data in the leftover buffer, and out last data in the skid buffer.
+                        // this cases pulls all 5 held then, num_in should be between 0-2
+                        //TODO: fix case
+                        case(num_incoming_q)
+                                
+                            3'd5 : out_data_d = {{2{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*5], TERM_L5};
+                
+                            3'd6 : out_data_d = {{1{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*6], TERM_L6};
+                
+                            3'd7 : out_data_d = {leftover_bytes_q, TERM_L7};
+                        endcase
+                    end else begin
+                        // this case pulls 1 and then num_in should be between 0-6
+                        // need to catch the case where we sent out all the data, and have 0 to send out.
+                        //TODO: fix case
+                        case(num_incoming_q)
+                
+                            3'd1 : out_data_d = {{6{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L1};
+                
+                            3'd2 : out_data_d = {{5{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*2], TERM_L2};
+                
+                            3'd3 : out_data_d = {{4{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*3], TERM_L3};
+                
+                            3'd4 : out_data_d = {{3{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*4], TERM_L4};
+                
+                            3'd5 : out_data_d = {{2{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*5], TERM_L5};
+                
+                            3'd6 : out_data_d = {{1{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*6], TERM_L6};
+                
+                            3'd7 : out_data_d = {leftover_bytes_q, TERM_L7};
+                        endcase
 
-                end
-                    case(num_incoming_q)
-                        3'd0 : out_data_d = {{7{BYTE_W'd0}}, TERM_L0};
-            
-                        3'd1 : out_data_d = {{6{BYTE_W'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L1};
-            
-                        3'd2 : out_data_d = {{5{BYTE_W'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*2], TERM_L2};
-            
-                        3'd3 : out_data_d = {{4{BYTE_W'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*3], TERM_L3};
-            
-                        3'd4 : out_data_d = {{3{BYTE_W'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*4], TERM_L4};
-            
-                        3'd5 : out_data_d = {{2{BYTE_W'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*5], TERM_L5};
-            
-                        3'd6 : out_data_d = {{1{BYTE_W'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*6], TERM_L6};
-            
-                        3'd7 : out_data_d = {leftover_bytes_q, TERM_L7};
-                    endcase
+                    end
+
                     out_valid_d     = 1'b1;
                     held_byte_cnt_q = 3'd0;
                 end else begin // if num_incoming_q + held_byte_cnt_q > 7, we need to output another data packet before flushing
-
+                    out_control_d    = DATA_HDR;
+                    tready_d         = 1'b0; //We don't need another AXI beat right now since we are forcing a data_frame
                     num_incoming_d   = num_incoming_q - (8-held_byte_cnt_q); //calculate num left after sending this data chunk
                     leftover_bytes_d = skid_value_q.data[(7*BYTE_W)-1:0]; // at max we would have 5 leftover (5 stored, + 8 incoming, 8 go out this cycle) 
 
@@ -232,7 +251,7 @@ always_comb begin
             next_state = WAIT_START;
             // Output an IDLE chunk
             out_control_d = CTRL_HDR;
-            out_data_d    = {7{BYTE_W'd0}, IDLE_BLK};
+            out_data_d    = {{7{8'd0}}, IDLE_BLK};
             out_valid_d   = 1'b1;
 
         end
@@ -246,21 +265,24 @@ end
 // Clocked Block
 always_ff@(posedge clk)begin
     if(rst)begin
-        current_state   <= WAIT_START;
-        ready_o         <= '0;
-        out_valid_o     <= '0;
-        held_byte_cnt_q <= '0;
-        num_incoming_q  <= '0
+        current_state        <= WAIT_START;
+        axis_slave_if.tready <= '0;
+        out_valid_o          <= '0;
+        held_byte_cnt_q      <= '0;
+        num_incoming_q       <= '0;
     end else begin
-        current_state    <= next_state;
-        skid_value_q     <= skid_value_d;
-        ready_o          <= ready_d;
-        held_byte_cnt_q  <= held_byte_cnt_d;
-        out_control_o    <= out_control_d;
-        out_data_o       <= out_data_d;
-        out_valid_o      <= out_valid_d;
-        leftover_bytes_q <= leftover_bytes_d;
-        num_incoming_q   <= num_incoming_d;
+        current_state <= next_state;
+        if(axis_slave_if.tready && axis_slave_if.tvalid) begin //TODO figure out the conditon of when we shoul hold vs capture a new skid value
+        // I think its a combo of tvalid && tready && no backpressure
+            skid_value_q <= skid_value_d;
+        end
+        axis_slave_if.tready <= ready_d;
+        held_byte_cnt_q      <= held_byte_cnt_d;
+        out_control_o        <= out_control_d;
+        out_data_o           <= out_data_d;
+        out_valid_o          <= out_valid_d;
+        leftover_bytes_q     <= leftover_bytes_d;
+        num_incoming_q       <= num_incoming_d;
     end
 end
 

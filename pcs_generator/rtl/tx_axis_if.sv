@@ -21,7 +21,7 @@ interface tx_axis_if #(
 
   modport slave (
       input  tdata,
-      input  tmask, //this is bytes mask
+      input  tkeep, //this is bytes mask
       input  tvalid,
       input  tlast,
       input  tdest, //this is tied to nothing
