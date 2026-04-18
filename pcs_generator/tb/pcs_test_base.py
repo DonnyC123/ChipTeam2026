@@ -1,54 +1,65 @@
-from typing import TypeVar, Generic, Type
+from typing import Any, Optional, Type
+
 from cocotb.triggers import RisingEdge, Timer
 
-from tb_utils.generic_drivers import GenericDriver
-from tb_utils.generic_sequence import GenericSequence
-from tb_utils.generic_monitor import GenericMonitor
-from tb_utils.generic_scoreboard import GenericScoreboard
-from tb_utils.generic_model import GenericModel
-from tb_utils.generic_checker import GenericChecker
+from pcs_generator.tb.pcs_drivers import PCSDriver
+from pcs_generator.tb.pcs_model import GenericModel as PCSModel
+from pcs_generator.tb.pcs_sequence import PCSSequence
+from pcs_generator.tb.pcs_sequence_item import PCSSequenceItem
 from tb_utils.abstract_transactions import AbstractTransaction
 
 
-DriverT = TypeVar("DriverT", bound=GenericDriver)
-SequenceT = TypeVar("SequenceT", bound=GenericSequence)
-MonitorT = TypeVar("MonitorT", bound=GenericMonitor)
-ScoreboardT = TypeVar("ScoreboardT", bound=GenericScoreboard)
-ModelT = TypeVar("ModelT", bound=GenericModel)
-CheckerT = TypeVar("CheckerT", bound=GenericChecker)
-SeqItemT = TypeVar("SeqItemT", bound=AbstractTransaction)
-OutTransT = TypeVar("OutTransT", bound=AbstractTransaction)
-
-
-class GenericTestBase(
-    Generic[
-        DriverT, SeqItemT, SequenceT, MonitorT, OutTransT, ScoreboardT, ModelT, CheckerT
-    ]
-):
+class PCSTestBase:
     def __init__(
         self,
         dut,
-        driver: Type[DriverT] = GenericDriver,
-        sequence_item: Type[SeqItemT] = AbstractTransaction,
-        sequence: Type[SequenceT] = GenericSequence,
-        monitor: Type[MonitorT] = GenericMonitor,
-        output_transaction: Type[OutTransT] = AbstractTransaction,
-        scoreboard: Type[ScoreboardT] = GenericScoreboard,
-        model: Type[ModelT] = GenericModel,
-        checker: Type[CheckerT] = GenericChecker,
+        driver: Type[PCSDriver] = PCSDriver,
+        sequence_item: Type[PCSSequenceItem] = PCSSequenceItem,
+        sequence: Type[PCSSequence] = PCSSequence,
+        monitor: Optional[Type[Any]] = None,
+        output_transaction: Optional[Type[AbstractTransaction]] = None,
+        scoreboard: Optional[Type[Any]] = None,
+        model: Type[PCSModel] = PCSModel,
+        checker: Optional[Type[Any]] = None,
     ):
         self.dut = dut
 
-        self.driver: DriverT = driver(dut=dut, seq_item_type=sequence_item)
-        self.sequence: SequenceT = sequence(driver=self.driver)
-        self.monitor: MonitorT = monitor(dut=dut, output_transaction=output_transaction)
+        self.driver = driver(dut=dut, seq_item_type=sequence_item)
+        self.sequence = sequence(driver=self.driver)
+        self.model = model()
 
-        self.scoreboard: ScoreboardT = scoreboard(
-            monitor=self.monitor, model=model(), checker=checker()
-        )
+        self.monitor = None
+        self.checker = None
+        self.scoreboard = None
+
+        if monitor is not None:
+            if output_transaction is None:
+                raise ValueError(
+                    "output_transaction must be provided when constructing a monitor"
+                )
+            self.monitor = monitor(dut=dut, output_transaction=output_transaction)
+
+        if checker is not None:
+            self.checker = checker()
+
+        if scoreboard is not None:
+            if self.monitor is None:
+                raise ValueError(
+                    "monitor and output_transaction must be provided when constructing a scoreboard"
+                )
+            if self.checker is None:
+                raise ValueError("checker must be provided when constructing a scoreboard")
+
+            self.scoreboard = scoreboard(
+                monitor=self.monitor, model=self.model, checker=self.checker
+            )
+            self.sequence.add_subscriber(self.scoreboard)
 
     async def wait_for_driver_done(self):
         while await self.driver.busy():
             await RisingEdge(self.dut.clk)
 
         await Timer(1000, unit="ns")
+
+
+GenericTestBase = PCSTestBase

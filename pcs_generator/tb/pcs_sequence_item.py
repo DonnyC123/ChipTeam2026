@@ -25,17 +25,14 @@ class TxAxisSlaveTransaction:
 class PCSSequenceItem(AbstractTransaction):
     TDATA_W: ClassVar[int] = 64
     TKEEP_W: ClassVar[int] = 8
-    BLOCK_TYPE_W: ClassVar[int] = 8
 
     axis_slave_if: TxAxisSlaveTransaction = field(default_factory=TxAxisSlaveTransaction)
     out_ready_i: Logic = field(default_factory=lambda: Logic("1"))
-    block_type: InitVar[Any] = None
+    idle: InitVar[Any] = None
     tready: InitVar[Any] = None
 
-    def __post_init__(self, block_type: Any, tready: Any):
-        self._block_type = self._coerce_logic_array(
-            block_type, self.BLOCK_TYPE_W, default_fill="0"
-        )
+    def __post_init__(self, idle: Any, tready: Any):
+        self._idle = self._coerce_logic(idle, default="0")
         self._tready = self._coerce_logic(tready, default="0")
 
     @staticmethod
@@ -68,7 +65,7 @@ class PCSSequenceItem(AbstractTransaction):
                 tlast=Logic("0"),
             ),
             out_ready_i=Logic("1"),
-            block_type=LogicArray("0" * cls.BLOCK_TYPE_W),
+            idle=Logic("1"),
             tready=Logic("0"),
         )
 
@@ -81,8 +78,8 @@ class PCSSequenceItem(AbstractTransaction):
         self.axis_slave_if.tvalid = Logic(value)
 
     @property
-    def to_data(self) -> int:
-        return self.block_type.integer
+    def to_data(self) -> bool:
+        return bool(self.idle)
 
     @property
     def tdata(self) -> LogicArray:
@@ -129,14 +126,12 @@ class PCSSequenceItem(AbstractTransaction):
         self.out_ready_i = self._coerce_logic(value, default="1")
 
 
-def _get_block_type(self: PCSSequenceItem) -> LogicArray:
-    return self._block_type
+def _get_idle(self: PCSSequenceItem) -> Logic:
+    return self._idle
 
 
-def _set_block_type(self: PCSSequenceItem, value: Any):
-    self._block_type = self._coerce_logic_array(
-        value, self.BLOCK_TYPE_W, default_fill="0"
-    )
+def _set_idle(self: PCSSequenceItem, value: Any):
+    self._idle = self._coerce_logic(value, default="0")
 
 
 def _get_tready(self: PCSSequenceItem) -> Logic:
@@ -147,5 +142,5 @@ def _set_tready(self: PCSSequenceItem, value: Any):
     self._tready = self._coerce_logic(value, default="0")
 
 
-PCSSequenceItem.block_type = property(_get_block_type, _set_block_type)
+PCSSequenceItem.idle = property(_get_idle, _set_idle)
 PCSSequenceItem.tready = property(_get_tready, _set_tready)
