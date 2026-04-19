@@ -8,9 +8,8 @@ pythonpath = [
     ".",
 ]
 testpaths = [
-    "multiplier_demo/tb",
     "median_filter/tb",
-    "scripts/tests",
+    "pcs_generator/tb",
 ]
 
 python_files = ["*_runner.py"]
