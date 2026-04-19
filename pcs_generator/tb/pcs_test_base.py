@@ -4,8 +4,10 @@ from cocotb.triggers import RisingEdge, Timer
 
 from pcs_generator.tb.pcs_drivers import PCSDriver
 from pcs_generator.tb.pcs_model import GenericModel as PCSModel
+from pcs_generator.tb.pcs_monitor import PCSMonitor
 from pcs_generator.tb.pcs_sequence import PCSSequence
 from pcs_generator.tb.pcs_sequence_item import PCSSequenceItem
+from pcs_generator.tb.pcs_transactions import PCSOutputBlockTransaction
 from tb_utils.abstract_transactions import AbstractTransaction
 
 
@@ -16,8 +18,8 @@ class PCSTestBase:
         driver: Type[PCSDriver] = PCSDriver,
         sequence_item: Type[PCSSequenceItem] = PCSSequenceItem,
         sequence: Type[PCSSequence] = PCSSequence,
-        monitor: Optional[Type[Any]] = None,
-        output_transaction: Optional[Type[AbstractTransaction]] = None,
+        monitor: Optional[Type[Any]] = PCSMonitor,
+        output_transaction: Optional[Type[AbstractTransaction]] = PCSOutputBlockTransaction,
         scoreboard: Optional[Type[Any]] = None,
         model: Type[PCSModel] = PCSModel,
         checker: Optional[Type[Any]] = None,
@@ -33,10 +35,6 @@ class PCSTestBase:
         self.scoreboard = None
 
         if monitor is not None:
-            if output_transaction is None:
-                raise ValueError(
-                    "output_transaction must be provided when constructing a monitor"
-                )
             self.monitor = monitor(dut=dut, output_transaction=output_transaction)
 
         if checker is not None:
@@ -60,6 +58,16 @@ class PCSTestBase:
             await RisingEdge(self.dut.clk)
 
         await Timer(1000, unit="ns")
+
+    async def check_outputs(self):
+        if self.scoreboard is None:
+            raise RuntimeError("scoreboard must be configured before checking outputs")
+
+        self.model.assert_complete()
+        if self.monitor is not None:
+            self.monitor.assert_complete()
+
+        await self.scoreboard.check()
 
 
 GenericTestBase = PCSTestBase
