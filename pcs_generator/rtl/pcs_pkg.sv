@@ -28,26 +28,38 @@ localparam int CONTROL_W = 2;
 localparam int NUM_BYTES = 8; 
 localparam int DATA_W    = NUM_BYTES * BYTE_W;
 
-typedef struct packed {
-    logic [BYTE_W-1:0] byte6; //63-56
-    logic [BYTE_W-1:0] byte5;
-    logic [BYTE_W-1:0] byte4;
-    logic [BYTE_W-1:0] byte3;
-    logic [BYTE_W-1:0] byte2;
+typedef struct packed { // We would only ever store 5 bytes
+    logic [BYTE_W-1:0] byte0; //31-33
     logic [BYTE_W-1:0] byte1;
-    logic [BYTE_W-1:0] byte0;
+    logic [BYTE_W-1:0] byte2;
+    logic [BYTE_W-1:0] byte3;
+    logic [BYTE_W-1:0] byte4; //0-7
 } leftover_bytes_t;
 
-localparam int LEFTOVER_T_W = $bits(leftover_bytes_t);
+function automatic logic [3:0] count_valid (input logic[BYTE_W-1:0] mask);
+    unique casez (mask)
+        8'b???????0: count_valid = 0;
+        8'b??????01: count_valid = 1;
+        8'b?????011: count_valid = 2;
+        8'b????0111: count_valid = 3;
+        8'b???01111: count_valid = 4;
+        8'b??011111: count_valid = 5;
+        8'b?0111111: count_valid = 6;
+        8'b01111111: count_valid = 7;
+        8'b11111111: count_valid = 8;
+        default:     count_valid = 0;
+    endcase
+endfunction
 
+// Skid buffer is used to absorb one chunk of data when downstream cannot accept an output
 typedef struct packed {
     logic [DATA_W-1:0]    data;
     logic [NUM_BYTES-1:0] valid_bytes_mask;
     logic                 last_byte;
     logic                 valid_data_i;
-} skid_entry_t;
+} skid_entry_t; 
 
-typedef enum logic [2:0] {WAIT_START, DATA, IDLE_OUT} pcs_state_t;
+localparam LEFTOVER_T_W = $bits(leftover_bytes_t);
 
 // function automatic logic [DATA_W-1:0] to_network_order(input logic [DATA_W-1:0] DATA_IN);
 //     integer byte_idx;
@@ -61,10 +73,5 @@ typedef enum logic [2:0] {WAIT_START, DATA, IDLE_OUT} pcs_state_t;
 //         end
 //     end
 // endfunction
-
-
-// leftover_bytes_d = {{{BYTE_W'd0}}, skid_value_d.data[0 +: BYTE_W]}; //hold 1
-//out_data_d = {skid_value_d.data[0 +: BYTE_W*(NUM_BYTES-held_byte_cnt_q)], leftover_bytes_q[0 +: held_byte_cnt_q*BYTE_W]};
-
 
 endpackage

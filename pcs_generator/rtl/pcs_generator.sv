@@ -1,39 +1,15 @@
-//   Need to check if there is a manditory gap between packets
-//   IMPORTANT: We are reciving 8 bytes of data, but we can only use 7 of those if we are starting a frame 
-//              because we do 1 byte of data header type + 7 bytes of data and we  use <= 7 when ending a frame
-//              That means that we need a buffer to hold that extra byte, and we need to use that byte in the
-//              chunk. (we need an assembly buffer)
-//   1. Data comes from TX -> skid buffer
+//   We are reciving 8 bytes of data, when SOF or DATA, but can't output all of them so need a storage buffer
+//   1. Data comes from TX -> skid buffer (needed for backpressure)
 //   1.1 Skid buffer holds data, byte_valid_mask, last_byte, etc.
-//   2. Skid buffer -> assembly buffer, read from assembly bufferk
+//   2. Skid buffer -> assembly buffer, read from assembly buffer 
 //   3.1 If we are not already in a frame, and we have valid data, send a start_frame & then 
 //       find/append the correct data header type
 //   3.2 If we are in a frame and we have valid data, then just append the correct data header type
-//   3.3 If we are in frame and we see last = 1, then we make the data we see into an end frame
+//   3.3 If we are in frame and we see last = 1, then we make the data we see into an end frame, might need to output 1 more data chunk
 //   3.3 If we are not in a frame then we need to constantly send IDLE chunks
-//   This can easily be a FSM
-//   Idk the endian-ness that the data comes out the DMA as, that shouldn't matter
-//   We also need to put the data in network order before we send it out
-
-//   IDLE:
-//      emit IDLE blocks when no frame is available
-//      if frame data is available, emit a START block immediately
-//      if that same block is also the last block, handle that case too if needed
-//   DATA:
-//      emit data blocks while payload remains
-//      when last is reached, emit the proper terminate block
-//      then go back to IDLE
 //     
 //   There is a minimum IPG of 12 bytes between a an 'end' -> next 'start'
-//   We could run and 'Deficit Idle Count' which only cares that adverage IPG is 12
-//   - After 1st Frame, insert 2 idle chunks (16 bytes) (4 extra)
-//   - After 2nd Frame, insert 1 idle chunk (8 bytes)  (4 fewer)
-//   - Adverage = 12 byte gap
-
-/// Alternitivly we can use the SOF_L4 block which makes things a little, more complicated, but
-//  then we only have to output 1 IDLE  (8 bytes) and then use the SOF_L4 which includes 4 'idle' bytes
-//  The C lanes after T do count toward the interpacket gap
-// Have constmts depending on 
+//   The C lanes after T do count toward the interpacket gap
 
 import pcs_pkg::*;
 
@@ -46,45 +22,8 @@ module pcs_generator #()
     output logic [CONTROL_W-1:0] out_control_o, //header bits
     output logic                 out_valid_o,
 
-    tx_axis_if.slave              axis_slave_if
+    tx_axis_if.slave             axis_slave_if
 );
-
-//TODO: Cleanup the file, put some stuff in packages
-//TODO: Clean up the description in the file header
-
-typedef struct packed { // We would only ever store 5 bytes
-    logic [BYTE_W-1:0] byte0; //31-33
-    logic [BYTE_W-1:0] byte1;
-    logic [BYTE_W-1:0] byte2;
-    logic [BYTE_W-1:0] byte3;
-    logic [BYTE_W-1:0] byte4; //0-7
-} leftover_bytes_t;
-
-function automatic logic [3:0] count_valid (input logic[BYTE_W-1:0] mask);
-    unique casez (mask)
-        8'b???????0: count_valid = 0;
-        8'b??????01: count_valid = 1;
-        8'b?????011: count_valid = 2;
-        8'b????0111: count_valid = 3;
-        8'b???01111: count_valid = 4;
-        8'b??011111: count_valid = 5;
-        8'b?0111111: count_valid = 6;
-        8'b01111111: count_valid = 7;
-        8'b11111111: count_valid = 8;
-        default:     count_valid = 0;
-    endcase
-endfunction
-
-// Skid buffer is used to absorb one chunk of data when downstream cannot accept an output
-typedef struct packed {
-    logic [DATA_W-1:0]    data;
-    logic [NUM_BYTES-1:0] valid_bytes_mask;
-    logic                 last_byte;
-    logic                 valid_data_i;
-} skid_entry_t; 
-
-localparam LEFTOVER_T_W = $bits(leftover_bytes_t);
-
 
 skid_entry_t              skid_value_q;
 skid_entry_t              skid_value_d;
@@ -98,9 +37,8 @@ state_t current_state, next_state;
 
 logic       can_read;
 logic       next_is_last;
-logic       skid_valid_d, skid_valid_q; //To tell us the skid buffer has valid data
-logic [2:0] held_byte_cnt_d, held_byte_cnt_q; //max count = 7
-logic [3:0] num_incoming_d, num_incoming_q;
+logic [2:0] held_byte_cnt_d, held_byte_cnt_q; //max ever stored = 5
+logic [3:0] num_incoming_d, num_incoming_q; //max ever incoming = 8
 
 // Clocked port outputs
 logic                 ready_d;
@@ -108,9 +46,7 @@ logic                 get_axi;
 logic [CONTROL_W-1:0] out_control_d;
 logic [DATA_W-1:0]    out_data_d;
 logic                 out_valid_d;
-logic                 tready_d; //I think we are not always ready in the End Frame State,
-// when are in EOF & we have > 7 data bytes we want to throw out a data chunk, not take in an AXI,
-// throw out the EOF chunk, then take an AXI frame
+logic                 tready_d;
  
 // FSM traversal Flags
 assign can_read     = skid_value_q.valid_data_i  && out_ready_i;
@@ -118,9 +54,8 @@ assign next_is_last = axis_slave_if.tvalid && axis_slave_if.tlast; //means that 
 assign get_axi      = axis_slave_if.tvalid && axis_slave_if.tready;
 
 // Always pack the inputs into the struct
-// TODO: Check that this is correct, we might only want to grab data on tready, maybe we alwyas grab but we only clock it on tready
 always_comb begin
-    skid_value_d.data             = axis_slave_if.tdata; //we will put the data in network order here
+    skid_value_d.data             = axis_slave_if.tdata; //we will put the data in network order here, if we switch up again
     skid_value_d.valid_bytes_mask = axis_slave_if.tkeep;
     skid_value_d.last_byte        = last_byte_i;
     skid_value_d.valid_data_i     = axis_slave_if.valid_data_i;
@@ -198,9 +133,9 @@ always_comb begin
 
                             3'd5 : out_data_d = {{2{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*5], TERM_L5};
                 
-                            3'd6 : out_data_d = {{1{8'd0}}, skid_valid_q.data[0 +: BYTE_W-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*5], TERM_L6};
+                            3'd6 : out_data_d = {{1{8'd0}}, skid_value_q.data[0 +: BYTE_W-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*5], TERM_L6};
                 
-                            3'd7 : out_data_d = {skid_valid_q.data[0 +: (BYTE_W*2)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*5], TERM_L6};
+                            3'd7 : out_data_d = {skid_value_q.data[0 +: (BYTE_W*2)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W*5], TERM_L6};
                         endcase
                     end else begin
                         // this case pulls 1 and then num_in should be between 0-6
@@ -210,17 +145,17 @@ always_comb begin
 
                             3'd1 : out_data_d = {{6{8'd0}}, leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L1};
                 
-                            3'd2 : out_data_d = {{5{8'd0}}, skid_valid_q.data[0 +: (BYTE_W*1)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L2};
+                            3'd2 : out_data_d = {{5{8'd0}}, skid_value_q.data[0 +: (BYTE_W*1)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L2};
                 
-                            3'd3 : out_data_d = {{4{8'd0}}, skid_valid_q.data[0 +: (BYTE_W*2)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L3};
+                            3'd3 : out_data_d = {{4{8'd0}}, skid_value_q.data[0 +: (BYTE_W*2)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L3};
                 
-                            3'd4 : out_data_d = {{3{8'd0}}, skid_valid_q.data[0 +: (BYTE_W*3)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L4};
+                            3'd4 : out_data_d = {{3{8'd0}}, skid_value_q.data[0 +: (BYTE_W*3)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L4};
                 
-                            3'd5 : out_data_d = {{2{8'd0}}, skid_valid_q.data[0 +: (BYTE_W*4)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L5};
+                            3'd5 : out_data_d = {{2{8'd0}}, skid_value_q.data[0 +: (BYTE_W*4)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L5};
                 
-                            3'd6 : out_data_d = {{1{8'd0}}, skid_valid_q.data[0 +: (BYTE_W*5)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L6};
+                            3'd6 : out_data_d = {{1{8'd0}}, skid_value_q.data[0 +: (BYTE_W*5)-1], leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L6};
                 
-                            3'd7 : out_data_d = {skid_valid_q.data[0 +: (BYTE_W*6)-1],  leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L7};
+                            3'd7 : out_data_d = {skid_value_q.data[0 +: (BYTE_W*6)-1],  leftover_bytes_q[LEFTOVER_T_W -: BYTE_W], TERM_L7};
                         endcase
 
                     end
@@ -260,6 +195,7 @@ always_comb begin
 end 
 
 // Clocked Block
+// TODO: convert these to use the pipeline module
 always_ff@(posedge clk)begin
     if(rst)begin
         current_state        <= WAIT_START;
