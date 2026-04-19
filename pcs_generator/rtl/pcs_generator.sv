@@ -117,7 +117,7 @@ always_comb begin
             // if data in skid buffer has the eof signal, go to the EOF state, and pre-compute num of valid incoming bytes
             if(can_read && next_is_last) begin
                 next_state     = EOF;
-                num_incoming_d = count_valid(skid_value_q);
+                num_incoming_d = count_valid(skid_value_q.valid_bytes_mask);
             end
         end
 
@@ -161,6 +161,7 @@ always_comb begin
 
                     out_valid_d     = 1'b1;
                     held_byte_cnt_d = 3'd0;
+                    next_state      = IDLE_OUT;
                 end else begin // if num_incoming_q + held_byte_cnt_q > 7, we need to output another data packet before flushing
                     out_control_d    = DATA_HDR;
                     tready_d         = 1'b0; //We don't need another AXI beat right now since we are forcing a data_frame
