@@ -49,7 +49,7 @@ logic                 tready_d;
  
 // FSM traversal Flags
 assign can_read     = skid_value_q.valid_data_i  && out_ready_i;
-assign next_is_last = axis_slave_if.tvalid && axis_slave_if.tlast; //means that the thing in the skid buffer is the eof signal
+assign next_is_last = get_axi && axis_slave_if.tlast; // lookahead beat accepted this cycle is the eof signal
 assign get_axi      = axis_slave_if.tvalid && axis_slave_if.tready;
 
 // Always pack the inputs into the struct
@@ -70,7 +70,8 @@ always_comb begin
     leftover_bytes_d = leftover_bytes_q;
     num_incoming_d   = num_incoming_q;
     out_valid_d      = 1'b0;
-    tready_d         = 1'b1;
+    // One-entry skid: accept a new AXI beat only if the slot is empty or we are consuming it now.
+    tready_d         = !skid_value_q.valid_data_i || can_read;
 
     case(current_state) 
         WAIT_START : begin 
@@ -117,7 +118,7 @@ always_comb begin
             // if data in skid buffer has the eof signal, go to the EOF state, and pre-compute num of valid incoming bytes
             if(can_read && next_is_last) begin
                 next_state     = EOF;
-                num_incoming_d = count_valid(skid_value_q.valid_bytes_mask);
+                num_incoming_d = count_valid(skid_value_d.valid_bytes_mask);
             end
         end
 
@@ -182,10 +183,10 @@ always_comb begin
         IDLE_OUT : begin
             next_state = WAIT_START;
             // Output an IDLE chunk
-            out_control_d    = CTRL_HDR;
-            out_data_d       = {{7{8'd0}}, IDLE_BLK};
-            out_valid_d      = 1'b1;
-            leftover_bytes_d = (get_axi) ?  3'd5 : 3'd1; //if data right away need SOF_L4, else SOF_L0
+            out_control_d   = CTRL_HDR;
+            out_data_d      = {{7{8'd0}}, IDLE_BLK};
+            out_valid_d     = 1'b1;
+            held_byte_cnt_d = (get_axi) ?  3'd5 : 3'd1; //if data right away need SOF_L4, else SOF_L0
         end
         
         default : begin
@@ -199,6 +200,7 @@ end
 always_ff@(posedge clk)begin
     if(rst)begin
         current_state        <= WAIT_START;
+        skid_value_q         <= '0;
         axis_slave_if.tready <= '0;
         out_valid_o          <= '0;
         held_byte_cnt_q      <= '0;
@@ -208,6 +210,8 @@ always_ff@(posedge clk)begin
         current_state <= next_state;
         if(get_axi == 1'b1) begin
             skid_value_q <= skid_value_d;
+        end else if (can_read) begin
+            skid_value_q.valid_data_i <= '0;
         end
         axis_slave_if.tready <= tready_d;
         held_byte_cnt_q      <= held_byte_cnt_d;
