@@ -11,6 +11,7 @@ python3 --version
 ## VS Code Configuration
 
 Update `.vscode/settings.json` to include the formatter configuration below.
+- If you don't have this already, make a folder in your main workspace called '.vscode' and make a file within that folder called 'settings.json'
 
 ```json
 "[systemverilog]": {
