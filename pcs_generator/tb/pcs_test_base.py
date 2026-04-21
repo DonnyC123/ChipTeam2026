@@ -51,7 +51,7 @@ class PCSTestBase:
             self.scoreboard = scoreboard(
                 monitor=self.monitor, model=self.model, checker=self.checker
             )
-            self.sequence.add_subscriber(self.scoreboard)
+            self.driver.add_subscriber(self.scoreboard)
 
     async def wait_for_driver_done(self):
         while await self.driver.busy():

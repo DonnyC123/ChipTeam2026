@@ -61,6 +61,7 @@ def test_pcs_generator():
         hdl_toplevel="pcs_generator_tb_top",
         test_module="pcs_generator.tb.pcs_generator_test",
         waves=True,
+        gui=False,
         test_args=sim_test_args,
         extra_env={
             "TOPLEVEL_LANG": "verilog",

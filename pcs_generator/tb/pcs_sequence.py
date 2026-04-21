@@ -12,12 +12,6 @@ class PCSSequence(GenericSequence[PCSSequenceItem]):
     DIRTY_PAUSE_INSERT_NUMERATOR = 3
     DIRTY_PAUSE_INSERT_DENOMINATOR = 4
 
-    # Notifies subscribers with the full input transaction so downstream models
-    # can reconstruct expected payload bytes and frame boundaries.
-    async def add_transaction(self, transaction: PCSSequenceItem):
-        await self.notify_subscribers(transaction)
-        await super().add_transaction(transaction)
-
     # Validates manual stream input and converts supported byte-like formats
     # into a normalized bytes object for downstream chunking logic.
     def _normalize_stream_bytes(self, data: Any) -> bytes:
