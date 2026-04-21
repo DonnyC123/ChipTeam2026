@@ -71,7 +71,7 @@ always_comb begin
     num_incoming_d   = num_incoming_q;
     out_valid_d      = 1'b0;
     // One-entry skid: accept a new AXI beat only if the slot is empty or we are consuming it now.
-    tready_d = !skid_value_q.valid_data_i || can_read;
+    tready_d = (!skid_value_q.valid_data_i || can_read) && !(get_axi && !can_read);
 
     case(current_state) 
         WAIT_START : begin 
@@ -177,6 +177,7 @@ always_comb begin
                     out_valid_d     = 1'b1;
                     held_byte_cnt_d = 3'd0;
                     next_state      = IDLE_OUT;
+                    tready_d        = '0;
                 end else begin // if num_incoming_q + held_byte_cnt_q > 7, we need to output another data packet before flushing
                     out_control_d  = DATA_HDR;
                     tready_d       = 1'b0; //We don't need another AXI beat right now since we are forcing a data_frame
@@ -213,13 +214,14 @@ always_comb begin
             end
         end
 
-        IDLE_OUT : begin
-            next_state = WAIT_START;
-            // Output an IDLE chunk
+        IDLE_OUT : begin //TODO fix bug where we read data too early.
+            // Output a single IDLE chunk
+            tready_d        = '0;
+            next_state      = WAIT_START;
             out_control_d   = CTRL_HDR;
             out_data_d      = {{7{8'd0}}, IDLE_BLK};
             out_valid_d     = 1'b1;
-            held_byte_cnt_d = (get_axi) ?  3'd5 : 3'd1; //if data right away need SOF_L4, else SOF_L0
+            held_byte_cnt_d = (skid_value_q.valid_data_i || get_axi) ? 3'd5 : 3'd1; //if data right away need SOF_L4, else SOF_L0
         end
         
         default : begin
@@ -243,7 +245,7 @@ always_ff@(posedge clk)begin
         current_state <= next_state;
         if(get_axi == 1'b1) begin
             skid_value_q <= skid_value_d;
-        end else if (can_read) begin
+        end else if (can_read && current_state != IDLE_OUT) begin
             skid_value_q.valid_data_i <= '0;
         end
         axis_slave_if.tready <= tready_d;
