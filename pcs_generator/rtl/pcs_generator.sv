@@ -71,7 +71,7 @@ always_comb begin
     num_incoming_d   = num_incoming_q;
     out_valid_d      = 1'b0;
     // One-entry skid: accept a new AXI beat only if the slot is empty or we are consuming it now.
-    tready_d         = !skid_value_q.valid_data_i || can_read;
+    tready_d = !skid_value_q.valid_data_i || can_read;
 
     case(current_state) 
         WAIT_START : begin 
@@ -116,46 +116,60 @@ always_comb begin
             end
 
             // if data in skid buffer has the eof signal, go to the EOF state, and pre-compute num of valid incoming bytes
-            if(can_read && next_is_last) begin
+            if(next_is_last) begin
                 next_state     = EOF;
                 num_incoming_d = count_valid(skid_value_d.valid_bytes_mask);
             end
         end
 
         EOF : begin // Frozen here we have some data in the leftover buffer, and out last data in the skid buffer.
-            if(can_read) begin
-                if(num_incoming_q + held_byte_cnt_q < 7) begin // We can output all the data
+            if(out_ready_i) begin
+                if(num_incoming_q + held_byte_cnt_q <= 7) begin // We can output all the data
                     out_control_d = CTRL_HDR;
-                    if(held_byte_cnt_q == 3'd5) begin // we have some data in the leftover buffer, and out last data in the skid buffer.
-                        // this cases pulls all 5 held then, num_in should be between 0-2
-                        case(num_incoming_q)
-                            3'd0 : out_data_d = {{7{8'd0}}, TERM_L0};
-
-                            3'd5 : out_data_d = {{2{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W*5], TERM_L5};
-                
-                            3'd6 : out_data_d = {{1{8'd0}}, skid_value_q.data[0 +: BYTE_W-1], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W*5], TERM_L6};
-                
-                            3'd7 : out_data_d = {skid_value_q.data[0 +: (BYTE_W*2)-1], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W*5], TERM_L6};
-                        endcase
-                    end else begin
-                        // this case pulls 1 and then num_in should be between 0-6
-                        // need to catch the case where we sent out all the data, and have 0 to send out.
-                        case(num_incoming_q)
+                    if(num_incoming_q == 4'd0) begin // after a spill cycle the remainder only lives in leftover_bytes_q
+                        case(held_byte_cnt_q)
                             3'd0 : out_data_d = {{7{8'd0}}, TERM_L0};
 
                             3'd1 : out_data_d = {{6{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L1};
                 
-                            3'd2 : out_data_d = {{5{8'd0}}, skid_value_q.data[0 +: (BYTE_W*1)-1], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L2};
+                            3'd2 : out_data_d = {{5{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W*2], TERM_L2};
                 
-                            3'd3 : out_data_d = {{4{8'd0}}, skid_value_q.data[0 +: (BYTE_W*2)-1], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L3};
+                            3'd3 : out_data_d = {{4{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W*3], TERM_L3};
                 
-                            3'd4 : out_data_d = {{3{8'd0}}, skid_value_q.data[0 +: (BYTE_W*3)-1], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L4};
+                            3'd4 : out_data_d = {{3{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W*4], TERM_L4};
                 
-                            3'd5 : out_data_d = {{2{8'd0}}, skid_value_q.data[0 +: (BYTE_W*4)-1], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L5};
+                            3'd5 : out_data_d = {{2{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W*5], TERM_L5};
+                        endcase
+                    end else if(held_byte_cnt_q == 3'd5) begin // we have some data in the leftover buffer, and out last data in the skid buffer.
+                        // this cases pulls all 5 held then, num_in should be between 0-2
+                        case(num_incoming_q + 5)
+                            3'd0 : out_data_d = {{7{8'd0}}, TERM_L0};
+
+                            3'd5 : out_data_d = {{2{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W*5], TERM_L5};
                 
-                            3'd6 : out_data_d = {{1{8'd0}}, skid_value_q.data[0 +: (BYTE_W*5)-1], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L6};
+                            3'd6 : out_data_d = {{1{8'd0}}, skid_value_q.data[0 +: BYTE_W], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W*5], TERM_L6};
                 
-                            3'd7 : out_data_d = {skid_value_q.data[0 +: (BYTE_W*6)-1],  leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L7};
+                            3'd7 : out_data_d = {skid_value_q.data[0 +: BYTE_W*2], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W*5], TERM_L7};
+                        endcase
+                    end else begin
+                        // this case pulls 1 and then num_in should be between 0-6
+                        // need to catch the case where we sent out all the data, and have 0 to send out.
+                        case(num_incoming_q + 1)
+                            3'd0 : out_data_d = {{7{8'd0}}, TERM_L0};
+
+                            3'd1 : out_data_d = {{6{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L1};
+                
+                            3'd2 : out_data_d = {{5{8'd0}}, skid_value_q.data[0 +: BYTE_W], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L2};
+                
+                            3'd3 : out_data_d = {{4{8'd0}}, skid_value_q.data[0 +: BYTE_W*2], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L3};
+                
+                            3'd4 : out_data_d = {{3{8'd0}}, skid_value_q.data[0 +: BYTE_W*3], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L4};
+                
+                            3'd5 : out_data_d = {{2{8'd0}}, skid_value_q.data[0 +: BYTE_W*4], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L5};
+                
+                            3'd6 : out_data_d = {{1{8'd0}}, skid_value_q.data[0 +: BYTE_W*5], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L6};
+                
+                            3'd7 : out_data_d = {skid_value_q.data[0 +: BYTE_W*6],  leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L7};
                         endcase
 
                     end
@@ -164,15 +178,34 @@ always_comb begin
                     held_byte_cnt_d = 3'd0;
                     next_state      = IDLE_OUT;
                 end else begin // if num_incoming_q + held_byte_cnt_q > 7, we need to output another data packet before flushing
-                    out_control_d    = DATA_HDR;
-                    tready_d         = 1'b0; //We don't need another AXI beat right now since we are forcing a data_frame
-                    num_incoming_d   = num_incoming_q - (8-held_byte_cnt_q); //calculate num left after sending this data chunk
-                    leftover_bytes_d = skid_value_q.data[(7*BYTE_W)-1:0]; // at max we would have 5 leftover (5 stored, + 8 incoming, 8 go out this cycle) 
+                    out_control_d  = DATA_HDR;
+                    tready_d       = 1'b0; //We don't need another AXI beat right now since we are forcing a data_frame
+                    num_incoming_d = 4'd0; //after the spill cycle the remainder is canonicalized into leftover_bytes_q
 
                     if(held_byte_cnt_q == 3'd5) begin
-                        out_data_d = {skid_value_q.data[(BYTE_W*3)-1:0], leftover_bytes_q[(5*BYTE_W)-1:0]};
+                        held_byte_cnt_d = num_incoming_q - 4'd3;
+                        out_data_d      = {skid_value_q.data[(BYTE_W*3)-1:0], leftover_bytes_q[(5*BYTE_W)-1:0]};
+                        case(num_incoming_q - 4'd3)
+                            3'd0 : leftover_bytes_d = '0;
+
+                            3'd1 : leftover_bytes_d = {skid_value_q.data[(BYTE_W*3) +: BYTE_W], {4{8'd0}}};
+                
+                            3'd2 : leftover_bytes_d = {skid_value_q.data[(BYTE_W*3) +: BYTE_W*2], {3{8'd0}}};
+                
+                            3'd3 : leftover_bytes_d = {skid_value_q.data[(BYTE_W*3) +: BYTE_W*3], {2{8'd0}}};
+                
+                            3'd4 : leftover_bytes_d = {skid_value_q.data[(BYTE_W*3) +: BYTE_W*4], {1{8'd0}}};
+                
+                            3'd5 : leftover_bytes_d = skid_value_q.data[(BYTE_W*3) +: BYTE_W*5];
+                        endcase
                     end else begin 
-                        out_data_d = {skid_value_q.data[(BYTE_W*7)-1:0], leftover_bytes_q[BYTE_W-1:0]};
+                        held_byte_cnt_d = num_incoming_q - 4'd7;
+                        out_data_d      = {skid_value_q.data[(BYTE_W*7)-1:0], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W]};
+                        case(num_incoming_q - 4'd7)
+                            3'd0 : leftover_bytes_d = '0;
+
+                            3'd1 : leftover_bytes_d = {skid_value_q.data[(BYTE_W*7) +: BYTE_W], {4{8'd0}}};
+                        endcase
                     end
 
                     out_valid_d = 1'b1;
