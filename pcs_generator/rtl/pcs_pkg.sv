@@ -23,10 +23,11 @@ localparam logic [7:0] OS_D3B = 8'h2D; // C0..C3 O4 D5..D7
 localparam logic [1:0] CTRL_HDR = 2'b10; // 10 is in network order
 localparam logic [1:0] DATA_HDR = 2'b01; // 01 is network order
 
-localparam int BYTE_W    = 8;
-localparam int CONTROL_W = 2;
-localparam int NUM_BYTES = 8; 
-localparam int DATA_W    = NUM_BYTES * BYTE_W;
+localparam int BYTE_W     = 8;
+localparam int CONTROL_W  = 2;
+localparam int NUM_BYTES  = 8; 
+localparam int DATA_W     = NUM_BYTES * BYTE_W;
+localparam int PIPE_DEPTH = 1;
 
 typedef struct packed { // We would only ever store 5 bytes
     logic [BYTE_W-1:0] byte0; //31-33
