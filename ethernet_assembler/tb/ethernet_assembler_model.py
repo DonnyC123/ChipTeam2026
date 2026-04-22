@@ -4,6 +4,10 @@ from typing import Any, Dict, Mapping, Tuple
 from tb_utils.generic_model import GenericModel
 
 
+def _mask_from_bytes_valid(mask: int) -> Tuple[bool, ...]:
+    return tuple(bool((mask >> (7 - idx)) & 1) for idx in range(8))
+
+
 @dataclass(frozen=True)
 class ControlBlockSpec:
     kind: str
@@ -16,83 +20,82 @@ class EthernetAssemblerModel(GenericModel):
     DATA_SYNC_HEADER = 0b01
     CONTROL_SYNC_HEADER = 0b10
     DATA_MASK_64 = (1 << 64) - 1
-    BIT_REVERSE_TABLE = tuple(int(f"{i:08b}"[::-1], 2) for i in range(256))
     VALID_SYNC_HEADERS = {DATA_SYNC_HEADER, CONTROL_SYNC_HEADER}
 
     CONTROL_BLOCK_LUT: Dict[int, ControlBlockSpec] = {
         # Start blocks.
         0x78: ControlBlockSpec(
             kind="start",
-            valid_mask=(False, True, True, True, True, True, True, True),
+            valid_mask=_mask_from_bytes_valid(0b1111_1110),
             enters_frame=True,
         ),
         0x33: ControlBlockSpec(
             kind="start",
-            valid_mask=(False, False, False, False, False, True, True, True),
+            valid_mask=_mask_from_bytes_valid(0b1110_0000),
             enters_frame=True,
         ),
         # Terminate blocks.
         0x87: ControlBlockSpec(
             kind="term",
-            valid_mask=(False, False, False, False, False, False, False, False),
+            valid_mask=_mask_from_bytes_valid(0b0000_0000),
             exits_frame=True,
         ),
         0x99: ControlBlockSpec(
             kind="term",
-            valid_mask=(False, True, False, False, False, False, False, False),
+            valid_mask=_mask_from_bytes_valid(0b0000_0010),
             exits_frame=True,
         ),
         0xAA: ControlBlockSpec(
             kind="term",
-            valid_mask=(False, True, True, False, False, False, False, False),
+            valid_mask=_mask_from_bytes_valid(0b0000_0110),
             exits_frame=True,
         ),
         0xB4: ControlBlockSpec(
             kind="term",
-            valid_mask=(False, True, True, True, False, False, False, False),
+            valid_mask=_mask_from_bytes_valid(0b0000_1110),
             exits_frame=True,
         ),
         0xCC: ControlBlockSpec(
             kind="term",
-            valid_mask=(False, True, True, True, True, False, False, False),
+            valid_mask=_mask_from_bytes_valid(0b0001_1110),
             exits_frame=True,
         ),
         0xD2: ControlBlockSpec(
             kind="term",
-            valid_mask=(False, True, True, True, True, True, False, False),
+            valid_mask=_mask_from_bytes_valid(0b0011_1110),
             exits_frame=True,
         ),
         0xE1: ControlBlockSpec(
             kind="term",
-            valid_mask=(False, True, True, True, True, True, True, False),
+            valid_mask=_mask_from_bytes_valid(0b0111_1110),
             exits_frame=True,
         ),
         0xFF: ControlBlockSpec(
             kind="term",
-            valid_mask=(False, True, True, True, True, True, True, True),
+            valid_mask=_mask_from_bytes_valid(0b0111_1111),
             exits_frame=True,
         ),
         # Ordered set blocks.
         0x66: ControlBlockSpec(
             kind="ordered_set",
-            valid_mask=(False, True, True, True, False, True, True, True),
+            valid_mask=_mask_from_bytes_valid(0b1110_1110),
         ),
         0x55: ControlBlockSpec(
             kind="ordered_set",
-            valid_mask=(False, True, True, True, False, True, True, True),
+            valid_mask=_mask_from_bytes_valid(0b1110_1110),
         ),
         0x4B: ControlBlockSpec(
             kind="ordered_set",
-            valid_mask=(False, True, True, True, False, False, False, False),
+            valid_mask=_mask_from_bytes_valid(0b0000_1110),
         ),
         0x2D: ControlBlockSpec(
             kind="ordered_set",
-            valid_mask=(False, False, False, False, False, True, True, True),
+            valid_mask=_mask_from_bytes_valid(0b1110_0000),
         ),
         # Idle block.
         0x1E: ControlBlockSpec(
             kind="idle",
-            valid_mask=(False, False, False, False, False, False, False, False),
+            valid_mask=_mask_from_bytes_valid(0b0000_0000),
         ),
     }
 
@@ -118,36 +121,6 @@ class EthernetAssemblerModel(GenericModel):
             return default
         return bool(int(value))
 
-    @staticmethod
-    def _reverse_bits(value: int, width: int) -> int:
-        if width <= 0:
-            return 0
-
-        value &= (1 << width) - 1
-        reversed_value = 0
-        full_bytes, remaining_bits = divmod(width, 8)
-
-        for byte_idx in range(full_bytes):
-            shift = byte_idx * 8
-            byte = (value >> shift) & 0xFF
-            reversed_value |= EthernetAssemblerModel.BIT_REVERSE_TABLE[byte] << shift
-
-        if remaining_bits:
-            shift = full_bytes * 8
-            rem_mask = (1 << remaining_bits) - 1
-            rem_bits = (value >> shift) & rem_mask
-            rem_reversed = 0
-            for bit_idx in range(remaining_bits):
-                rem_reversed = (rem_reversed << 1) | ((rem_bits >> bit_idx) & 1)
-            reversed_value |= rem_reversed << shift
-
-        return reversed_value
-
-    @staticmethod
-    def _from_network_header(header_bits: int) -> int:
-        header_bits &= 0b11
-        return ((header_bits & 0b01) << 1) | ((header_bits >> 1) & 0b01)
-
     def _decode_baseline(
         self,
         *,
@@ -158,9 +131,9 @@ class EthernetAssemblerModel(GenericModel):
         cancel_frame: bool,
     ) -> Dict[str, Any]:
         raw_payload = input_data & self.DATA_MASK_64
-        out_data = self._reverse_bits(raw_payload, 64)
-        sync_header = self._from_network_header(header_bits)
-        control_byte = (out_data >> 56) & 0xFF
+        out_data = raw_payload
+        sync_header = header_bits & 0b11
+        control_byte = out_data & 0xFF
 
         expected = {
             "out_valid": False,
