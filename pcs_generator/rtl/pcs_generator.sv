@@ -214,7 +214,7 @@ always_comb begin
             end
         end
 
-        IDLE_OUT : begin //TODO fix bug where we read data too early.
+        IDLE_OUT : begin
             // Output a single IDLE chunk
             tready_d        = '0;
             next_state      = WAIT_START;
@@ -234,13 +234,13 @@ end
 // TODO: convert these to use the pipeline module
 always_ff@(posedge clk)begin
     if(rst)begin
-        current_state        <= WAIT_START;
-        skid_value_q         <= '0;
-        axis_slave_if.tready <= '0;
-        out_valid_o          <= '0;
-        held_byte_cnt_q      <= '0;
-        leftover_bytes_q     <= '0;
-        num_incoming_q       <= '0;
+        current_state <= WAIT_START;
+        skid_value_q  <= '0;
+        //axis_slave_if.tready <= '0;
+        //out_valid_o          <= '0;
+        held_byte_cnt_q  <= '0;
+        leftover_bytes_q <= '0;
+        num_incoming_q   <= '0;
     end else begin
         current_state <= next_state;
         if(get_axi == 1'b1) begin
@@ -248,14 +248,63 @@ always_ff@(posedge clk)begin
         end else if (can_read && current_state != IDLE_OUT) begin
             skid_value_q.valid_data_i <= '0;
         end
-        axis_slave_if.tready <= tready_d;
-        held_byte_cnt_q      <= held_byte_cnt_d;
-        out_control_o        <= out_control_d;
-        out_data_o           <= out_data_d;
-        out_valid_o          <= out_valid_d;
-        leftover_bytes_q     <= leftover_bytes_d;
-        num_incoming_q       <= num_incoming_d;
+        //axis_slave_if.tready <= tready_d;
+        held_byte_cnt_q <= held_byte_cnt_d;
+        //out_control_o        <= out_control_d;
+        //out_data_o           <= out_data_d;
+        //out_valid_o          <= out_valid_d;
+        leftover_bytes_q <= leftover_bytes_d;
+        num_incoming_q   <= num_incoming_d;
     end
 end
+
+
+//axis_slave_if.tready
+data_pipeline #(
+    .DATA_W    (1),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (1)
+) data_pipeline_inst0 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(axis_slave_if.tready),
+    .data_o(tready_d)
+);
+
+//out_data_o
+data_pipeline #(
+    .DATA_W    (DATA_W),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (0)
+) data_pipeline_inst1 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(out_data_o),
+    .data_o(out_data_d)
+);
+
+//out_control_o
+data_pipeline #(
+    .DATA_W    (CONTROL_W),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (0)
+) data_pipeline_inst2 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(out_control_o),
+    .data_o(out_control_d)
+);
+
+//out_valid_o
+data_pipeline #(
+    .DATA_W    (1),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (1)
+) data_pipeline_inst3 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(out_valid_o),
+    .data_o(out_valid_d)
+);
 
 endmodule: pcs_generator
