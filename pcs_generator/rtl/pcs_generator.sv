@@ -36,6 +36,7 @@ typedef enum logic [3:0] {WAIT_START, DATA, EOF, IDLE_OUT} state_t;
 state_t current_state, next_state;
 
 logic       can_read;
+logic       use_sof0;
 logic       next_is_last;
 logic [2:0] held_byte_cnt_d, held_byte_cnt_q; //max ever stored = 5
 logic [3:0] num_incoming_d, num_incoming_q; //max ever incoming = 8
@@ -69,6 +70,7 @@ always_comb begin
     held_byte_cnt_d  = held_byte_cnt_q;
     leftover_bytes_d = leftover_bytes_q;
     num_incoming_d   = num_incoming_q;
+    use_sof0         = 1'b0;
     out_valid_d      = 1'b0;
     // One-entry skid: accept a new AXI beat only if the slot is empty or we are consuming it now.
     tready_d = (!skid_value_q.valid_data_i || can_read) && !(get_axi && !can_read);
@@ -128,13 +130,13 @@ always_comb begin
                     out_control_d = CTRL_HDR;
                     if(num_incoming_q == 4'd0) begin // after a spill cycle the remainder only lives in leftover_bytes_q
                         case(held_byte_cnt_q)
-                            3'd0 : out_data_d = {{7{8'd0}}, TERM_L0};
+                            3'd0 : begin out_data_d = {{7{8'd0}}, TERM_L0}; use_sof0 = 1'b1; end
 
-                            3'd1 : out_data_d = {{6{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L1};
+                            3'd1 : begin out_data_d = {{6{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L1}; use_sof0 = 1'b1; end
                 
-                            3'd2 : out_data_d = {{5{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W*2], TERM_L2};
+                            3'd2 : begin out_data_d = {{5{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W*2], TERM_L2}; use_sof0 = 1'b1; end
                 
-                            3'd3 : out_data_d = {{4{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W*3], TERM_L3};
+                            3'd3 : begin out_data_d = {{4{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W*3], TERM_L3}; use_sof0 = 1'b1;end
                 
                             3'd4 : out_data_d = {{3{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W*4], TERM_L4};
                 
@@ -143,7 +145,7 @@ always_comb begin
                     end else if(held_byte_cnt_q == 3'd5) begin // we have some data in the leftover buffer, and out last data in the skid buffer.
                         // this cases pulls all 5 held then, num_in should be between 0-2
                         case(num_incoming_q + 5)
-                            3'd0 : out_data_d = {{7{8'd0}}, TERM_L0};
+                            3'd0 : begin out_data_d = {{7{8'd0}}, TERM_L0}; use_sof0 = 1'b1; end
 
                             3'd5 : out_data_d = {{2{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W*5], TERM_L5};
                 
@@ -155,13 +157,13 @@ always_comb begin
                         // this case pulls 1 and then num_in should be between 0-6
                         // need to catch the case where we sent out all the data, and have 0 to send out.
                         case(num_incoming_q + 1)
-                            3'd0 : out_data_d = {{7{8'd0}}, TERM_L0};
+                            3'd0 : begin out_data_d = {{7{8'd0}}, TERM_L0}; use_sof0 = 1'b1; end
 
-                            3'd1 : out_data_d = {{6{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L1};
+                            3'd1 : begin out_data_d = {{6{8'd0}}, leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L1}; use_sof0 = 1'b1; end
                 
-                            3'd2 : out_data_d = {{5{8'd0}}, skid_value_q.data[0 +: BYTE_W], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L2};
+                            3'd2 : begin out_data_d = {{5{8'd0}}, skid_value_q.data[0 +: BYTE_W], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L2}; use_sof0 = 1'b1; end
                 
-                            3'd3 : out_data_d = {{4{8'd0}}, skid_value_q.data[0 +: BYTE_W*2], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L3};
+                            3'd3 : begin out_data_d = {{4{8'd0}}, skid_value_q.data[0 +: BYTE_W*2], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L3}; use_sof0 = 1'b1; end
                 
                             3'd4 : out_data_d = {{3{8'd0}}, skid_value_q.data[0 +: BYTE_W*3], leftover_bytes_q[LEFTOVER_T_W-1 -: BYTE_W], TERM_L4};
                 
@@ -216,12 +218,22 @@ always_comb begin
 
         IDLE_OUT : begin
             // Output a single IDLE chunk
-            tready_d        = '0;
-            next_state      = WAIT_START;
-            out_control_d   = CTRL_HDR;
-            out_data_d      = {{7{8'd0}}, IDLE_BLK};
-            out_valid_d     = 1'b1;
-            held_byte_cnt_d = (skid_value_q.valid_data_i || get_axi) ? 3'd5 : 3'd1; //if data right away need SOF_L4, else SOF_L0
+            tready_d      = '0;
+            next_state    = WAIT_START;
+            out_control_d = CTRL_HDR;
+            out_data_d    = {{7{8'd0}}, IDLE_BLK};
+            out_valid_d   = 1'b1;
+            // if we need a beat away, use either sof4 or sof0, otherwise use sof0
+            if (skid_value_q.valid_data_i || get_axi) begin
+                if (use_sof0) begin
+                    held_byte_cnt_d = 3'd1;
+                end else begin
+                    held_byte_cnt_d = 3'd5;
+                end
+                end else begin
+                    held_byte_cnt_d = 3'd1;
+            end
+
         end
         
         default : begin
@@ -234,13 +246,13 @@ end
 // TODO: convert these to use the pipeline module
 always_ff@(posedge clk)begin
     if(rst)begin
-        current_state <= WAIT_START;
-        skid_value_q  <= '0;
-        //axis_slave_if.tready <= '0;
-        //out_valid_o          <= '0;
+        current_state    <= WAIT_START;
+        skid_value_q     <= '0;
         held_byte_cnt_q  <= '0;
         leftover_bytes_q <= '0;
         num_incoming_q   <= '0;
+        //axis_slave_if.tready <= '0;
+        //out_valid_o          <= '0;
     end else begin
         current_state <= next_state;
         if(get_axi == 1'b1) begin
@@ -248,13 +260,13 @@ always_ff@(posedge clk)begin
         end else if (can_read && current_state != IDLE_OUT) begin
             skid_value_q.valid_data_i <= '0;
         end
+        held_byte_cnt_q  <= held_byte_cnt_d;
+        leftover_bytes_q <= leftover_bytes_d;
+        num_incoming_q   <= num_incoming_d;
         //axis_slave_if.tready <= tready_d;
-        held_byte_cnt_q <= held_byte_cnt_d;
         //out_control_o        <= out_control_d;
         //out_data_o           <= out_data_d;
         //out_valid_o          <= out_valid_d;
-        leftover_bytes_q <= leftover_bytes_d;
-        num_incoming_q   <= num_incoming_d;
     end
 end
 
