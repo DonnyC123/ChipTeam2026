@@ -267,8 +267,8 @@ data_pipeline #(
 ) data_pipeline_inst0 (
     .clk   (clk),
     .rst   (rst),
-    .data_i(axis_slave_if.tready),
-    .data_o(tready_d)
+    .data_i(tready_d),
+    .data_o(axis_slave_if.tready)
 );
 
 //out_data_o
@@ -279,8 +279,8 @@ data_pipeline #(
 ) data_pipeline_inst1 (
     .clk   (clk),
     .rst   (rst),
-    .data_i(out_data_o),
-    .data_o(out_data_d)
+    .data_i(out_data_d),
+    .data_o(out_data_o)
 );
 
 //out_control_o
@@ -291,8 +291,8 @@ data_pipeline #(
 ) data_pipeline_inst2 (
     .clk   (clk),
     .rst   (rst),
-    .data_i(out_control_o),
-    .data_o(out_control_d)
+    .data_i(out_control_d),
+    .data_o(out_control_o)
 );
 
 //out_valid_o
@@ -303,8 +303,8 @@ data_pipeline #(
 ) data_pipeline_inst3 (
     .clk   (clk),
     .rst   (rst),
-    .data_i(out_valid_o),
-    .data_o(out_valid_d)
+    .data_i(out_valid_d),
+    .data_o(out_valid_o)
 );
 
 endmodule: pcs_generator
