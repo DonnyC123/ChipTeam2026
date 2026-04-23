@@ -20,9 +20,15 @@ localparam logic [7:0] OS_D5    = 8'h55; // O0 D1..D3 O4 O5 D6..D7 (3 Ordered Se
 localparam logic [7:0] OS_D3T   = 8'h4B; // O0 D1..D3 O4 C5..C7
 localparam logic [7:0] OS_D3B   = 8'h2D; // C0..C3 O4 D5..D7
 
-
 localparam logic [1:0] CTRL_HDR = 2'b10;
 localparam logic [1:0] DATA_HDR = 2'b01;
+
+localparam int IPG_MIN                            = 12;
+localparam int IPG_BIT_W                          = $clog2(IPG_MIN);
+localparam logic [IPG_BIT_W-1:0] IPG_MIN_BYTES    = IPG_BIT_W'(IPG_MIN);
+localparam logic [IPG_BIT_W-1:0] IPG_SOF_L4_BYTES = IPG_BIT_W'(IPG_MIN - 4);
+localparam logic [IPG_BIT_W-1:0] IPG_IDLE_BYTES   = IPG_BIT_W'(BYTES_OUT);
+localparam logic [IPG_BIT_W-1:0] IPG_IDLE_SAT     = IPG_BIT_W'(IPG_MIN - BYTES_OUT);
 
 localparam int SIZE_BYTE = 8;
 
