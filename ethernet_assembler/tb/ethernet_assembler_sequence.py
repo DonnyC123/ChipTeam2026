@@ -180,6 +180,48 @@ class EthernetAssemblerSequence(GenericSequence):
             cancel_frame=cancel_frame,
         )
 
+    async def add_manual_idle_chunk(
+        self,
+        count: int,
+        in_valid: bool = True,
+        locked: bool = True,
+        cancel_frame: bool = False,
+    ):
+        if count < 0:
+            raise ValueError("count must be non-negative")
+
+        for _ in range(count):
+            await self.add_idle_blk(
+                in_valid=in_valid,
+                locked=locked,
+                cancel_frame=cancel_frame,
+            )
+
+    async def add_random_idle_chunk(
+        self,
+        min_count: int = 0,
+        max_count: int = 3,
+        in_valid: bool = True,
+        locked: bool = True,
+        cancel_frame: bool = False,
+        rng: random.Random | None = None,
+        seed: int | None = None,
+    ):
+        local_rng = self._resolve_rng(rng=rng, seed=seed)
+
+        if min_count < 0:
+            raise ValueError("min_count must be non-negative")
+        if max_count < min_count:
+            raise ValueError("max_count must be >= min_count")
+
+        idle_count = local_rng.randint(min_count, max_count)
+        await self.add_manual_idle_chunk(
+            count=idle_count,
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=cancel_frame,
+        )
+
     async def add_sof_l0(
         self,
         payload_upper: int | None = None,
