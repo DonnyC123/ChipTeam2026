@@ -1,0 +1,509 @@
+# vsim -c -onfinish exit -pli "/home/svd5397/miniconda3/envs/ieee_chip_team/lib/python3.11/site-packages/cocotb/libs/libcocotbvpi_modelsim.so" -voptargs="+acc" top.rx_top -do "log -recursive /*;run -all; quit" 
+# Start time: 21:05:39 on Apr 19,2026
+# ** Note: (vsim-3812) Design is being optimized...
+# ** Warning: (vsim-3865) Due to PLI being present, global +acc is being enabled automatically. This will cause your simulation to run very slowly. Please use vsim -no_autoacc to disable this feature. This feature is now deprecated and will be removed from future releases.
+# ** Note: (vopt-143) Recognized 1 FSM in module "alignment_finder(fast)".
+# //  ModelSim SE-64 2020.1 Jan 28 2020 Linux 4.18.0-553.117.1.el8_10.x86_64
+# //
+# //  Copyright 1991-2020 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  ModelSim SE-64 and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.rx_top(fast)
+# Loading work.bubbler(fast)
+# Loading work.descrambler(fast)
+# Loading work.alignment_finder(fast)
+# Loading work.nic_global_pkg(fast)
+# Loading work.ethernet_assembler_sv_unit(fast)
+# Loading work.ethernet_assembler(fast)
+# Loading work.data_pipeline(fast)
+# Loading work.data_pipeline(fast__1)
+# Loading work.data_pipeline(fast__2)
+# Loading /home/svd5397/miniconda3/envs/ieee_chip_team/lib/python3.11/site-packages/cocotb/libs/libcocotbvpi_modelsim.so
+#      -.--ns INFO     gpi                                ..mbed/gpi_embed.cpp:93   in _embed_init_python              Using Python 3.11.9 interpreter at /home/svd5397/miniconda3/envs/ieee_chip_team/bin/python3.11
+#      -.--ns INFO     gpi                                ../gpi/GpiCommon.cpp:79   in gpi_print_registered_impl       VPI registered
+#      -.--ns INFO     gpi                                ../gpi/GpiCommon.cpp:79   in gpi_print_registered_impl       FLI registered
+# log -recursive /*
+# run -all
+#      0.00ns INFO     cocotb                             Running on ModelSim SE-64 version 2020.1 2020.01
+#      0.00ns INFO     cocotb                             Seeding Python random module with 1776650740
+#      0.00ns INFO     cocotb                             Initialized cocotb v2.0.1 from /home/svd5397/miniconda3/envs/ieee_chip_team/lib/python3.11/site-packages/cocotb
+#      0.00ns INFO     cocotb                             Running tests
+#      0.00ns INFO     cocotb.regression                  running rx_tb.tb.rx_test.test_lock_and_single_frame (1/2)
+# time=60 | BUBBLER | 64i=5929293030328282 | 66o=00
+# time=70 | BUBBLER | 64i=faeddeed782d6699 | 66o=00
+# time=80 | DESCRAMBLER | 64i=5929293030328282 | 64o=00
+# time=80 | BUBBLER | 64i=c7f8ecf8eb28eba7 | 66o=15929293030328282
+# time=90 | BUBBLER | 64i=f486a0395fe55fd8 | 66o=1febb77bb5e0b59a6
+# time=90 | DESCRAMBLER | 64i=febb77bb5e0b59a6 | 64o=00
+# time=100 | DESCRAMBLER | 64i=8c7f8ecf8eb28eba | 64o=7878787878787878
+# time=100 | BUBBLER | 64i=83f2bfc6fb833753 | 66o=18c7f8ecf8eb28eba
+# time=110 | BUBBLER | 64i=aa5b01f0ce3f09ce | 66o=14fd21a80e57f957f
+# time=110 | DESCRAMBLER | 64i=4fd21a80e57f957f | 64o=7878787878787878
+# time=120 | DESCRAMBLER | 64i=ce83f2bfc6fb8337 | 64o=7878787878787878
+# time=120 | BUBBLER | 64i=7bfff0b87964f430 | 66o=1ce83f2bfc6fb8337
+# time=130 | BUBBLER | 64i=f3e0e0a3f3ff9828 | 66o=10c2a96c07c338fc2
+# time=130 | DESCRAMBLER | 64i=c2a96c07c338fc2 | 64o=7878787878787878
+# time=140 | DESCRAMBLER | 64i=8287bfff0b87964f | 64o=7878787878787878
+# time=140 | BUBBLER | 64i=297cf03fd683600f | 66o=18287bfff0b87964f
+# time=150 | BUBBLER | 64i=477782879665a56d | 66o=1803fcf83828fcffe
+# time=150 | DESCRAMBLER | 64i=803fcf83828fcffe | 64o=7878787878787878
+# time=160 | DESCRAMBLER | 64i=a56d297cf03fd683 | 64o=7878787878787878
+# time=160 | BUBBLER | 64i=a6f2f6c909c77277 | 66o=1a56d297cf03fd683
+# time=170 | BUBBLER | 64i=1c8a13b8029b5867 | 66o=1dc9dd1dde0a1e599
+# time=170 | DESCRAMBLER | 64i=dc9dd1dde0a1e599 | 64o=7878787878787878
+# time=180 | DESCRAMBLER | 64i=b5867a6f2f6c909c | 64o=7878787878787878
+# time=180 | BUBBLER | 64i=75847190b454d95 | 66o=1b5867a6f2f6c909c
+# time=190 | BUBBLER | 64i=e0c51c0aed17fb54 | 66o=115365472284ee00a
+# time=190 | DESCRAMBLER | 64i=15365472284ee00a | 64o=7878787878787878
+# time=200 | DESCRAMBLER | 64i=17fb54075847190b | 64o=7878787878787878
+# time=200 | BUBBLER | 64i=b86e9b0c6f55b6f | 66o=117fb54075847190b
+# time=210 | BUBBLER | 64i=82b7b99c5b52eaa7 | 66o=1bd56dbf8314702bb
+# time=210 | DESCRAMBLER | 64i=bd56dbf8314702bb | 64o=7878787878787878
+# time=220 | DESCRAMBLER | 64i=b52eaa70b86e9b0c | 64o=7878787878787878
+# time=220 | BUBBLER | 64i=d73e6fe714decdc | 66o=1b52eaa70b86e9b0c
+# time=230 | BUBBLER | 64i=35ee5bfd4c379ac2 | 66o=1c537b3720adee671
+# time=230 | DESCRAMBLER | 64i=c537b3720adee671 | 64o=7878787878787878
+# time=240 | DESCRAMBLER | 64i=4c379ac20d73e6fe | 64o=7878787878787878
+# time=240 | BUBBLER | 64i=d7b8fff53a1e6afc | 66o=14c379ac20d73e6fe
+# time=250 | BUBBLER | 64i=2dd0c691bd565407 | 66o=14e879abf0d7b96ff
+# time=250 | DESCRAMBLER | 64i=4e879abf0d7b96ff | 64o=7878787878787878
+# time=260 | DESCRAMBLER | 64i=1bd565407d7b8fff | 64o=7878787878787878
+# time=260 | BUBBLER | 64i=46025b49fa54410e | 66o=11bd565407d7b8fff
+# time=270 | BUBBLER | 64i=3a60f9bd03bbf7cb | 66o=127e9510438b7431a
+# time=270 | DESCRAMBLER | 64i=27e9510438b7431a | 64o=7878787878787878
+# time=280 | DESCRAMBLER | 64i=bd03bbf7cb46025b | 64o=7878787878787878
+# time=280 | BUBBLER | 64i=fd547601ec3e3d5a | 66o=1bd03bbf7cb46025b
+# time=290 | BUBBLER | 64i=e0fedcfc742831bf | 66o=1807b0f8f568e983e
+# time=290 | DESCRAMBLER | 64i=807b0f8f568e983e | 64o=7878787878787878
+# time=300 | DESCRAMBLER | 64i=cfc742831bffd547 | 64o=7878787878787878
+# time=300 | BUBBLER | 64i=c30f50f5a6f00f50 | 66o=1cfc742831bffd547
+# time=310 | BUBBLER | 64i=3c394e96aabc387b | 66o=143d69bc03d4383fb
+# time=310 | DESCRAMBLER | 64i=43d69bc03d4383fb | 64o=7878787878787878
+# time=320 | DESCRAMBLER | 64i=4e96aabc387bc30f | 64o=7878787878787878
+# time=320 | BUBBLER | 64i=a82605fffefe1e2e | 66o=14e96aabc387bc30f
+# time=330 | BUBBLER | 64i=afdc03b83834fcfd | 66o=1817fffbf878b8f0e
+# time=330 | DESCRAMBLER | 64i=817fffbf878b8f0e | 64o=7878787878787878
+# time=340 | DESCRAMBLER | 64i=c03b83834fcfda82 | 64o=7878787878787878
+# time=340 | BUBBLER | 64i=ff60f1e3f0c3a0f5 | 66o=1c03b83834fcfda82
+# time=350 | BUBBLER | 64i=95e569657c3d7fc3 | 66o=183c78fc30e83d6bf
+# time=350 | DESCRAMBLER | 64i=83c78fc30e83d6bf | 64o=7878787878787878
+# time=360 | DESCRAMBLER | 64i=e569657c3d7fc3ff | 64o=7878787878787878
+# time=360 | BUBBLER | 64i=a7e8dddd88787796 | 66o=1e569657c3d7fc3ff
+# time=370 | BUBBLER | 64i=d8c72cecef2b2b6f | 66o=1fa3777621e1de5a5
+# time=370 | DESCRAMBLER | 64i=fa3777621e1de5a5 | 64o=7878787878787878
+# time=380 | DESCRAMBLER | 64i=8c72cecef2b2b6fa | 64o=7878787878787878
+# time=380 | BUBBLER | 64i=56a1d65fc64fe54c | 66o=18c72cecef2b2b6fa
+# time=390 | BUBBLER | 64i=8ebfcebb82bb4ffb | 66o=15a87597f193f9533
+# time=390 | DESCRAMBLER | 64i=5a87597f193f9533 | 64o=7878787878787878
+# time=400 | BUBBLER | 64i=c0ab5a01c0fe3a0d | 66o=00
+# time=410 | DESCRAMBLER | 64i=8ebfcebb82bb4ffb | 64o=00
+# time=410 | BUBBLER | 64i=6c7bf330b92d64c7 | 66o=18ebfcebb82bb4ffb
+# time=420 | BUBBLER | 64i=cf3e0b0a3fcff98 | 66o=1f02ad680703f8e83
+# time=420 | DESCRAMBLER | 64i=f02ad680703f8e83 | 64o=7878787878787878
+# time=430 | DESCRAMBLER | 64i=86c7bf330b92d64c | 64o=7878787878787878
+# time=430 | BUBBLER | 64i=c796830c3fd6c360 | 66o=186c7bf330b92d64c
+# time=440 | BUBBLER | 64i=f3fff0a1e0ffd0f | 66o=18033cf82c28ff3fe
+# time=440 | DESCRAMBLER | 64i=8033cf82c28ff3fe | 64o=7878787878787878
+# time=450 | DESCRAMBLER | 64i=fc796830c3fd6c3 | 64o=7878787878787878
+# time=450 | BUBBLER | 64i=5697c7c3fcfc360a | 66o=10fc796830c3fd6c3
+# time=460 | BUBBLER | 64i=feeee1d2d3c695a9 | 66o=18283cfffc28783ff
+# time=460 | DESCRAMBLER | 64i=8283cfffc28783ff | 64o=7878787878787878
+# time=470 | DESCRAMBLER | 64i=5a95697c7c3fcfc3 | 64o=7878787878787878
+# time=470 | BUBBLER | 64i=838f8fce8e826faf | 66o=15a95697c7c3fcfc3
+# time=480 | BUBBLER | 64i=3f0c6a0f55fdc07f | 66o=1bebffbbb874b4f1a
+# time=480 | DESCRAMBLER | 64i=bebffbbb874b4f1a | 64o=7878787878787878
+# time=490 | DESCRAMBLER | 64i=c07f838f8fce8e82 | 64o=7878787878787878
+# time=490 | BUBBLER | 64i=e83c2bfc3fb60f1d | 66o=1c07f838f8fce8e82
+# time=500 | BUBBLER | 64i=a00f0fe0f0d8fc3c | 66o=183c74fc31a83d57f
+# time=500 | DESCRAMBLER | 64i=83c74fc31a83d57f | 64o=7878787878787878
+# time=510 | DESCRAMBLER | 64i=8fc3ce83c2bfc3fb | 64o=7878787878787878
+# time=510 | BUBBLER | 64i=ffc787830f43f5a5 | 66o=18fc3ce83c2bfc3fb
+# time=520 | BUBBLER | 64i=e0f3f3f098283ff | 66o=10fd696803c3f83c3
+# time=520 | DESCRAMBLER | 64i=fd696803c3f83c3 | 64o=7878787878787878
+# time=530 | DESCRAMBLER | 64i=8283ffffc787830f | 64o=7878787878787878
+# time=530 | BUBBLER | 64i=30fc3d683700ff0e | 66o=18283ffffc787830f
+# time=540 | BUBBLER | 64i=f0a0f0ffdc3c783c | 66o=1c03fc38383cfcfc2
+# time=540 | DESCRAMBLER | 64i=c03fc38383cfcfc2 | 64o=7878787878787878
+# time=550 | DESCRAMBLER | 64i=c3c783c30fc3d683 | 64o=7878787878787878
+# time=550 | BUBBLER | 64i=3c3fc3c360f0f3f0 | 66o=1c3c783c30fc3d683
+# time=560 | BUBBLER | 64i=87879695a569697c | 66o=183c3cfc3c283c3ff
+# time=560 | DESCRAMBLER | 64i=83c3cfc3c283c3ff | 64o=7878787878787878
+# time=570 | DESCRAMBLER | 64i=a569697c3c3fc3c3 | 64o=7878787878787878
+# time=570 | BUBBLER | 64i=90909c672777777 | 66o=1a569697c3c3fc3c3
+# time=580 | BUBBLER | 64i=9b319b1d32cd0d0d | 66o=19c9ddddde1e1e5a5
+# time=580 | DESCRAMBLER | 64i=9c9ddddde1e1e5a5 | 64o=7878787878787878
+# time=590 | DESCRAMBLER | 64i=d32cd0d0d090909c | 64o=7878787878787878
+# time=590 | BUBBLER | 64i=144a54529a129b02 | 66o=1d32cd0d0d090909c
+# time=600 | BUBBLER | 64i=a01c51071447144b | 66o=14a684a6c0a6cc66c
+# time=600 | DESCRAMBLER | 64i=4a684a6c0a6cc66c | 64o=7878787878787878
+# time=610 | DESCRAMBLER | 64i=71447144b144a54 | 64o=7878787878787878
+# time=610 | BUBBLER | 64i=9129b4d3f5495fe3 | 66o=1071447144b144a54
+# time=620 | BUBBLER | 64i=48a9971f92ea730b | 66o=134fd5257f8e80714
+# time=620 | DESCRAMBLER | 64i=34fd5257f8e80714 | 64o=7878787878787878
+# time=630 | DESCRAMBLER | 64i=71f92ea730b9129b | 64o=7878787878787878
+# time=630 | BUBBLER | 64i=37a64c8248b98c7d | 66o=171f92ea730b9129b
+# time=640 | BUBBLER | 64i=de69fe0d77a6fe09 | 66o=1320922e631f522a6
+# time=640 | DESCRAMBLER | 64i=320922e631f522a6 | 64o=7878787878787878
+# time=650 | DESCRAMBLER | 64i=fe0d77a6fe0937a6 | 64o=7878787878787878
+# time=650 | BUBBLER | 64i=b9a6fd35ee6bfd35 | 66o=1fe0d77a6fe0937a6
+# time=660 | BUBBLER | 64i=d0d261bd12540b17 | 66o=1bf4d7b9aff4d779a
+# time=660 | DESCRAMBLER | 64i=bf4d7b9aff4d779a | 64o=7878787878787878
+# time=670 | DESCRAMBLER | 64i=261bd12540b17b9a | 64o=7878787878787878
+# time=670 | BUBBLER | 64i=256d9fa57410e7d | 66o=1261bd12540b17b9a
+# time=680 | BUBBLER | 64i=f958dba9114834ba | 66o=15b67e95d0439f743
+# time=680 | DESCRAMBLER | 64i=5b67e95d0439f743 | 64o=7878787878787878
+# time=690 | DESCRAMBLER | 64i=58dba9114834ba02 | 64o=7878787878787878
+# time=690 | BUBBLER | 64i=64637c944645d2b2 | 66o=158dba9114834ba02
+# time=700 | BUBBLER | 64i=954df28519008ac8 | 66o=118df25119174acbe
+# time=700 | DESCRAMBLER | 64i=18df25119174acbe | 64o=7878787878787878
+# time=710 | DESCRAMBLER | 64i=54df28519008ac86 | 64o=7878787878787878
+# time=710 | BUBBLER | 64i=66329f449bfd3b21 | 66o=154df28519008ac86
+# time=720 | BUBBLER | 64i=5dfddf853bdbcf73 | 66o=198ca7d126ff4ec86
+# time=720 | DESCRAMBLER | 64i=98ca7d126ff4ec86 | 64o=7878787878787878
+# time=730 | BUBBLER | 64i=6bc9f510d6bff969 | 66o=00
+# time=740 | DESCRAMBLER | 64i=5dfddf853bdbcf73 | 64o=00
+# time=740 | BUBBLER | 64i=d040ac59c27d1f3b | 66o=15dfddf853bdbcf73
+# time=750 | BUBBLER | 64i=e5403fab70c13460 | 66o=2daf27d4435affe5a
+# time=750 | DESCRAMBLER | 64i=daf27d4435affe5a | 64o=1e55dd33bb55dd33
+# time=760 | DESCRAMBLER | 64i=d040ac59c27d1f3 | 64o=bb55dd33bb55dd33
+# time=760 | BUBBLER | 64i=b4a978826ba3dea4 | 66o=20d040ac59c27d1f3
+# time=770 | BUBBLER | 64i=e00417778f775e1b | 66o=2939500feadc304d1
+# time=770 | DESCRAMBLER | 64i=939500feadc304d1 | 64o=bb55dd33bb55dd33
+# time=780 | DESCRAMBLER | 64i=1bb4a978826ba3de | 64o=bb55dd33bb55dd33
+# time=780 | BUBBLER | 64i=bea499e3e919199b | 66o=21bb4a978826ba3de
+# time=790 | BUBBLER | 64i=9dea9d17349ee0ab | 66o=266f80105dde3ddd7
+# time=790 | DESCRAMBLER | 64i=66f80105dde3ddd7 | 64o=bb55dd33bb55dd33
+# time=800 | DESCRAMBLER | 64i=abbea499e3e9191 | 64o=bb55dd33bb55dd33
+# time=800 | BUBBLER | 64i=ec40234c065d902b | 66o=20abbea499e3e9191
+# time=810 | BUBBLER | 64i=7daf867116b5cb68 | 66o=240ae77aa745cd27b
+# time=810 | DESCRAMBLER | 64i=40ae77aa745cd27b | 64o=bb55dd33bb55dd33
+# time=820 | DESCRAMBLER | 64i=cb68ec40234c065d | 64o=bb55dd33bb55dd33
+# time=820 | BUBBLER | 64i=d770901e9c616f7 | 66o=1cb68ec40234c065d
+# time=830 | BUBBLER | 64i=57cc4e64acd2cfad | 66o=185bddf6be19c45ad
+# time=830 | DESCRAMBLER | 64i=85bddf6be19c45ad | 64o=99bb000000000000
+# time=840 | DESCRAMBLER | 64i=2cfad0d770901e9c | 64o=7878787878787878
+# time=840 | BUBBLER | 64i=77286e100c6921b6 | 66o=12cfad0d770901e9c
+# time=850 | BUBBLER | 64i=ae6dd135794af9aa | 66o=1a486d95f313992b3
+# time=850 | DESCRAMBLER | 64i=a486d95f313992b3 | 64o=7878787878787878
+# time=860 | DESCRAMBLER | 64i=4af9aa77286e100c | 64o=7878787878787878
+# time=860 | BUBBLER | 64i=91671342e6c902eb | 66o=14af9aa77286e100c
+# time=870 | BUBBLER | 64i=c8aae47e14ca70ad | 66o=1b240baeb9b744d5e
+# time=870 | DESCRAMBLER | 64i=b240baeb9b744d5e | 64o=7878787878787878
+# time=880 | DESCRAMBLER | 64i=4ca70ad91671342e | 64o=7878787878787878
+# time=880 | BUBBLER | 64i=7d0c8ff677a18c6f | 66o=14ca70ad91671342e
+# time=890 | BUBBLER | 64i=e2df4c6900d56790 | 66o=1de8631bf22ab91f8
+# time=890 | DESCRAMBLER | 64i=de8631bf22ab91f8 | 64o=7878787878787878
+# time=900 | DESCRAMBLER | 64i=d567907d0c8ff6 | 64o=7878787878787878
+# time=900 | BUBBLER | 64i=e1356a4760e5440c | 66o=100d567907d0c8ff6
+# time=910 | BUBBLER | 64i=39fc55506b8773b0 | 66o=1d839510338b7d31a
+# time=910 | DESCRAMBLER | 64i=d839510338b7d31a | 64o=7878787878787878
+# time=920 | DESCRAMBLER | 64i=6b8773b0e1356a4 | 64o=7878787878787878
+# time=920 | BUBBLER | 64i=ca30a258a67b7f49 | 66o=106b8773b0e1356a4
+# time=930 | BUBBLER | 64i=25cb193ef323b6d1 | 66o=16299edfd24e7f155
+# time=930 | DESCRAMBLER | 64i=6299edfd24e7f155 | 64o=7878787878787878
+# time=940 | DESCRAMBLER | 64i=3ef323b6d1ca30a2 | 64o=7878787878787878
+# time=940 | BUBBLER | 64i=1bb956ad31a16b30 | 66o=13ef323b6d1ca30a2
+# time=950 | BUBBLER | 64i=172f1c9dbd22140e | 66o=1ab4c685acc0972c6
+# time=950 | DESCRAMBLER | 64i=ab4c685acc0972c6 | 64o=7878787878787878
+# time=960 | DESCRAMBLER | 64i=c9dbd22140e1bb95 | 64o=7878787878787878
+# time=960 | BUBBLER | 64i=d279783bc965245b | 66o=1c9dbd22140e1bb95
+# time=970 | BUBBLER | 64i=2561ba391b63355d | 66o=1e0ef2594916c5cbc
+# time=970 | DESCRAMBLER | 64i=e0ef2594916c5cbc | 64o=7878787878787878
+# time=980 | DESCRAMBLER | 64i=ba391b63355dd279 | 64o=7878787878787878
+# time=980 | BUBBLER | 64i=71151852ec916d45 | 66o=1ba391b63355dd279
+# time=990 | BUBBLER | 64i=e6d3bcd5342f8dbf | 66o=14614bb245b514958
+# time=990 | DESCRAMBLER | 64i=4614bb245b514958 | 64o=7878787878787878
+# time=1000 | DESCRAMBLER | 64i=3bcd5342f8dbf711 | 64o=7878787878787878
+# time=1000 | BUBBLER | 64i=3c76d0f456f02e50 | 66o=13bcd5342f8dbf711
+# time=1010 | DESCRAMBLER | 64i=db43d15bc0b9439b | 64o=7878787878787878
+#   9060.00ns INFO     cocotb.regression                  rx_tb.tb.rx_test.test_lock_and_single_frame passed
+#   9060.00ns INFO     cocotb.regression                  running rx_tb.tb.rx_test.test_back_to_back_frames (2/2)
+# time=9131 | BUBBLER | 64i=5929293030328282 | 66o=00
+# time=9141 | BUBBLER | 64i=faeddeed782d6699 | 66o=00
+# time=9151 | DESCRAMBLER | 64i=5929293030328282 | 64o=00
+# time=9151 | BUBBLER | 64i=c7f8ecf8eb28eba7 | 66o=15929293030328282
+# time=9161 | BUBBLER | 64i=f486a0395fe55fd8 | 66o=1febb77bb5e0b59a6
+# time=9161 | DESCRAMBLER | 64i=febb77bb5e0b59a6 | 64o=00
+# time=9171 | DESCRAMBLER | 64i=8c7f8ecf8eb28eba | 64o=7878787878787878
+# time=9171 | BUBBLER | 64i=83f2bfc6fb833753 | 66o=18c7f8ecf8eb28eba
+# time=9181 | BUBBLER | 64i=aa5b01f0ce3f09ce | 66o=14fd21a80e57f957f
+# time=9181 | DESCRAMBLER | 64i=4fd21a80e57f957f | 64o=7878787878787878
+# time=9191 | DESCRAMBLER | 64i=ce83f2bfc6fb8337 | 64o=7878787878787878
+# time=9191 | BUBBLER | 64i=7bfff0b87964f430 | 66o=1ce83f2bfc6fb8337
+# time=9201 | BUBBLER | 64i=f3e0e0a3f3ff9828 | 66o=10c2a96c07c338fc2
+# time=9201 | DESCRAMBLER | 64i=c2a96c07c338fc2 | 64o=7878787878787878
+# time=9211 | DESCRAMBLER | 64i=8287bfff0b87964f | 64o=7878787878787878
+# time=9211 | BUBBLER | 64i=297cf03fd683600f | 66o=18287bfff0b87964f
+# time=9221 | BUBBLER | 64i=477782879665a56d | 66o=1803fcf83828fcffe
+# time=9221 | DESCRAMBLER | 64i=803fcf83828fcffe | 64o=7878787878787878
+# time=9231 | DESCRAMBLER | 64i=a56d297cf03fd683 | 64o=7878787878787878
+# time=9231 | BUBBLER | 64i=a6f2f6c909c77277 | 66o=1a56d297cf03fd683
+# time=9241 | BUBBLER | 64i=1c8a13b8029b5867 | 66o=1dc9dd1dde0a1e599
+# time=9241 | DESCRAMBLER | 64i=dc9dd1dde0a1e599 | 64o=7878787878787878
+# time=9251 | DESCRAMBLER | 64i=b5867a6f2f6c909c | 64o=7878787878787878
+# time=9251 | BUBBLER | 64i=75847190b454d95 | 66o=1b5867a6f2f6c909c
+# time=9261 | BUBBLER | 64i=e0c51c0aed17fb54 | 66o=115365472284ee00a
+# time=9261 | DESCRAMBLER | 64i=15365472284ee00a | 64o=7878787878787878
+# time=9271 | DESCRAMBLER | 64i=17fb54075847190b | 64o=7878787878787878
+# time=9271 | BUBBLER | 64i=b86e9b0c6f55b6f | 66o=117fb54075847190b
+# time=9281 | BUBBLER | 64i=82b7b99c5b52eaa7 | 66o=1bd56dbf8314702bb
+# time=9281 | DESCRAMBLER | 64i=bd56dbf8314702bb | 64o=7878787878787878
+# time=9291 | DESCRAMBLER | 64i=b52eaa70b86e9b0c | 64o=7878787878787878
+# time=9291 | BUBBLER | 64i=d73e6fe714decdc | 66o=1b52eaa70b86e9b0c
+# time=9301 | BUBBLER | 64i=35ee5bfd4c379ac2 | 66o=1c537b3720adee671
+# time=9301 | DESCRAMBLER | 64i=c537b3720adee671 | 64o=7878787878787878
+# time=9311 | DESCRAMBLER | 64i=4c379ac20d73e6fe | 64o=7878787878787878
+# time=9311 | BUBBLER | 64i=d7b8fff53a1e6afc | 66o=14c379ac20d73e6fe
+# time=9321 | BUBBLER | 64i=2dd0c691bd565407 | 66o=14e879abf0d7b96ff
+# time=9321 | DESCRAMBLER | 64i=4e879abf0d7b96ff | 64o=7878787878787878
+# time=9331 | DESCRAMBLER | 64i=1bd565407d7b8fff | 64o=7878787878787878
+# time=9331 | BUBBLER | 64i=46025b49fa54410e | 66o=11bd565407d7b8fff
+# time=9341 | BUBBLER | 64i=3a60f9bd03bbf7cb | 66o=127e9510438b7431a
+# time=9341 | DESCRAMBLER | 64i=27e9510438b7431a | 64o=7878787878787878
+# time=9351 | DESCRAMBLER | 64i=bd03bbf7cb46025b | 64o=7878787878787878
+# time=9351 | BUBBLER | 64i=fd547601ec3e3d5a | 66o=1bd03bbf7cb46025b
+# time=9361 | BUBBLER | 64i=e0fedcfc742831bf | 66o=1807b0f8f568e983e
+# time=9361 | DESCRAMBLER | 64i=807b0f8f568e983e | 64o=7878787878787878
+# time=9371 | DESCRAMBLER | 64i=cfc742831bffd547 | 64o=7878787878787878
+# time=9371 | BUBBLER | 64i=c30f50f5a6f00f50 | 66o=1cfc742831bffd547
+# time=9381 | BUBBLER | 64i=3c394e96aabc387b | 66o=143d69bc03d4383fb
+# time=9381 | DESCRAMBLER | 64i=43d69bc03d4383fb | 64o=7878787878787878
+# time=9391 | DESCRAMBLER | 64i=4e96aabc387bc30f | 64o=7878787878787878
+# time=9391 | BUBBLER | 64i=a82605fffefe1e2e | 66o=14e96aabc387bc30f
+# time=9401 | BUBBLER | 64i=afdc03b83834fcfd | 66o=1817fffbf878b8f0e
+# time=9401 | DESCRAMBLER | 64i=817fffbf878b8f0e | 64o=7878787878787878
+# time=9411 | DESCRAMBLER | 64i=c03b83834fcfda82 | 64o=7878787878787878
+# time=9411 | BUBBLER | 64i=ff60f1e3f0c3a0f5 | 66o=1c03b83834fcfda82
+# time=9421 | BUBBLER | 64i=95e569657c3d7fc3 | 66o=183c78fc30e83d6bf
+# time=9421 | DESCRAMBLER | 64i=83c78fc30e83d6bf | 64o=7878787878787878
+# time=9431 | DESCRAMBLER | 64i=e569657c3d7fc3ff | 64o=7878787878787878
+# time=9431 | BUBBLER | 64i=a7e8dddd88787796 | 66o=1e569657c3d7fc3ff
+# time=9441 | BUBBLER | 64i=d8c72cecef2b2b6f | 66o=1fa3777621e1de5a5
+# time=9441 | DESCRAMBLER | 64i=fa3777621e1de5a5 | 64o=7878787878787878
+# time=9451 | DESCRAMBLER | 64i=8c72cecef2b2b6fa | 64o=7878787878787878
+# time=9451 | BUBBLER | 64i=56a1d65fc64fe54c | 66o=18c72cecef2b2b6fa
+# time=9461 | BUBBLER | 64i=8ebfcebb82bb4ffb | 66o=15a87597f193f9533
+# time=9461 | DESCRAMBLER | 64i=5a87597f193f9533 | 64o=7878787878787878
+# time=9471 | BUBBLER | 64i=c0ab5a01c0fe3a0d | 66o=00
+# time=9481 | DESCRAMBLER | 64i=8ebfcebb82bb4ffb | 64o=00
+# time=9481 | BUBBLER | 64i=6c7bf330b92d64c7 | 66o=18ebfcebb82bb4ffb
+# time=9491 | BUBBLER | 64i=cf3e0b0a3fcff98 | 66o=1f02ad680703f8e83
+# time=9491 | DESCRAMBLER | 64i=f02ad680703f8e83 | 64o=7878787878787878
+# time=9501 | DESCRAMBLER | 64i=86c7bf330b92d64c | 64o=7878787878787878
+# time=9501 | BUBBLER | 64i=c796830c3fd6c360 | 66o=186c7bf330b92d64c
+# time=9511 | BUBBLER | 64i=f3fff0a1e0ffd0f | 66o=18033cf82c28ff3fe
+# time=9511 | DESCRAMBLER | 64i=8033cf82c28ff3fe | 64o=7878787878787878
+# time=9521 | DESCRAMBLER | 64i=fc796830c3fd6c3 | 64o=7878787878787878
+# time=9521 | BUBBLER | 64i=5697c7c3fcfc360a | 66o=10fc796830c3fd6c3
+# time=9531 | BUBBLER | 64i=feeee1d2d3c695a9 | 66o=18283cfffc28783ff
+# time=9531 | DESCRAMBLER | 64i=8283cfffc28783ff | 64o=7878787878787878
+# time=9541 | DESCRAMBLER | 64i=5a95697c7c3fcfc3 | 64o=7878787878787878
+# time=9541 | BUBBLER | 64i=838f8fce8e826faf | 66o=15a95697c7c3fcfc3
+# time=9551 | BUBBLER | 64i=3f0c6a0f55fdc07f | 66o=1bebffbbb874b4f1a
+# time=9551 | DESCRAMBLER | 64i=bebffbbb874b4f1a | 64o=7878787878787878
+# time=9561 | DESCRAMBLER | 64i=c07f838f8fce8e82 | 64o=7878787878787878
+# time=9561 | BUBBLER | 64i=e83c2bfc3fb60f1d | 66o=1c07f838f8fce8e82
+# time=9571 | BUBBLER | 64i=a00f0fe0f0d8fc3c | 66o=183c74fc31a83d57f
+# time=9571 | DESCRAMBLER | 64i=83c74fc31a83d57f | 64o=7878787878787878
+# time=9581 | DESCRAMBLER | 64i=8fc3ce83c2bfc3fb | 64o=7878787878787878
+# time=9581 | BUBBLER | 64i=ffc787830f43f5a5 | 66o=18fc3ce83c2bfc3fb
+# time=9591 | BUBBLER | 64i=e0f3f3f098283ff | 66o=10fd696803c3f83c3
+# time=9591 | DESCRAMBLER | 64i=fd696803c3f83c3 | 64o=7878787878787878
+# time=9601 | DESCRAMBLER | 64i=8283ffffc787830f | 64o=7878787878787878
+# time=9601 | BUBBLER | 64i=30fc3d683700ff0e | 66o=18283ffffc787830f
+# time=9611 | BUBBLER | 64i=f0a0f0ffdc3c783c | 66o=1c03fc38383cfcfc2
+# time=9611 | DESCRAMBLER | 64i=c03fc38383cfcfc2 | 64o=7878787878787878
+# time=9621 | DESCRAMBLER | 64i=c3c783c30fc3d683 | 64o=7878787878787878
+# time=9621 | BUBBLER | 64i=3c3fc3c360f0f3f0 | 66o=1c3c783c30fc3d683
+# time=9631 | BUBBLER | 64i=87879695a569697c | 66o=183c3cfc3c283c3ff
+# time=9631 | DESCRAMBLER | 64i=83c3cfc3c283c3ff | 64o=7878787878787878
+# time=9641 | DESCRAMBLER | 64i=a569697c3c3fc3c3 | 64o=7878787878787878
+# time=9641 | BUBBLER | 64i=90909c672777777 | 66o=1a569697c3c3fc3c3
+# time=9651 | BUBBLER | 64i=9b319b1d32cd0d0d | 66o=19c9ddddde1e1e5a5
+# time=9651 | DESCRAMBLER | 64i=9c9ddddde1e1e5a5 | 64o=7878787878787878
+# time=9661 | DESCRAMBLER | 64i=d32cd0d0d090909c | 64o=7878787878787878
+# time=9661 | BUBBLER | 64i=144a54529a129b02 | 66o=1d32cd0d0d090909c
+# time=9671 | BUBBLER | 64i=a01c51071447144b | 66o=14a684a6c0a6cc66c
+# time=9671 | DESCRAMBLER | 64i=4a684a6c0a6cc66c | 64o=7878787878787878
+# time=9681 | DESCRAMBLER | 64i=71447144b144a54 | 64o=7878787878787878
+# time=9681 | BUBBLER | 64i=9129b4d3f5495fe3 | 66o=1071447144b144a54
+# time=9691 | BUBBLER | 64i=48a9971f92ea730b | 66o=134fd5257f8e80714
+# time=9691 | DESCRAMBLER | 64i=34fd5257f8e80714 | 64o=7878787878787878
+# time=9701 | DESCRAMBLER | 64i=71f92ea730b9129b | 64o=7878787878787878
+# time=9701 | BUBBLER | 64i=37a64c8248b98c7d | 66o=171f92ea730b9129b
+# time=9711 | BUBBLER | 64i=de69fe0d77a6fe09 | 66o=1320922e631f522a6
+# time=9711 | DESCRAMBLER | 64i=320922e631f522a6 | 64o=7878787878787878
+# time=9721 | DESCRAMBLER | 64i=fe0d77a6fe0937a6 | 64o=7878787878787878
+# time=9721 | BUBBLER | 64i=b9a6fd35ee6bfd35 | 66o=1fe0d77a6fe0937a6
+# time=9731 | BUBBLER | 64i=d0d261bd12540b17 | 66o=1bf4d7b9aff4d779a
+# time=9731 | DESCRAMBLER | 64i=bf4d7b9aff4d779a | 64o=7878787878787878
+# time=9741 | DESCRAMBLER | 64i=261bd12540b17b9a | 64o=7878787878787878
+# time=9741 | BUBBLER | 64i=256d9fa57410e7d | 66o=1261bd12540b17b9a
+# time=9751 | BUBBLER | 64i=f958dba9114834ba | 66o=15b67e95d0439f743
+# time=9751 | DESCRAMBLER | 64i=5b67e95d0439f743 | 64o=7878787878787878
+# time=9761 | DESCRAMBLER | 64i=58dba9114834ba02 | 64o=7878787878787878
+# time=9761 | BUBBLER | 64i=64637c944645d2b2 | 66o=158dba9114834ba02
+# time=9771 | BUBBLER | 64i=954df28519008ac8 | 66o=118df25119174acbe
+# time=9771 | DESCRAMBLER | 64i=18df25119174acbe | 64o=7878787878787878
+# time=9781 | DESCRAMBLER | 64i=54df28519008ac86 | 64o=7878787878787878
+# time=9781 | BUBBLER | 64i=66329f449bfd3b21 | 66o=154df28519008ac86
+# time=9791 | BUBBLER | 64i=c637954583f8e442 | 66o=198ca7d126ff4ec86
+# time=9791 | DESCRAMBLER | 64i=98ca7d126ff4ec86 | 64o=7878787878787878
+# time=9801 | BUBBLER | 64i=6b97a3cfaa513be1 | 66o=00
+# time=9811 | DESCRAMBLER | 64i=c637954583f8e442 | 64o=00
+# time=9811 | BUBBLER | 64i=2b7ce7d0dacfdedb | 66o=1c637954583f8e442
+# time=9821 | BUBBLER | 64i=ee8a151ff5c40ef | 66o=2dae5e8f3ea944ef8
+# time=9821 | DESCRAMBLER | 64i=dae5e8f3ea944ef8 | 64o=1e008040c020a060
+# time=9831 | DESCRAMBLER | 64i=f2b7ce7d0dacfded | 64o=e0109050d030b070
+# time=9831 | BUBBLER | 64i=397e94f07f9d4a90 | 66o=2f2b7ce7d0dacfded
+# time=9841 | BUBBLER | 64i=c2e761578f0a860f | 66o=2403ba28547fd7103
+# time=9841 | DESCRAMBLER | 64i=403ba28547fd7103 | 64o=f0088848c828a868
+# time=9851 | DESCRAMBLER | 64i=f397e94f07f9d4a | 64o=e8189858d838b878
+# time=9851 | BUBBLER | 64i=ab16835ff4922b5d | 66o=20f397e94f07f9d4a
+# time=9861 | BUBBLER | 64i=422c0e16325365e7 | 66o=2d770b9d855e3c2a1
+# time=9861 | DESCRAMBLER | 64i=d770b9d855e3c2a1 | 64o=f8048444c424a464
+# time=9871 | DESCRAMBLER | 64i=5e7ab16835ff4922 | 64o=e4149454d434b474
+# time=9871 | BUBBLER | 64i=f00a3101e53088bd | 66o=25e7ab16835ff4922
+# time=9881 | BUBBLER | 64i=9b5304c14ec988ca | 66o=222f508b03858c94d
+# time=9881 | DESCRAMBLER | 64i=22f508b03858c94d | 64o=f40c8c4ccc2cac6c
+# time=9891 | DESCRAMBLER | 64i=88caf00a3101e530 | 64o=ec1c9c5cdc3cbc7c
+# time=9891 | BUBBLER | 64i=8559f086d96433b0 | 66o=188caf00a3101e530
+# time=9901 | BUBBLER | 64i=1d015391de9ab1f7 | 66o=10cec26d4c13053b2
+# time=9901 | DESCRAMBLER | 64i=cec26d4c13053b2 | 64o=99fc000000000000
+# time=9911 | DESCRAMBLER | 64i=ab1f78559f086d96 | 64o=7878787878787878
+# time=9911 | BUBBLER | 64i=5207c8e7024545f9 | 66o=1ab1f78559f086d96
+# time=9921 | BUBBLER | 64i=b861d3f7f96b37fc | 66o=11517e474054e477a
+# time=9921 | DESCRAMBLER | 64i=1517e474054e477a | 64o=7878787878787878
+# time=9931 | DESCRAMBLER | 64i=6b37fc5207c8e702 | 64o=7878787878787878
+# time=9931 | BUBBLER | 64i=c581691f4401d847 | 66o=16b37fc5207c8e702
+# time=9941 | BUBBLER | 64i=ce3662f861295ec0 | 66o=1007611ee1874fdfe
+# time=9941 | DESCRAMBLER | 64i=7611ee1874fdfe | 64o=7878787878787878
+# time=9951 | DESCRAMBLER | 64i=1295ec0c581691f4 | 64o=1e7bb57df77bb57d
+# time=9951 | BUBBLER | 64i=4e1402549ece05e8 | 66o=21295ec0c581691f4
+# time=9961 | BUBBLER | 64i=92afc6a474533eb | 66o=27b3817a338d98be1
+# time=9961 | DESCRAMBLER | 64i=7b3817a338d98be1 | 64o=f77bb57df77bb57d
+# time=9971 | DESCRAMBLER | 64i=474533eb4e140254 | 64o=f77bb57df77bb57d
+# time=9971 | BUBBLER | 64i=e5f0759aaf25c2c8 | 66o=2474533eb4e140254
+# time=9981 | BUBBLER | 64i=2d643aa5044307b7 | 66o=2abc970b2024abf1a
+# time=9981 | DESCRAMBLER | 64i=abc970b2024abf1a | 64o=f77bb57df77bb57d
+# time=9991 | DESCRAMBLER | 64i=5044307b7e5f0759 | 64o=f77bb57df77bb57d
+# time=9991 | BUBBLER | 64i=14bd8499cfc578ea | 66o=25044307b7e5f0759
+# time=10001 | BUBBLER | 64i=3fae4ab89ca3ede5 | 66o=2673f15e3a8b590ea
+# time=10001 | DESCRAMBLER | 64i=673f15e3a8b590ea | 64o=f77bb57df77bb57d
+# time=10011 | DESCRAMBLER | 64i=b89ca3ede514bd84 | 64o=f77bb57df77bb57d
+# time=10011 | BUBBLER | 64i=7fd19a01ca9dfb17 | 66o=2b89ca3ede514bd84
+# time=10021 | BUBBLER | 64i=6576d6c6152d54f7 | 66o=28072a77ec5cfeb92
+# time=10021 | DESCRAMBLER | 64i=8072a77ec5cfeb92 | 64o=f77bb57df77bb57d
+# time=10031 | DESCRAMBLER | 64i=6c6152d54f77fd19 | 64o=f77bb57df77bb57d
+# time=10031 | BUBBLER | 64i=63366f748ef838d1 | 66o=16c6152d54f77fd19
+# time=10041 | BUBBLER | 64i=dda1661c0d25c6f1 | 66o=1bdd23be0e34595db
+# time=10041 | DESCRAMBLER | 64i=bdd23be0e34595db | 64o=99f7000000000000
+# time=10051 | DESCRAMBLER | 64i=661c0d25c6f16336 | 64o=7878787878787878
+# time=10051 | BUBBLER | 64i=931448cad38be957 | 66o=1661c0d25c6f16336
+# time=10061 | BUBBLER | 64i=57dc4c1f353a6d8c | 66o=11232b4e2fa55f768
+# time=10061 | DESCRAMBLER | 64i=1232b4e2fa55f768 | 64o=7878787878787878
+# time=10071 | DESCRAMBLER | 64i=c4c1f353a6d8c931 | 64o=7878787878787878
+# time=10071 | BUBBLER | 64i=de57d277fc967fa4 | 66o=1c4c1f353a6d8c931
+# time=10081 | BUBBLER | 64i=f2a867a07571f606 | 66o=15f49dff259fe915f
+# time=10081 | DESCRAMBLER | 64i=5f49dff259fe915f | 64o=7878787878787878
+# time=10091 | DESCRAMBLER | 64i=a867a07571f606de | 64o=1effffffffffffff
+# time=10091 | BUBBLER | 64i=7be975fc461fb35d | 66o=2a867a07571f606de
+# time=10101 | BUBBLER | 64i=a800e07fedf7fc9e | 66o=2fa5d7f1187ecd77c
+# time=10101 | DESCRAMBLER | 64i=fa5d7f1187ecd77c | 64o=ffffffffffffffff
+# time=10111 | DESCRAMBLER | 64i=800e07fedf7fc9e7 | 64o=ffffffffffffffff
+# time=10111 | BUBBLER | 64i=96888c4666b35542 | 66o=2800e07fedf7fc9e7
+# time=10121 | BUBBLER | 64i=1d3dbd8b939634b4 | 66o=25a2231199acd550a
+# time=10121 | DESCRAMBLER | 64i=5a2231199acd550a | 64o=ffffffffffffffff
+# time=10131 | BUBBLER | 64i=881cd67da8579072 | 66o=00
+# time=10141 | DESCRAMBLER | 64i=1d3dbd8b939634b4 | 64o=00
+# time=10141 | BUBBLER | 64i=7dbb27932974a849 | 66o=21d3dbd8b939634b4
+# time=10151 | BUBBLER | 64i=acd650a850e070eb | 66o=26207359f6a15e41c
+# time=10151 | DESCRAMBLER | 64i=6207359f6a15e41c | 64o=ffffffffffffffff
+# time=10161 | DESCRAMBLER | 64i=b7dbb27932974a84 | 64o=ffffffffffffffff
+# time=10161 | BUBBLER | 64i=4f2792e9748c4689 | 66o=2b7dbb27932974a84
+# time=10171 | BUBBLER | 64i=6d9c6495b5241282 | 66o=226b35942a14381c3
+# time=10171 | DESCRAMBLER | 64i=26b35942a14381c3 | 64o=ffffffffffffffff
+# time=10181 | DESCRAMBLER | 64i=824f2792e9748c46 | 64o=ffffffffffffffff
+# time=10181 | BUBBLER | 64i=ac1b20bd29e38a17 | 66o=2824f2792e9748c46
+# time=10191 | BUBBLER | 64i=da77c9167a4c65c4 | 66o=285db6719256d4904
+# time=10191 | DESCRAMBLER | 64i=85db6719256d4904 | 64o=ffffffffffffffff
+# time=10201 | DESCRAMBLER | 64i=5c4ac1b20bd29e38 | 64o=ffffffffffffffff
+# time=10201 | BUBBLER | 64i=a7c6017b5fc7887e | 66o=25c4ac1b20bd29e38
+# time=10211 | BUBBLER | 64i=f546ee034ce7e8a | 66o=221fb69df2459e931
+# time=10211 | DESCRAMBLER | 64i=21fb69df2459e931 | 64o=ffffffffffffffff
+# time=10221 | DESCRAMBLER | 64i=7e8aa7c6017b5fc7 | 64o=ffffffffffffffff
+# time=10221 | BUBBLER | 64i=aead20c089eaf997 | 66o=27e8aa7c6017b5fc7
+# time=10231 | BUBBLER | 64i=3f0d04117230ce4 | 66o=2be65c3d51bb80d33
+# time=10231 | DESCRAMBLER | 64i=be65c3d51bb80d33 | 64o=ffffffffffffffff
+# time=10241 | DESCRAMBLER | 64i=30ce4aead20c089e | 64o=ffffffffffffffff
+# time=10241 | BUBBLER | 64i=94cf9c528d723fbb | 66o=230ce4aead20c089e
+# time=10251 | BUBBLER | 64i=d54f59e3012f1380 | 66o=1c8feec0fc341045c
+# time=10251 | DESCRAMBLER | 64i=c8feec0fc341045c | 64o=ffffffffffffffff
+# time=10261 | DESCRAMBLER | 64i=2f138094cf9c528d | 64o=99ff000000000000
+# time=10261 | BUBBLER | 64i=aea598b95b46cf3 | 66o=12f138094cf9c528d
+# time=10271 | BUBBLER | 64i=42b98d9d5222e71e | 66o=16d1b3cf553d678c0
+# time=10271 | DESCRAMBLER | 64i=6d1b3cf553d678c0 | 64o=7878787878787878
+# time=10281 | DESCRAMBLER | 64i=222e71e0aea598b9 | 64o=7878787878787878
+# time=10281 | BUBBLER | 64i=8826fe014de9ec82 | 66o=1222e71e0aea598b9
+# time=10291 | BUBBLER | 64i=ff78ce05a2cfa9f2 | 66o=137a7b2090ae63675
+# time=10291 | DESCRAMBLER | 64i=37a7b2090ae63675 | 64o=7878787878787878
+# time=10301 | DESCRAMBLER | 64i=a2cfa9f28826fe01 | 64o=7878787878787878
+# time=10301 | BUBBLER | 64i=b4f2b5a64165f224 | 66o=1a2cfa9f28826fe01
+# time=10311 | BUBBLER | 64i=2f6c76deaa14479b | 66o=190597c893fde3381
+# time=10311 | DESCRAMBLER | 64i=90597c893fde3381 | 64o=7878787878787878
+# time=10321 | DESCRAMBLER | 64i=eaa14479bb4f2b5a | 64o=7878787878787878
+# time=10321 | BUBBLER | 64i=e07ac563dcdba7b7 | 66o=1eaa14479bb4f2b5a
+# time=10331 | BUBBLER | 64i=a42e31364ec22ab3 | 66o=18f736e9edcbdb1db
+# time=10331 | DESCRAMBLER | 64i=8f736e9edcbdb1db | 64o=7878787878787878
+# time=10341 | DESCRAMBLER | 64i=364ec22ab3e07ac5 | 64o=7878787878787878
+# time=10341 | BUBBLER | 64i=bbb1652d50a96101 | 66o=1364ec22ab3e07ac5
+# time=10351 | BUBBLER | 64i=90d09abdbf841470 | 66o=14b542a5840690b8c
+# time=10351 | DESCRAMBLER | 64i=4b542a5840690b8c | 64o=7878787878787878
+# time=10361 | DESCRAMBLER | 64i=abdbf841470bbb16 | 64o=7878787878787878
+# time=10361 | BUBBLER | 64i=e70e6545af1d0ef3 | 66o=1abdbf841470bbb16
+# time=10371 | BUBBLER | 64i=826d199d552df870 | 66o=19516bc743bce4342
+# time=10371 | DESCRAMBLER | 64i=9516bc743bce4342 | 64o=7878787878787878
+# time=10381 | DESCRAMBLER | 64i=199d552df870e70e | 64o=7878787878787878
+# time=10381 | BUBBLER | 64i=c9349373454742e2 | 66o=1199d552df870e70e
+# time=10391 | BUBBLER | 64i=b810e3586a26f39e | 66o=124dcd151d0b8a09b
+# time=10391 | DESCRAMBLER | 64i=24dcd151d0b8a09b | 64o=7878787878787878
+# time=10401 | DESCRAMBLER | 64i=e3586a26f39ec93 | 64o=7878787878787878
+# time=10401 | BUBBLER | 64i=33686cb26abc8a1d | 66o=10e3586a26f39ec93
+# time=10411 | BUBBLER | 64i=45f05ca689d93e21 | 66o=1a1b2c9aaf22876e0
+# time=10411 | DESCRAMBLER | 64i=a1b2c9aaf22876e0 | 64o=7878787878787878
+# time=10421 | DESCRAMBLER | 64i=f05ca689d93e2133 | 64o=7878787878787878
+# time=10421 | BUBBLER | 64i=a68e49e733bc8b52 | 66o=1f05ca689d93e2133
+# time=10431 | BUBBLER | 64i=1263cc123d3b1c0c | 66o=1a39279ccef22d491
+# time=10431 | DESCRAMBLER | 64i=a39279ccef22d491 | 64o=7878787878787878
+# time=10441 | DESCRAMBLER | 64i=263cc123d3b1c0ca | 64o=7878787878787878
+# time=10441 | BUBBLER | 64i=4b40783de965825b | 66o=1263cc123d3b1c0ca
+# time=10451 | BUBBLER | 64i=c1d1a3a0a9c99822 | 66o=12d01e0f7a596096c
+# time=10451 | DESCRAMBLER | 64i=2d01e0f7a596096c | 64o=7878787878787878
+# time=10461 | BUBBLER | 64i=bc257258e7708c85 | 66o=00
+# time=10471 | DESCRAMBLER | 64i=c1d1a3a0a9c99822 | 64o=00
+# time=10471 | BUBBLER | 64i=ee4eeb554ba785b5 | 66o=1c1d1a3a0a9c99822
+# time=10481 | BUBBLER | 64i=a027dfe767e37b58 | 66o=16f095c9639dc2321
+# time=10481 | DESCRAMBLER | 64i=6f095c9639dc2321 | 64o=7878787878787878
+# time=10491 | DESCRAMBLER | 64i=8ee4eeb554ba785b | 64o=7878787878787878
+#  18131.00ns INFO     cocotb.regression                  rx_tb.tb.rx_test.test_back_to_back_frames passed
+#  18131.00ns INFO     cocotb.regression                  *****************************************************************************************************
+#                                                         ** TEST                                         STATUS  SIM TIME (ns)  REAL TIME (s)  RATIO (ns/s) **
+#                                                         *****************************************************************************************************
+#                                                         ** rx_tb.tb.rx_test.test_lock_and_single_frame   PASS        9060.00           0.11      84957.14  **
+#                                                         ** rx_tb.tb.rx_test.test_back_to_back_frames     PASS        9070.00           0.11      83437.16  **
+#                                                         *****************************************************************************************************
+#                                                         ** TESTS=2 PASS=2 FAIL=0 SKIP=0                             18131.00           0.22      82811.28  **
+#                                                         *****************************************************************************************************
+# ** Note: $finish    : /home/svd5397/Chip_Team_2026/ChipTeam2026/descrambler/rtl/descrambler.sv(67)
+#    Time: 18131 ns  Iteration: 2  Instance: /rx_top File: /home/svd5397/Chip_Team_2026/ChipTeam2026/rx_tb/rtl/rx_top.sv
+# End time: 21:05:40 on Apr 19,2026, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 1

@@ -1,0 +1,7 @@
+<testsuites name="results">
+  <testsuite name="all" package="all">
+    <property name="random_seed" value="1776650740" />
+    <testcase name="test_lock_and_single_frame" classname="rx_tb.tb.rx_test" file="/home/svd5397/Chip_Team_2026/ChipTeam2026/rx_tb/tb/rx_test.py" lineno="65" time="0.10664200782775879" sim_time_ns="9060.0" ratio_time="84957.14010404906" />
+    <testcase name="test_back_to_back_frames" classname="rx_tb.tb.rx_test" file="/home/svd5397/Chip_Team_2026/ChipTeam2026/rx_tb/tb/rx_test.py" lineno="79" time="0.1087045669555664" sim_time_ns="9070.0" ratio_time="83437.15681887968" />
+  </testsuite>
+</testsuites>
