@@ -2,7 +2,7 @@ import cocotb
 import random
 from cocotb.triggers import RisingEdge
 
-from tx_fifo.tb.tx_fifo_test_base import TxFifoTestBase
+from tx_fifo_test_base import TxFifoTestBase
 from tb_utils.tb_common import initialize_tb
 
 

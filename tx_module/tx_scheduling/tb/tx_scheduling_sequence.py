@@ -1,6 +1,6 @@
 from cocotb.types import Logic, LogicArray
 
-from tx_scheduling.tb.tx_scheduling_sequence_item import TxSchedulingSequenceItem
+from tx_scheduling_sequence_item import TxSchedulingSequenceItem
 from tb_utils.generic_sequence import GenericSequence
 
 

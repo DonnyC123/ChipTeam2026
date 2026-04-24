@@ -67,7 +67,7 @@ def test_tx_scheduling():
 
         sim.test(
             hdl_toplevel="tx_scheduling",
-            test_module="tx_scheduling.tb.tx_scheduling_test",
+            test_module="tx_scheduling_test",
             waves=waves,
             test_args=modelsim_sim_args,
             extra_env={

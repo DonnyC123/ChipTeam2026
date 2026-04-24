@@ -1,7 +1,7 @@
 import cocotb
 import random
 
-from tx_scheduling.tb.tx_scheduling_test_base import TxSchedulingTestBase
+from tx_scheduling_test_base import TxSchedulingTestBase
 from tb_utils.tb_common import initialize_tb
 
 

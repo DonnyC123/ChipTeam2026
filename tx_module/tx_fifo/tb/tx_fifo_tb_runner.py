@@ -46,7 +46,7 @@ def test_tx_fifo():
     waves = os.environ.get("COCOTB_WAVES", "1") != "0"
     sim.test(
         hdl_toplevel="tx_fifo",
-        test_module="tx_fifo.tb.tx_fifo_test",
+        test_module="tx_fifo_test",
         waves=waves,
         test_args=modelsim_sim_args,
         extra_env={

@@ -1,9 +1,9 @@
 from functools import partial
 
-from tx_fifo.tb.tx_fifo_model import TxFifoModel
-from tx_fifo.tb.tx_fifo_sequence import TxFifoSequence
-from tx_fifo.tb.tx_fifo_sequence_item import TxFifoSequenceItem
-from tx_fifo.tb.tx_fifo_out_transaction import TxFifoOutTransaction
+from tx_fifo_model import TxFifoModel
+from tx_fifo_sequence import TxFifoSequence
+from tx_fifo_sequence_item import TxFifoSequenceItem
+from tx_fifo_out_transaction import TxFifoOutTransaction
 
 from tb_utils.generic_checker import GenericChecker
 from tb_utils.generic_drivers import GenericDriver

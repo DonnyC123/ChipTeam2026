@@ -2,10 +2,10 @@ from functools import partial
 
 from cocotb.triggers import FallingEdge, ReadOnly
 
-from tx_scheduling.tb.tx_scheduling_model import TxSchedulingModel
-from tx_scheduling.tb.tx_scheduling_sequence import TxSchedulingSequence
-from tx_scheduling.tb.tx_scheduling_sequence_item import TxSchedulingSequenceItem
-from tx_scheduling.tb.tx_scheduling_out_transaction import TxSchedulingOutTransaction
+from tx_scheduling_model import TxSchedulingModel
+from tx_scheduling_sequence import TxSchedulingSequence
+from tx_scheduling_sequence_item import TxSchedulingSequenceItem
+from tx_scheduling_out_transaction import TxSchedulingOutTransaction
 
 from tb_utils.generic_checker import GenericChecker
 from tb_utils.generic_drivers import GenericDriver
