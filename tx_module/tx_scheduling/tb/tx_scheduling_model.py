@@ -11,6 +11,8 @@ class TxSchedulingModel(GenericModel):
 
     def __init__(self, num_queues: int = 4, max_burst_beats: int = 256):
         super().__init__()
+        if num_queues < 1:
+            raise ValueError("num_queues must be >= 1")
         if max_burst_beats < 1:
             raise ValueError("max_burst_beats must be >= 1")
         self.num_queues = num_queues
@@ -20,30 +22,32 @@ class TxSchedulingModel(GenericModel):
         self.queue_sel = 0
         self.burst_cnt = 0
 
-    def _rr_next(self, q_valid: int):
+    def _rr_next(self, q_valid: int, q_packet_ready: int):
         """Round-robin scan from last_served+1, return (found, queue_id)."""
+        eligible = q_valid & q_packet_ready
         for i in range(self.num_queues):
             cand = (self.last_served + 1 + i) % self.num_queues
-            if q_valid & (1 << cand):
+            if eligible & (1 << cand):
                 return True, cand
         return False, 0
 
     async def process_notification(self, notification):
         q_valid = notification.get("q_valid", 0)
         q_last = notification.get("q_last", 0)
+        q_packet_ready = notification.get("q_packet_ready", q_valid)
         fifo_full = notification.get("fifo_full", False)
         fifo_grant = notification.get("fifo_grant", True)
 
         if self.state == "IDLE":
             if not fifo_full:
-                found, nxt = self._rr_next(q_valid)
+                found, nxt = self._rr_next(q_valid, q_packet_ready)
                 if found:
                     read_en = 1 if fifo_grant else 0
                     await self.expected_queue.put((nxt, read_en))
 
                     if fifo_grant:
                         is_last = bool(q_last & (1 << nxt))
-                        if is_last:
+                        if is_last or self.max_burst_beats == 1:
                             self.last_served = nxt
                             self.burst_cnt = 0
                         else:
@@ -53,18 +57,26 @@ class TxSchedulingModel(GenericModel):
 
         elif self.state == "SERVING":
             q = self.queue_sel
-            if not fifo_full and (q_valid & (1 << q)):
-                read_en = 1 if fifo_grant else 0
-                await self.expected_queue.put((q, read_en))
+            if fifo_full:
+                return
 
-                if fifo_grant:
-                    if q_last & (1 << q):
-                        self.state = "IDLE"
-                        self.last_served = q
-                        self.burst_cnt = 0
-                    elif self.burst_cnt == (self.max_burst_beats - 1):
-                        self.state = "IDLE"
-                        self.last_served = q
-                        self.burst_cnt = 0
-                    else:
-                        self.burst_cnt += 1
+            if not (q_valid & (1 << q)):
+                self.state = "IDLE"
+                self.last_served = q
+                self.burst_cnt = 0
+                return
+
+            read_en = 1 if fifo_grant else 0
+            await self.expected_queue.put((q, read_en))
+
+            if fifo_grant:
+                if q_last & (1 << q):
+                    self.state = "IDLE"
+                    self.last_served = q
+                    self.burst_cnt = 0
+                elif self.burst_cnt == (self.max_burst_beats - 1):
+                    self.state = "IDLE"
+                    self.last_served = q
+                    self.burst_cnt = 0
+                else:
+                    self.burst_cnt += 1

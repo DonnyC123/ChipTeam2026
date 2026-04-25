@@ -14,14 +14,19 @@ class TxSchedulingSequence(GenericSequence):
         self,
         q_valid=0,
         q_last=0,
+        q_packet_ready=None,
         fifo_full=False,
         fifo_grant=True,
     ):
         """Drive one scheduler cycle and notify model."""
+        if q_packet_ready is None:
+            q_packet_ready = q_valid
+
         await self.notify_subscribers(
             {
                 "q_valid": q_valid,
                 "q_last": q_last,
+                "q_packet_ready": q_packet_ready,
                 "fifo_full": fifo_full,
                 "fifo_grant": fifo_grant,
             }
@@ -30,6 +35,7 @@ class TxSchedulingSequence(GenericSequence):
             TxSchedulingSequenceItem(
                 q_valid_i=LogicArray.from_unsigned(q_valid, _num_queues()),
                 q_last_i=LogicArray.from_unsigned(q_last, _num_queues()),
+                q_packet_ready_i=LogicArray.from_unsigned(q_packet_ready, _num_queues()),
                 fifo_full_i=Logic("1" if fifo_full else "0"),
                 fifo_grant_i=Logic("1" if fifo_grant else "0"),
             )

@@ -42,6 +42,7 @@ def test_tx_subsystem():
     sim = get_runner("questa")
 
     rtl_parameters = {
+        "FIFO_DEPTH": 64,
         "MAX_BURST_BEATS": 256,
     }
 
@@ -64,7 +65,8 @@ def test_tx_subsystem():
         extra_env={
             "TOPLEVEL_LANG": "verilog",
             "PYTHONPATH": pythonpath,
-            "TX_SUBSYSTEM_MAX_BURST_BEATS": str(rtl_parameters["MAX_BURST_BEATS"]),
+            "TX_SUBSYSTEM_FIFO_DEPTH": str(rtl_parameters["FIFO_DEPTH"]),
+                "TX_SUBSYSTEM_MAX_BURST_BEATS": str(rtl_parameters["MAX_BURST_BEATS"]),
         },
     )
 

@@ -1,5 +1,5 @@
 module tx_subsystem #(
-    parameter int FIFO_DEPTH      = 32,
+    parameter int FIFO_DEPTH      = 64,
     parameter int NUM_QUEUES      = 4,
     parameter int MAX_BURST_BEATS = 256
 ) (
@@ -18,12 +18,14 @@ module tx_subsystem #(
   logic [PCS_DATA_W-1:0]  queue_pcs_data[NUM_QUEUES];
   logic [PCS_VALID_W-1:0] queue_pcs_valid[NUM_QUEUES];
   logic                   queue_pcs_last[NUM_QUEUES];
+  logic                   queue_packet_ready[NUM_QUEUES];
   logic                   queue_empty[NUM_QUEUES];
   logic                   queue_wr_en[NUM_QUEUES];
   logic                   queue_read[NUM_QUEUES];
   logic [NUM_QUEUES-1:0]  queue_sched_grant;
   logic [NUM_QUEUES-1:0]  sched_q_valid;
   logic [NUM_QUEUES-1:0]  sched_q_last;
+  logic [NUM_QUEUES-1:0]  sched_q_packet_ready;
 
   logic             sched_read_en;
   logic [QID_W-1:0] sched_queue_sel;
@@ -63,30 +65,35 @@ module tx_subsystem #(
   // Internal scheduling view:
   // - q_valid_i[q]: queue q has at least one beat available.
   // - q_last_i[q]:  the CURRENT head beat in queue q is end-of-packet.
+  // - q_packet_ready_i[q]: queue q has a complete packet buffered. The scheduler
+  //   uses this only when selecting a new queue from IDLE, so frames are not
+  //   started before their tail has arrived.
   generate
     for (genvar q = 0; q < NUM_QUEUES; q++) begin : gen_queue_bank
-      assign queue_wr_en[q]   = axis_accept && (s_axis_dma_if.tdest == QID_W'(q));
-      assign sched_q_valid[q] = !queue_empty[q];
-      assign sched_q_last[q]  = (!queue_empty[q]) && queue_pcs_last[q];
-      assign queue_read[q]    = sched_read_en && (sched_queue_sel == QID_W'(q));
+      assign queue_wr_en[q]          = axis_accept && (s_axis_dma_if.tdest == QID_W'(q));
+      assign sched_q_valid[q]        = !queue_empty[q];
+      assign sched_q_last[q]         = (!queue_empty[q]) && queue_pcs_last[q];
+      assign sched_q_packet_ready[q] = queue_packet_ready[q];
+      assign queue_read[q]           = sched_read_en && (sched_queue_sel == QID_W'(q));
 
       tx_fifo #(
           .DEPTH        (FIFO_DEPTH)
       ) tx_fifo_q (
-          .clk          (clk),
-          .rst          (rst),
-          .dma_data_i   (s_axis_dma_if.tdata),
-          .dma_valid_i  (s_axis_dma_if.tkeep),
-          .dma_last_i   (s_axis_dma_if.tlast),
-          .dma_wr_en_i  (queue_wr_en[q]),
-          .pcs_data_o   (queue_pcs_data[q]),
-          .pcs_valid_o  (queue_pcs_valid[q]),
-          .pcs_last_o   (queue_pcs_last[q]),
-          .pcs_read_i   (queue_read[q]),
-          .empty_o      (queue_empty[q]),
-          .full_o       (),
-          .overflow_o   (),
-          .sched_req_i  (1'b1),
+          .clk           (clk),
+          .rst           (rst),
+          .dma_data_i    (s_axis_dma_if.tdata),
+          .dma_valid_i   (s_axis_dma_if.tkeep),
+          .dma_last_i    (s_axis_dma_if.tlast),
+          .dma_wr_en_i   (queue_wr_en[q]),
+          .pcs_data_o    (queue_pcs_data[q]),
+          .pcs_valid_o   (queue_pcs_valid[q]),
+          .pcs_last_o    (queue_pcs_last[q]),
+          .packet_ready_o(queue_packet_ready[q]),
+          .pcs_read_i    (queue_read[q]),
+          .empty_o       (queue_empty[q]),
+          .full_o        (),
+          .overflow_o    (),
+          .sched_req_i   (1'b1),
           .sched_grant_o (queue_sched_grant[q])
       );
     end
@@ -133,18 +140,20 @@ module tx_subsystem #(
   assign m_axis_pcs_if.tdest  = '0;
 
   tx_scheduling #(
-      .NUM_QUEUES     (NUM_QUEUES),
-      .MAX_BURST_BEATS (MAX_BURST_BEATS)
+      .NUM_QUEUES      (NUM_QUEUES),
+      .MAX_BURST_BEATS (MAX_BURST_BEATS),
+      .QID_W           (QID_W)
   ) tx_scheduling_inst (
-      .clk            (clk),
-      .rst            (rst),
-      .q_valid_i      (sched_q_valid),
-      .q_last_i       (sched_q_last),
-      .fifo_full_i    (!m_axis_accept_new),
-      .fifo_grant_i   (m_axis_accept_new),
-      .dma_read_en_o  (sched_read_en),
+      .clk             (clk),
+      .rst             (rst),
+      .q_valid_i       (sched_q_valid),
+      .q_last_i        (sched_q_last),
+      .q_packet_ready_i(sched_q_packet_ready),
+      .fifo_full_i     (!m_axis_accept_new),
+      .fifo_grant_i    (m_axis_accept_new),
+      .dma_read_en_o   (sched_read_en),
       .dma_queue_sel_o (sched_queue_sel),
-      .fifo_req_o     ()
+      .fifo_req_o      ()
   );
 
   always_comb begin

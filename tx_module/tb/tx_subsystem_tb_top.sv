@@ -1,4 +1,5 @@
 module tx_subsystem_tb_top #(
+    parameter int FIFO_DEPTH      = 64,
     parameter int MAX_BURST_BEATS = 256
 );
 
@@ -6,7 +7,6 @@ module tx_subsystem_tb_top #(
   localparam int DMA_VALID_W = 32;
   localparam int PCS_DATA_W  = 64;
   localparam int PCS_VALID_W = 8;
-  localparam int FIFO_DEPTH  = 32;
   localparam int NUM_QUEUES  = 4;
   localparam int QID_W       = (NUM_QUEUES > 1) ? $clog2(NUM_QUEUES) : 1;
 

@@ -31,8 +31,8 @@ def _set_pythonpath() -> str:
     return new_pythonpath
 
 
-def _queue_configs_from_env() -> list[int]:
-    raw = os.environ.get("TX_SCHED_NUM_QUEUES", "2,4,8")
+def _int_list_from_env(name: str, default: str) -> list[int]:
+    raw = os.environ.get(name, default)
     vals = []
     for tok in raw.split(","):
         tok = tok.strip()
@@ -41,9 +41,8 @@ def _queue_configs_from_env() -> list[int]:
         vals.append(int(tok))
 
     if not vals:
-        vals = [2, 4, 8]
+        vals = [int(tok) for tok in default.split(",") if tok.strip()]
 
-    # Preserve order while removing duplicates.
     unique = []
     for v in vals:
         if v not in unique:
@@ -55,35 +54,38 @@ def test_tx_scheduling():
     pythonpath = _set_pythonpath()
 
     sim = get_runner("questa")
-
-    queue_configs = _queue_configs_from_env()
+    queue_configs = _int_list_from_env("TX_SCHED_NUM_QUEUES", "1,2,4,8")
+    burst_configs = _int_list_from_env("TX_SCHED_MAX_BURST_BEATS", "256,1")
     waves = os.environ.get("COCOTB_WAVES", "1") != "0"
 
     for num_queues in queue_configs:
-        rtl_parameters = {
-            "NUM_QUEUES": num_queues,
-        }
+        for max_burst_beats in burst_configs:
+            rtl_parameters = {
+                "NUM_QUEUES": num_queues,
+                "MAX_BURST_BEATS": max_burst_beats,
+            }
 
-        sim.build(
-            sources=SOURCES,
-            hdl_toplevel="tx_scheduling",
-            build_dir=str(TX_SCHED_DIR / f"sim_build_q{num_queues}"),
-            parameters=rtl_parameters,
-            always=True,
-            clean=True,
-        )
+            sim.build(
+                sources=SOURCES,
+                hdl_toplevel="tx_scheduling",
+                build_dir=str(TX_SCHED_DIR / f"sim_build_q{num_queues}_b{max_burst_beats}"),
+                parameters=rtl_parameters,
+                always=True,
+                clean=True,
+            )
 
-        sim.test(
-            hdl_toplevel="tx_scheduling",
-            test_module="tx_scheduling_test",
-            waves=waves,
-            test_args=SIM_ARGS,
-            extra_env={
-                "TOPLEVEL_LANG": "verilog",
-                "PYTHONPATH": pythonpath,
-                "TX_SCHED_ACTIVE_NUM_QUEUES": str(num_queues),
-            },
-        )
+            sim.test(
+                hdl_toplevel="tx_scheduling",
+                test_module="tx_scheduling_test",
+                waves=waves,
+                test_args=SIM_ARGS,
+                extra_env={
+                    "TOPLEVEL_LANG": "verilog",
+                    "PYTHONPATH": pythonpath,
+                    "TX_SCHED_ACTIVE_NUM_QUEUES": str(num_queues),
+                    "TX_SCHED_ACTIVE_MAX_BURST_BEATS": str(max_burst_beats),
+                },
+            )
 
 
 if __name__ == "__main__":

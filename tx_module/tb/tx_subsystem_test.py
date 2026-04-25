@@ -1,3 +1,4 @@
+import os
 import random
 
 import cocotb
@@ -223,7 +224,7 @@ async def tx_subsystem_axis_queue_full_backpressure_test(dut):
     await initialize_tb(dut, clk_period_ns=10)
     testbase = TxSubsystemTestBase(dut)
 
-    fifo_depth = 32
+    fifo_depth = int(os.environ.get("TX_SUBSYSTEM_FIFO_DEPTH", "64"))
 
     # Keep downstream stalled so selected queue fills up.
     for idx in range(fifo_depth):

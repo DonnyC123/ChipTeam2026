@@ -18,8 +18,24 @@ def _max_burst_beats(dut) -> int:
 
 
 @cocotb.test()
+async def tx_scheduling_num_queues_one_test(dut):
+    """NUM_QUEUES=1 must compile and service Q0 normally."""
+    if _num_queues(dut) != 1:
+        return
+
+    await initialize_tb(dut, clk_period_ns=10)
+    testbase = TxSchedulingTestBase(dut)
+
+    await testbase.sequence.add_frame(queue_id=0, num_beats=1)
+    await testbase.sequence.add_frame(queue_id=0, num_beats=3)
+
+    await testbase.wait_for_driver_done()
+    await testbase.scoreboard.check()
+
+
+@cocotb.test()
 async def tx_scheduling_q0_only_test(dut):
-    """Single 3-beat frame on Q0, Q1 idle. All reads should select Q0."""
+    """Single 3-beat frame on Q0. All reads should select Q0."""
     await initialize_tb(dut, clk_period_ns=10)
     testbase = TxSchedulingTestBase(dut)
 
@@ -93,6 +109,47 @@ async def tx_scheduling_single_beat_frames_test(dut):
     await testbase.sequence.add_frame(queue_id=0, num_beats=1)
     await testbase.sequence.add_frame(queue_id=1, num_beats=1)
     await testbase.sequence.add_frame(queue_id=0, num_beats=1)
+
+    await testbase.wait_for_driver_done()
+    await testbase.scoreboard.check()
+
+
+@cocotb.test()
+async def tx_scheduling_incomplete_packet_not_selected_test(dut):
+    """A queue with data but no complete packet must not win IDLE arbitration."""
+    if _num_queues(dut) < 2:
+        return
+
+    await initialize_tb(dut, clk_period_ns=10)
+    testbase = TxSchedulingTestBase(dut)
+
+    q0 = 1 << 0
+    q1 = 1 << 1
+
+    # Q0 has a head word but no packet tail yet. Q1 has a complete single-beat
+    # packet, so the scheduler must choose Q1 first even though Q0 has priority.
+    await testbase.sequence.add_beat(q_valid=(q0 | q1), q_last=q1, q_packet_ready=q1)
+    await testbase.sequence.add_beat(q_valid=q0, q_last=q0, q_packet_ready=q0)
+
+    await testbase.wait_for_driver_done()
+    await testbase.scoreboard.check()
+
+
+@cocotb.test()
+async def tx_scheduling_mid_packet_gap_releases_test(dut):
+    """If the selected queue unexpectedly empties, other ready queues can proceed."""
+    if _num_queues(dut) < 2:
+        return
+
+    await initialize_tb(dut, clk_period_ns=10)
+    testbase = TxSchedulingTestBase(dut)
+
+    q0 = 1 << 0
+    q1 = 1 << 1
+
+    await testbase.sequence.add_beat(q_valid=q0, q_last=0, q_packet_ready=q0)
+    await testbase.sequence.add_beat(q_valid=q1, q_last=q1, q_packet_ready=q1)
+    await testbase.sequence.add_beat(q_valid=q1, q_last=q1, q_packet_ready=q1)
 
     await testbase.wait_for_driver_done()
     await testbase.scoreboard.check()
@@ -175,11 +232,13 @@ async def tx_scheduling_long_random_test(dut):
     for _ in range(num_cycles):
         q_valid = rng.getrandbits(num_queues) & mask_all
         q_last = rng.getrandbits(num_queues) & q_valid
+        q_packet_ready = rng.getrandbits(num_queues) & q_valid
         fifo_full = rng.random() < 0.10
         fifo_grant = rng.random() < 0.90
         await testbase.sequence.add_beat(
             q_valid=q_valid,
             q_last=q_last,
+            q_packet_ready=q_packet_ready,
             fifo_full=fifo_full,
             fifo_grant=fifo_grant,
         )
@@ -201,8 +260,8 @@ async def tx_scheduling_max_burst_rotation_test(dut):
     q0 = 1 << 0
     q1 = 1 << 1
 
-    # Keep Q0 + Q1 valid. Q0 never asserts last; Q1 is always single-beat.
-    # Scheduler should serve Q0 for max_burst beats, then force a Q1 turn.
+    # Keep Q0 + Q1 valid and packet-ready. Q0 never asserts last; Q1 is always
+    # single-beat. Scheduler should serve Q0 for max_burst beats, then rotate.
     for _ in range(max_burst + 2):
         await testbase.sequence.add_beat(q_valid=(q0 | q1), q_last=q1)
 

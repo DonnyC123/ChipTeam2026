@@ -12,6 +12,7 @@ module tx_fifo #(
     output logic [tx_fifo_pkg::PCS_DATA_W-1:0]  pcs_data_o,
     output logic [tx_fifo_pkg::PCS_VALID_W-1:0] pcs_valid_o,
     output logic                                 pcs_last_o,
+    output logic                                 packet_ready_o,
     output logic                                 empty_o,
     output logic                                 full_o,
     output logic                                 overflow_o,
@@ -27,6 +28,7 @@ module tx_fifo #(
   // - pcs_last_o can assert only on the terminal valid beat of dma_last_i=1 words.
   // Scheduler sideband:
   // - sched_grant_o indicates FIFO can accept a new word this cycle (not a pop grant).
+  // - packet_ready_o indicates at least one complete packet is buffered in this queue.
 
   localparam int DMA_DATA_W           = tx_fifo_pkg::DMA_DATA_W;
   localparam int DMA_VALID_W          = tx_fifo_pkg::DMA_VALID_W;
@@ -36,6 +38,7 @@ module tx_fifo #(
   localparam int BEATS_PER_WORD       = DMA_DATA_W / PCS_DATA_W;
   localparam int VALID_BEATS_PER_WORD = DMA_VALID_W / PCS_VALID_W;
   localparam int BEAT_CNT_W           = (BEATS_PER_WORD > 1) ? $clog2(BEATS_PER_WORD) : 1;
+  localparam int PACKET_CNT_W         = (DEPTH > 1) ? $clog2(DEPTH + 1) : 1;
 
   typedef struct packed {
     logic             tag;
@@ -44,18 +47,21 @@ module tx_fifo #(
 
   tx_fifo_pkg::fifo_entry_t mem [DEPTH];
 
-  tagged_addr_t        wr_ptr_d, wr_ptr_q;
-  tagged_addr_t        rd_ptr_d, rd_ptr_q;
+  tagged_addr_t wr_ptr_d, wr_ptr_q;
+  tagged_addr_t rd_ptr_d, rd_ptr_q;
 
-  logic                full, empty;
-  logic                wr_en;
+  logic full, empty;
+  logic wr_en;
 
   tx_fifo_pkg::fifo_entry_t rd_entry;
   logic [BEAT_CNT_W-1:0] beat_cnt_d, beat_cnt_q;
   logic [BEAT_CNT_W-1:0] terminal_beat_idx;
   logic [BEAT_CNT_W-1:0] last_valid_beat_idx;
-  logic                rd_last_word_has_valid;
-  logic                head_pop;
+  logic rd_last_word_has_valid;
+  logic head_pop;
+  logic push_packet;
+  logic pop_packet;
+  logic [PACKET_CNT_W-1:0] packet_count_d, packet_count_q;
 
 `ifndef SYNTHESIS
   initial begin
@@ -108,6 +114,16 @@ module tx_fifo #(
     end
 
     head_pop = pcs_read_i && !empty && (beat_cnt_q == terminal_beat_idx);
+    push_packet = wr_en && dma_last_i;
+    pop_packet  = head_pop && rd_entry.last;
+
+    packet_count_d = packet_count_q;
+    if (push_packet && !pop_packet) begin
+      packet_count_d = packet_count_q + 1'b1;
+    end else if (!push_packet && pop_packet) begin
+      packet_count_d = packet_count_q - 1'b1;
+    end
+    packet_ready_o = (packet_count_q != '0);
 
     rd_ptr_d = rd_ptr_q;
     if (head_pop) begin
@@ -137,13 +153,15 @@ module tx_fifo #(
 
   always_ff @(posedge clk) begin
     if (rst) begin
-      wr_ptr_q   <= '0;
-      rd_ptr_q   <= '0;
-      beat_cnt_q <= '0;
+      wr_ptr_q       <= '0;
+      rd_ptr_q       <= '0;
+      beat_cnt_q     <= '0;
+      packet_count_q <= '0;
     end else begin
-      wr_ptr_q   <= wr_ptr_d;
-      rd_ptr_q   <= rd_ptr_d;
-      beat_cnt_q <= beat_cnt_d;
+      wr_ptr_q       <= wr_ptr_d;
+      rd_ptr_q       <= rd_ptr_d;
+      beat_cnt_q     <= beat_cnt_d;
+      packet_count_q <= packet_count_d;
     end
   end
 
@@ -159,6 +177,18 @@ module tx_fifo #(
       overflow_o <-> (dma_wr_en_i && full);
   endproperty
   a_overflow_flag_exact: assert property (p_overflow_flag_exact);
+
+  property p_packet_ready_matches_count;
+    @(posedge clk) disable iff (rst)
+      packet_ready_o == (packet_count_q != '0);
+  endproperty
+  a_packet_ready_matches_count: assert property (p_packet_ready_matches_count);
+
+  property p_packet_count_no_underflow;
+    @(posedge clk) disable iff (rst)
+      pop_packet |-> (packet_count_q != '0);
+  endproperty
+  a_packet_count_no_underflow: assert property (p_packet_count_no_underflow);
 
   property p_last_only_on_final_beat;
     @(posedge clk) disable iff (rst)
