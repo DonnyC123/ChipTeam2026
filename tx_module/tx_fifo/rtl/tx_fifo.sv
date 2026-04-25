@@ -1,23 +1,21 @@
-import tx_fifo_pkg::*;
-
 module tx_fifo #(
     parameter int DEPTH = 64
 ) (
-    input  logic                   clk,
-    input  logic                   rst,
-    input  logic [DMA_DATA_W-1:0]  dma_data_i,
-    input  logic [DMA_VALID_W-1:0] dma_valid_i,
-    input  logic                   dma_last_i,
-    input  logic                   dma_wr_en_i,
-    input  logic                   pcs_read_i,
-    input  logic                   sched_req_i,
-    output logic [PCS_DATA_W-1:0]  pcs_data_o,
-    output logic [PCS_VALID_W-1:0] pcs_valid_o,
-    output logic                   pcs_last_o,
-    output logic                   empty_o,
-    output logic                   full_o,
-    output logic                   overflow_o,
-    output logic                   sched_grant_o
+    input  logic                                 clk,
+    input  logic                                 rst,
+    input  logic [tx_fifo_pkg::DMA_DATA_W-1:0]  dma_data_i,
+    input  logic [tx_fifo_pkg::DMA_VALID_W-1:0] dma_valid_i,
+    input  logic                                 dma_last_i,
+    input  logic                                 dma_wr_en_i,
+    input  logic                                 pcs_read_i,
+    input  logic                                 sched_req_i,
+    output logic [tx_fifo_pkg::PCS_DATA_W-1:0]  pcs_data_o,
+    output logic [tx_fifo_pkg::PCS_VALID_W-1:0] pcs_valid_o,
+    output logic                                 pcs_last_o,
+    output logic                                 empty_o,
+    output logic                                 full_o,
+    output logic                                 overflow_o,
+    output logic                                 sched_grant_o
 );
   // FIFO interface contract:
   // Ingress:
@@ -30,6 +28,10 @@ module tx_fifo #(
   // Scheduler sideband:
   // - sched_grant_o indicates FIFO can accept a new word this cycle (not a pop grant).
 
+  localparam int DMA_DATA_W           = tx_fifo_pkg::DMA_DATA_W;
+  localparam int DMA_VALID_W          = tx_fifo_pkg::DMA_VALID_W;
+  localparam int PCS_DATA_W           = tx_fifo_pkg::PCS_DATA_W;
+  localparam int PCS_VALID_W          = tx_fifo_pkg::PCS_VALID_W;
   localparam int PTR_W                = $clog2(DEPTH);
   localparam int BEATS_PER_WORD       = DMA_DATA_W / PCS_DATA_W;
   localparam int VALID_BEATS_PER_WORD = DMA_VALID_W / PCS_VALID_W;
@@ -40,7 +42,7 @@ module tx_fifo #(
     logic [PTR_W-1:0] addr;
   } tagged_addr_t;
 
-  fifo_entry_t         mem [DEPTH];
+  tx_fifo_pkg::fifo_entry_t mem [DEPTH];
 
   tagged_addr_t        wr_ptr_d, wr_ptr_q;
   tagged_addr_t        rd_ptr_d, rd_ptr_q;
@@ -48,7 +50,7 @@ module tx_fifo #(
   logic                full, empty;
   logic                wr_en;
 
-  fifo_entry_t         rd_entry;
+  tx_fifo_pkg::fifo_entry_t rd_entry;
   logic [BEAT_CNT_W-1:0] beat_cnt_d, beat_cnt_q;
   logic [BEAT_CNT_W-1:0] terminal_beat_idx;
   logic [BEAT_CNT_W-1:0] last_valid_beat_idx;

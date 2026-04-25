@@ -46,7 +46,7 @@ module tx_subsystem #(
   logic             in_packet_q, in_packet_d;
   logic [QID_W-1:0] packet_tdest_q, packet_tdest_d;
 
-  assign ingress_tdest_in_range = (s_axis_dma_if.tdest < NUM_QUEUES);
+  assign ingress_tdest_in_range = (int'(s_axis_dma_if.tdest) < NUM_QUEUES);
   assign axis_accept            = s_axis_dma_if.tvalid && s_axis_dma_if.tready;
 
   always_comb begin
@@ -71,23 +71,23 @@ module tx_subsystem #(
       assign queue_read[q]    = sched_read_en && (sched_queue_sel == QID_W'(q));
 
       tx_fifo #(
-          .DEPTH(FIFO_DEPTH)
+          .DEPTH        (FIFO_DEPTH)
       ) tx_fifo_q (
-          .clk         (clk),
-          .rst         (rst),
-          .dma_data_i  (s_axis_dma_if.tdata),
-          .dma_valid_i (s_axis_dma_if.tkeep),
-          .dma_last_i  (s_axis_dma_if.tlast),
-          .dma_wr_en_i (queue_wr_en[q]),
-          .pcs_data_o  (queue_pcs_data[q]),
-          .pcs_valid_o (queue_pcs_valid[q]),
-          .pcs_last_o  (queue_pcs_last[q]),
-          .pcs_read_i  (queue_read[q]),
-          .empty_o     (queue_empty[q]),
-          .full_o      (),
-          .overflow_o  (),
-          .sched_req_i (1'b1),
-          .sched_grant_o(queue_sched_grant[q])
+          .clk          (clk),
+          .rst          (rst),
+          .dma_data_i   (s_axis_dma_if.tdata),
+          .dma_valid_i  (s_axis_dma_if.tkeep),
+          .dma_last_i   (s_axis_dma_if.tlast),
+          .dma_wr_en_i  (queue_wr_en[q]),
+          .pcs_data_o   (queue_pcs_data[q]),
+          .pcs_valid_o  (queue_pcs_valid[q]),
+          .pcs_last_o   (queue_pcs_last[q]),
+          .pcs_read_i   (queue_read[q]),
+          .empty_o      (queue_empty[q]),
+          .full_o       (),
+          .overflow_o   (),
+          .sched_req_i  (1'b1),
+          .sched_grant_o (queue_sched_grant[q])
       );
     end
   endgenerate
@@ -133,18 +133,18 @@ module tx_subsystem #(
   assign m_axis_pcs_if.tdest  = '0;
 
   tx_scheduling #(
-      .NUM_QUEUES(NUM_QUEUES),
-      .MAX_BURST_BEATS(MAX_BURST_BEATS)
+      .NUM_QUEUES     (NUM_QUEUES),
+      .MAX_BURST_BEATS (MAX_BURST_BEATS)
   ) tx_scheduling_inst (
-      .clk           (clk),
-      .rst           (rst),
-      .q_valid_i     (sched_q_valid),
-      .q_last_i      (sched_q_last),
-      .fifo_full_i   (!m_axis_accept_new),
-      .fifo_grant_i  (m_axis_accept_new),
-      .dma_read_en_o (sched_read_en),
-      .dma_queue_sel_o(sched_queue_sel),
-      .fifo_req_o    ()
+      .clk            (clk),
+      .rst            (rst),
+      .q_valid_i      (sched_q_valid),
+      .q_last_i       (sched_q_last),
+      .fifo_full_i    (!m_axis_accept_new),
+      .fifo_grant_i   (m_axis_accept_new),
+      .dma_read_en_o  (sched_read_en),
+      .dma_queue_sel_o (sched_queue_sel),
+      .fifo_req_o     ()
   );
 
   always_comb begin
@@ -195,7 +195,9 @@ module tx_subsystem #(
   // Do not accept writes when the addressed queue is full.
   property p_no_accept_when_target_full;
     @(posedge clk) disable iff (rst)
-      (s_axis_dma_if.tvalid && ingress_tdest_in_range && ingress_target_full) |-> !s_axis_dma_if.tready;
+      (s_axis_dma_if.tvalid &&
+       ingress_tdest_in_range &&
+       ingress_target_full) |-> !s_axis_dma_if.tready;
   endproperty
   a_no_accept_when_target_full: assert property (p_no_accept_when_target_full);
 

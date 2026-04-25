@@ -1,16 +1,34 @@
 import os
 from pathlib import Path
+
 from cocotb_tools.runner import get_runner
+
 
 TB_DIR = Path(__file__).resolve().parent
 TX_SCHED_DIR = TB_DIR.parent
 TX_MODULE_DIR = TX_SCHED_DIR.parent
 REPO_ROOT = TX_MODULE_DIR.parent
 
-sources = [
+SOURCES = [
     str(TX_SCHED_DIR / "rtl" / "tx_scheduling_pkg.sv"),
     str(TX_SCHED_DIR / "rtl" / "tx_scheduling.sv"),
-] + sorted(str(p) for p in (TX_MODULE_DIR / "rtl_utils").glob("*.sv"))
+] + sorted(str(p) for p in (REPO_ROOT / "rtl_utils").glob("*.sv"))
+
+SIM_ARGS = [
+    "-64",
+    "-voptargs=+acc",
+]
+
+
+def _set_pythonpath() -> str:
+    path_parts = [str(TX_MODULE_DIR), str(REPO_ROOT), str(TB_DIR)]
+    current_pythonpath = os.environ.get("PYTHONPATH")
+    if current_pythonpath:
+        path_parts.append(current_pythonpath)
+
+    new_pythonpath = os.pathsep.join(path_parts)
+    os.environ["PYTHONPATH"] = new_pythonpath
+    return new_pythonpath
 
 
 def _queue_configs_from_env() -> list[int]:
@@ -34,19 +52,9 @@ def _queue_configs_from_env() -> list[int]:
 
 
 def test_tx_scheduling():
-    current_pythonpath = os.environ.get("PYTHONPATH", "")
-    path_parts = [str(TX_MODULE_DIR), str(REPO_ROOT), str(TB_DIR)]
-    if current_pythonpath:
-        path_parts.append(current_pythonpath)
-    new_pythonpath = os.pathsep.join(path_parts)
-    os.environ["PYTHONPATH"] = new_pythonpath
+    pythonpath = _set_pythonpath()
 
     sim = get_runner("questa")
-
-    modelsim_sim_args = [
-        "-64",
-        "-voptargs=+acc",
-    ]
 
     queue_configs = _queue_configs_from_env()
     waves = os.environ.get("COCOTB_WAVES", "1") != "0"
@@ -57,7 +65,7 @@ def test_tx_scheduling():
         }
 
         sim.build(
-            sources=sources,
+            sources=SOURCES,
             hdl_toplevel="tx_scheduling",
             build_dir=str(TX_SCHED_DIR / f"sim_build_q{num_queues}"),
             parameters=rtl_parameters,
@@ -69,10 +77,10 @@ def test_tx_scheduling():
             hdl_toplevel="tx_scheduling",
             test_module="tx_scheduling_test",
             waves=waves,
-            test_args=modelsim_sim_args,
+            test_args=SIM_ARGS,
             extra_env={
                 "TOPLEVEL_LANG": "verilog",
-                "PYTHONPATH": new_pythonpath,
+                "PYTHONPATH": pythonpath,
                 "TX_SCHED_ACTIVE_NUM_QUEUES": str(num_queues),
             },
         )

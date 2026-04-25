@@ -27,15 +27,15 @@ module tx_subsystem_tb_top #(
   logic                  m_axis_tlast_o;
 
   tx_axis_if #(
-      .DATA_W(DMA_DATA_W),
-      .KEEP_W(DMA_VALID_W),
-      .DEST_W(QID_W)
+      .DATA_W    (DMA_DATA_W),
+      .KEEP_W    (DMA_VALID_W),
+      .DEST_W    (QID_W)
   ) s_axis_dma_if ();
 
   tx_axis_if #(
-      .DATA_W(PCS_DATA_W),
-      .KEEP_W(PCS_VALID_W),
-      .DEST_W(1)
+      .DATA_W    (PCS_DATA_W),
+      .KEEP_W    (PCS_VALID_W),
+      .DEST_W    (1)
   ) m_axis_pcs_if ();
 
   assign s_axis_dma_if.tdata  = s_axis_dma_tdata_i;
@@ -52,14 +52,14 @@ module tx_subsystem_tb_top #(
   assign m_axis_tlast_o       = m_axis_pcs_if.tlast;
 
   tx_subsystem #(
-      .FIFO_DEPTH(FIFO_DEPTH),
-      .NUM_QUEUES(NUM_QUEUES),
-      .MAX_BURST_BEATS(MAX_BURST_BEATS)
+      .FIFO_DEPTH     (FIFO_DEPTH),
+      .NUM_QUEUES     (NUM_QUEUES),
+      .MAX_BURST_BEATS (MAX_BURST_BEATS)
   ) dut (
-      .clk(clk),
-      .rst(rst),
-      .s_axis_dma_if(s_axis_dma_if),
-      .m_axis_pcs_if(m_axis_pcs_if)
+      .clk           (clk),
+      .rst           (rst),
+      .s_axis_dma_if (s_axis_dma_if),
+      .m_axis_pcs_if (m_axis_pcs_if)
   );
 
 endmodule

@@ -1,8 +1,9 @@
-import cocotb
 import random
 
-from tx_scheduling_test_base import TxSchedulingTestBase
+import cocotb
+
 from tb_utils.tb_common import initialize_tb
+from tx_scheduling_test_base import TxSchedulingTestBase
 
 
 def _num_queues(dut) -> int:

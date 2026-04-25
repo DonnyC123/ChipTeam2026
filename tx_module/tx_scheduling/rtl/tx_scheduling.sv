@@ -49,7 +49,7 @@ module tx_scheduling #(
     next_found = 1'b0;
     next_queue = '0;
     for (int unsigned i = 0; i < NUM_QUEUES; i++) begin
-      rr_raw_idx = (unsigned'(last_served_q) + 1 + i) % NUM_QUEUES;
+      rr_raw_idx = (int'(last_served_q) + 1 + i) % NUM_QUEUES;
       rr_cand    = rr_raw_idx[QID_W-1:0];
       if (!next_found && q_valid_i[rr_cand]) begin
         next_queue = rr_cand;
@@ -92,7 +92,8 @@ module tx_scheduling #(
           queue_sel_d = queue_sel_q;
           if (fifo_grant_i) begin
             dma_read_en_d = 1'b1;
-            if (q_last_i[queue_sel_q] || (burst_cnt_q == (MAX_BURST_BEATS - 1))) begin
+            if (q_last_i[queue_sel_q] ||
+                (burst_cnt_q == BURST_CNT_W'(MAX_BURST_BEATS - 1))) begin
               // Safety valve: also force queue rotation when q_last is missing.
               state_d       = IDLE;
               last_served_d = queue_sel_q;

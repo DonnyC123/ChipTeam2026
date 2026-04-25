@@ -1,15 +1,14 @@
 from functools import partial
 
-from tx_fifo_model import TxFifoModel
-from tx_fifo_sequence import TxFifoSequence
-from tx_fifo_sequence_item import TxFifoSequenceItem
-from tx_fifo_out_transaction import TxFifoOutTransaction
-
 from tb_utils.generic_checker import GenericChecker
 from tb_utils.generic_drivers import GenericDriver
 from tb_utils.generic_test_base import GenericTestBase
 from tb_utils.generic_monitor import GenericValidMonitor
 from tb_utils.generic_scoreboard import GenericScoreboard
+from tx_fifo_model import TxFifoModel
+from tx_fifo_out_transaction import TxFifoOutTransaction
+from tx_fifo_sequence import TxFifoSequence
+from tx_fifo_sequence_item import TxFifoSequenceItem
 
 
 class TxFifoTestBase(GenericTestBase):

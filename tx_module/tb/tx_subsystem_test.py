@@ -3,9 +3,9 @@ import random
 import cocotb
 from cocotb.triggers import Event, RisingEdge
 
+from tb_utils.tb_common import initialize_tb
 from tx_subsystem_test_base import TxSubsystemTestBase
 from tx_subsystem_sequence_item import TxSubsystemSequenceItem
-from tb_utils.tb_common import initialize_tb
 
 
 BEATS_PER_WORD = 4

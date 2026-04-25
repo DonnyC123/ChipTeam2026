@@ -1,9 +1,10 @@
-import cocotb
 import random
+
+import cocotb
 from cocotb.triggers import RisingEdge
 
-from tx_fifo_test_base import TxFifoTestBase
 from tb_utils.tb_common import initialize_tb
+from tx_fifo_test_base import TxFifoTestBase
 
 
 def _get_depth(dut, default=64) -> int:

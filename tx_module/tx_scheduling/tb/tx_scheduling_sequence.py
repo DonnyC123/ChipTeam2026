@@ -1,7 +1,7 @@
 from cocotb.types import Logic, LogicArray
 
-from tx_scheduling_sequence_item import TxSchedulingSequenceItem
 from tb_utils.generic_sequence import GenericSequence
+from tx_scheduling_sequence_item import TxSchedulingSequenceItem
 
 
 def _num_queues() -> int:

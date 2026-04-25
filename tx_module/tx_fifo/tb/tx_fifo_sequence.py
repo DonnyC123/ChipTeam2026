@@ -1,7 +1,7 @@
 from cocotb.types import Logic, LogicArray
 
-from tx_fifo_sequence_item import TxFifoSequenceItem
 from tb_utils.generic_sequence import GenericSequence
+from tx_fifo_sequence_item import TxFifoSequenceItem
 
 DMA_DATA_W = TxFifoSequenceItem.DMA_DATA_W
 DMA_VALID_W = TxFifoSequenceItem.DMA_VALID_W

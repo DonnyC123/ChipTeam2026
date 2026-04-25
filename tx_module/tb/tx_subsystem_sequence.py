@@ -1,8 +1,8 @@
 from cocotb.triggers import RisingEdge
 from cocotb.types import Logic, LogicArray
 
-from tx_subsystem_sequence_item import TxSubsystemSequenceItem
 from tb_utils.generic_sequence import GenericSequence
+from tx_subsystem_sequence_item import TxSubsystemSequenceItem
 
 
 class TxSubsystemSequence(GenericSequence):
