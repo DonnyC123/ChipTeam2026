@@ -26,6 +26,8 @@ module rx_top #(
     logic [DATA_64_W-1:0] descrambled_data_64;
     logic                 descrambled_valid;
 
+    logic[1:0]            control_o;
+
     logic                 drop_frame;
     logic [1:0]           header_bits_q;
 
@@ -64,16 +66,9 @@ module rx_top #(
         .data_valid_i (bubbler_valid_66),
         .data_i       (bubbler_data_66),
         .locked_o     (locked_o),
-        .bitslip_o    (bitslip_o)
+        .bitslip_o    (bitslip_o),
+        .control_o    (control_o)
     );
-    
-    always_ff @(posedge clk) begin
-        if (rst) begin
-            header_bits_q <= '0;
-        end else begin
-            header_bits_q <= bubbler_data_66[65:64];
-        end
-    end
 
     ethernet_assembler #(
         .DATA_IN_W  (DATA_64_W),
@@ -85,7 +80,7 @@ module rx_top #(
         .locked_i       (locked_o),          
         .cancel_frame_i (1'b0),
         .input_data_i   (descrambled_data_64),
-        .header_bits_i  (header_bits_q),     
+        .header_bits_i  (control_o),     
         .drop_frame_o   (drop_frame),
         .out_valid_o    (out_valid_o),
         .out_data_o     (out_data_o),
