@@ -85,7 +85,7 @@ class EthernetAssemblerModel(GenericModel):
         ),
         0xFF: ControlBlockSpec(
             kind="term",
-            valid_mask=_mask_from_bytes_valid(0b0111_1111),
+            valid_mask=_mask_from_bytes_valid(0b1111_1110),
             exits_frame=True,
         ),
         # Ordered set blocks.

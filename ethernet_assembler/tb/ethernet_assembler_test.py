@@ -23,8 +23,16 @@ def _sample_outputs(dut) -> dict[str, int]:
     return {
         "drop_frame": int(dut.drop_frame_o.value),
         "out_valid": int(dut.out_valid_o.value),
+        "out_data": int(dut.out_data_o.value),
         "bytes_valid": int(dut.bytes_valid_o.value),
     }
+
+
+def _phase_contains_control_block(samples, *, block_type: int, bytes_valid: int) -> bool:
+    return any(
+        sample["bytes_valid"] == bytes_valid and (sample["out_data"] & 0xFF) == block_type
+        for sample in samples
+    )
 
 
 async def _drain_driver_and_capture(testbase: EthernetAssemblerTestBase, settle_cycles: int = 2):
@@ -723,7 +731,11 @@ async def edge_case_ipg_term_l7_idle_sof_l0_drops_test(dut):
     assert any(sample["drop_frame"] == 1 for sample in violation_phase), (
         "Expected TERM_L7 + IDLE_BLK + SOF_L0 to violate the 12-byte IPG"
     )
-    assert all(sample["bytes_valid"] != 0b1111_1110 for sample in violation_phase), (
+    assert not _phase_contains_control_block(
+        violation_phase,
+        block_type=seq.SOF_L0,
+        bytes_valid=0b1111_1110,
+    ), (
         "Expected the violating SOF_L0 block to be suppressed"
     )
 
@@ -829,7 +841,11 @@ async def constrained_random_ipg_restart_test(dut):
 
     await seq.add_sof_l0()
     initial_start_phase = await _drain_driver_and_capture(testbase)
-    assert any(sample["bytes_valid"] == _START_BYTES_VALID[seq.SOF_L0] for sample in initial_start_phase), (
+    assert _phase_contains_control_block(
+        initial_start_phase,
+        block_type=seq.SOF_L0,
+        bytes_valid=_START_BYTES_VALID[seq.SOF_L0],
+    ), (
         "Expected initial SOF_L0 to enter a frame before constrained-random IPG trials"
     )
 
@@ -864,7 +880,11 @@ async def constrained_random_ipg_restart_test(dut):
                 f"Expected legal IPG restart to avoid drop_frame_o "
                 f"(term=0x{term_block_type:02X}, idle_blocks={idle_count}, start=0x{start_block_type:02X})"
             )
-            assert any(sample["bytes_valid"] == expected_start_mask for sample in restart_phase), (
+            assert _phase_contains_control_block(
+                restart_phase,
+                block_type=start_block_type,
+                bytes_valid=expected_start_mask,
+            ), (
                 f"Expected legal IPG restart to emit the start bytes_valid mask "
                 f"(term=0x{term_block_type:02X}, idle_blocks={idle_count}, start=0x{start_block_type:02X})"
             )
@@ -875,7 +895,11 @@ async def constrained_random_ipg_restart_test(dut):
                 f"Expected IPG violation to pulse drop_frame_o "
                 f"(term=0x{term_block_type:02X}, idle_blocks={idle_count}, start=0x{start_block_type:02X})"
             )
-            assert all(sample["bytes_valid"] != expected_start_mask for sample in restart_phase), (
+            assert not _phase_contains_control_block(
+                restart_phase,
+                block_type=start_block_type,
+                bytes_valid=expected_start_mask,
+            ), (
                 f"Expected violating start to be suppressed "
                 f"(term=0x{term_block_type:02X}, idle_blocks={idle_count}, start=0x{start_block_type:02X})"
             )
@@ -883,7 +907,11 @@ async def constrained_random_ipg_restart_test(dut):
         await seq.add_manual_idle_chunk(count=2)
         await seq.add_sof_l0()
         recovery_phase = await _drain_driver_and_capture(testbase)
-        assert any(sample["bytes_valid"] == _START_BYTES_VALID[seq.SOF_L0] for sample in recovery_phase), (
+        assert _phase_contains_control_block(
+            recovery_phase,
+            block_type=seq.SOF_L0,
+            bytes_valid=_START_BYTES_VALID[seq.SOF_L0],
+        ), (
             "Expected deterministic SOF_L0 recovery after restoring a legal IPG"
         )
 
