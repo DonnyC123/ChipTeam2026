@@ -10,12 +10,9 @@ REPO_ROOT = TX_MODULE_DIR.parent
 
 SOURCES = [
     str(TX_MODULE_DIR / "tx_fifo" / "rtl" / "tx_fifo_pkg.sv"),
-    str(TX_MODULE_DIR / "tx_fifo" / "rtl" / "tx_fifo.sv"),
-    str(TX_MODULE_DIR / "tx_scheduling" / "rtl" / "tx_scheduling_pkg.sv"),
-    str(TX_MODULE_DIR / "tx_scheduling" / "rtl" / "tx_scheduling.sv"),
-    str(TX_MODULE_DIR / "rtl" / "tx_axis_if.sv"),
-    str(TX_MODULE_DIR / "rtl" / "tx_subsystem_pkg.sv"),
+    str(TX_MODULE_DIR / "rtl" / "tx_async_fifo.sv"),
     str(TX_MODULE_DIR / "rtl" / "tx_subsystem.sv"),
+    str(TX_MODULE_DIR / "rtl" / "tx_subsystem_axis_1q.sv"),
     str(TB_DIR / "tx_subsystem_tb_top.sv"),
 ]
 
@@ -38,18 +35,17 @@ def _set_pythonpath() -> str:
 
 def test_tx_subsystem():
     pythonpath = _set_pythonpath()
-
     sim = get_runner("questa")
 
     rtl_parameters = {
-        "FIFO_DEPTH": 64,
-        "MAX_BURST_BEATS": 256,
+        "FIFO_DEPTH": int(os.environ.get("TX_SUBSYSTEM_FIFO_DEPTH", "16")),
+        "DESC_DEPTH": int(os.environ.get("TX_SUBSYSTEM_DESC_DEPTH", "16")),
     }
 
     sim.build(
         sources=SOURCES,
         hdl_toplevel="tx_subsystem_tb_top",
-        build_dir=str(TX_MODULE_DIR / "sim_build_subsystem_axis"),
+        build_dir=str(TX_MODULE_DIR / "sim_build_subsystem_axis_1q"),
         parameters=rtl_parameters,
         always=True,
         clean=True,
@@ -66,7 +62,7 @@ def test_tx_subsystem():
             "TOPLEVEL_LANG": "verilog",
             "PYTHONPATH": pythonpath,
             "TX_SUBSYSTEM_FIFO_DEPTH": str(rtl_parameters["FIFO_DEPTH"]),
-                "TX_SUBSYSTEM_MAX_BURST_BEATS": str(rtl_parameters["MAX_BURST_BEATS"]),
+            "TX_SUBSYSTEM_DESC_DEPTH": str(rtl_parameters["DESC_DEPTH"]),
         },
     )
 

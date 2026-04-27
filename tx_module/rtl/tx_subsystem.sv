@@ -1,281 +1,219 @@
-module tx_subsystem #(
-    parameter int FIFO_DEPTH      = 64,
-    parameter int NUM_QUEUES      = 4,
-    parameter int MAX_BURST_BEATS = 256
+module tx_subsystem import tx_fifo_pkg::*; #(
+    parameter int FIFO_DEPTH = 64,
+    parameter int DESC_DEPTH = 32
 ) (
-    input logic clk,
-    input logic rst,
+    input  logic                   dma_clk,
+    input  logic                   dma_rst,
+    input  logic [DMA_DATA_W-1:0]  s_axis_dma_tdata_i,
+    input  logic [DMA_VALID_W-1:0] s_axis_dma_tkeep_i,
+    input  logic                   s_axis_dma_tvalid_i,
+    input  logic                   s_axis_dma_tlast_i,
+    output logic                   s_axis_dma_tready_o,
 
-    tx_axis_if.sink   s_axis_dma_if,
-    tx_axis_if.source m_axis_pcs_if
+    input  logic                   tx_clk,
+    input  logic                   tx_rst,
+    output logic [PCS_DATA_W-1:0]  m_axis_pcs_tdata_o,
+    output logic [PCS_VALID_W-1:0] m_axis_pcs_tkeep_o,
+    output logic                   m_axis_pcs_tvalid_o,
+    output logic                   m_axis_pcs_tlast_o,
+    input  logic                   m_axis_pcs_tready_i
 );
 
-  import tx_fifo_pkg::*;
-  import tx_subsystem_pkg::*;
+  localparam int WORD_CNT_W = (FIFO_DEPTH > 1) ? $clog2(FIFO_DEPTH + 1) : 1;
+  localparam int LANE_W     = (BEATS_PER_ENTRY > 1) ? $clog2(BEATS_PER_ENTRY) : 1;
 
-  localparam int QID_W = (NUM_QUEUES > 1) ? $clog2(NUM_QUEUES) : 1;
+  logic [FIFO_ENTRY_W-1:0] data_wr_payload;
+  logic [FIFO_ENTRY_W-1:0] data_rd_payload;
+  logic                    data_wr_valid;
+  logic                    data_wr_ready;
+  logic                    data_rd_valid;
+  logic                    data_rd_ready;
+  logic                    data_fifo_full;
+  logic                    data_fifo_empty;
 
-  logic [PCS_DATA_W-1:0]  queue_pcs_data[NUM_QUEUES];
-  logic [PCS_VALID_W-1:0] queue_pcs_valid[NUM_QUEUES];
-  logic                   queue_pcs_last[NUM_QUEUES];
-  logic                   queue_packet_ready[NUM_QUEUES];
-  logic                   queue_empty[NUM_QUEUES];
-  logic                   queue_wr_en[NUM_QUEUES];
-  logic                   queue_read[NUM_QUEUES];
-  logic [NUM_QUEUES-1:0]  queue_sched_grant;
-  logic [NUM_QUEUES-1:0]  sched_q_valid;
-  logic [NUM_QUEUES-1:0]  sched_q_last;
-  logic [NUM_QUEUES-1:0]  sched_q_packet_ready;
+  logic [WORD_CNT_W-1:0] desc_wr_payload;
+  logic [WORD_CNT_W-1:0] desc_rd_payload;
+  logic                  desc_wr_valid;
+  logic                  desc_wr_ready;
+  logic                  desc_rd_valid;
+  logic                  desc_rd_ready;
+  logic                  desc_fifo_full;
+  logic                  desc_fifo_empty;
 
-  logic             sched_read_en;
-  logic [QID_W-1:0] sched_queue_sel;
+  fifo_entry_t data_rd_entry;
 
-  logic [PCS_DATA_W-1:0]  selected_data;
-  logic [PCS_VALID_W-1:0] selected_keep;
-  logic                   selected_last;
+  logic [WORD_CNT_W-1:0] dma_packet_words_q, dma_packet_words_d;
+  logic                  axis_accept;
 
-  logic axis_accept;
-  logic ingress_tdest_in_range;
-  logic ingress_target_full;
-  logic m_axis_pop;
-  logic m_axis_accept_new;
+  logic [DMA_DATA_W-1:0]  word_data_q, word_data_d;
+  logic [DMA_VALID_W-1:0] word_keep_q, word_keep_d;
+  logic                   word_last_q, word_last_d;
+  logic                   word_valid_q, word_valid_d;
+  logic [LANE_W-1:0]      lane_idx_q, lane_idx_d;
+  logic [LANE_W-1:0]      terminal_lane_q, terminal_lane_d;
+  logic                   packet_active_q, packet_active_d;
+  logic [WORD_CNT_W-1:0]  words_remaining_q, words_remaining_d;
 
-  logic [PCS_DATA_W-1:0]  m_axis_data_q, m_axis_data_d;
-  logic [PCS_VALID_W-1:0] m_axis_keep_q, m_axis_keep_d;
-  logic                   m_axis_last_q, m_axis_last_d;
-  logic                   m_axis_valid_q, m_axis_valid_d;
+  logic desc_accept;
+  logic load_word;
+  logic output_accept;
+  logic output_terminal_lane;
 
-  logic             in_packet_q, in_packet_d;
-  logic [QID_W-1:0] packet_tdest_q, packet_tdest_d;
-
-  assign ingress_tdest_in_range = (int'(s_axis_dma_if.tdest) < NUM_QUEUES);
-  assign axis_accept            = s_axis_dma_if.tvalid && s_axis_dma_if.tready;
-
-  always_comb begin
-    ingress_target_full = 1'b1;
-    if (ingress_tdest_in_range) begin
-      ingress_target_full = !queue_sched_grant[s_axis_dma_if.tdest];
-    end
-  end
-
-  // Strict AXIS backpressure:
-  // - Accept only when target queue exists and has space.
-  assign s_axis_dma_if.tready = ingress_tdest_in_range && !ingress_target_full;
-
-  // Internal scheduling view:
-  // - q_valid_i[q]: queue q has at least one beat available.
-  // - q_last_i[q]:  the CURRENT head beat in queue q is end-of-packet.
-  // - q_packet_ready_i[q]: queue q has a complete packet buffered. The scheduler
-  //   uses this only when selecting a new queue from IDLE, so frames are not
-  //   started before their tail has arrived.
-  generate
-    for (genvar q = 0; q < NUM_QUEUES; q++) begin : gen_queue_bank
-      assign queue_wr_en[q]          = axis_accept && (s_axis_dma_if.tdest == QID_W'(q));
-      assign sched_q_valid[q]        = !queue_empty[q];
-      assign sched_q_last[q]         = (!queue_empty[q]) && queue_pcs_last[q];
-      assign sched_q_packet_ready[q] = queue_packet_ready[q];
-      assign queue_read[q]           = sched_read_en && (sched_queue_sel == QID_W'(q));
-
-      tx_fifo #(
-          .DEPTH        (FIFO_DEPTH)
-      ) tx_fifo_q (
-          .clk           (clk),
-          .rst           (rst),
-          .dma_data_i    (s_axis_dma_if.tdata),
-          .dma_valid_i   (s_axis_dma_if.tkeep),
-          .dma_last_i    (s_axis_dma_if.tlast),
-          .dma_wr_en_i   (queue_wr_en[q]),
-          .pcs_data_o    (queue_pcs_data[q]),
-          .pcs_valid_o   (queue_pcs_valid[q]),
-          .pcs_last_o    (queue_pcs_last[q]),
-          .packet_ready_o(queue_packet_ready[q]),
-          .pcs_read_i    (queue_read[q]),
-          .empty_o       (queue_empty[q]),
-          .full_o        (),
-          .overflow_o    (),
-          .sched_req_i   (1'b1),
-          .sched_grant_o (queue_sched_grant[q])
-      );
-    end
-  endgenerate
-
-  always_comb begin
-    selected_data = '0;
-    selected_keep = '0;
-    selected_last = 1'b0;
-
-    if (sched_q_valid[sched_queue_sel]) begin
-      selected_data = queue_pcs_data[sched_queue_sel];
-      selected_keep = queue_pcs_valid[sched_queue_sel];
-      selected_last = queue_pcs_last[sched_queue_sel];
-    end
-  end
-
-  assign m_axis_pop        = m_axis_valid_q && m_axis_pcs_if.tready;
-  assign m_axis_accept_new = !m_axis_valid_q || m_axis_pop;
-
-  always_comb begin
-    m_axis_data_d  = m_axis_data_q;
-    m_axis_keep_d  = m_axis_keep_q;
-    m_axis_last_d  = m_axis_last_q;
-    m_axis_valid_d = m_axis_valid_q;
-
-    if (m_axis_pop) begin
-      m_axis_last_d  = 1'b0;
-      m_axis_valid_d = 1'b0;
-    end
-
-    if (sched_read_en && m_axis_accept_new) begin
-      m_axis_data_d  = selected_data;
-      m_axis_keep_d  = selected_keep;
-      m_axis_last_d  = selected_last;
-      m_axis_valid_d = 1'b1;
-    end
-  end
-
-  assign m_axis_pcs_if.tdata  = m_axis_data_q;
-  assign m_axis_pcs_if.tkeep  = m_axis_keep_q;
-  assign m_axis_pcs_if.tvalid = m_axis_valid_q;
-  assign m_axis_pcs_if.tlast  = m_axis_last_q;
-  assign m_axis_pcs_if.tdest  = '0;
-
-  tx_scheduling #(
-      .NUM_QUEUES      (NUM_QUEUES),
-      .MAX_BURST_BEATS (MAX_BURST_BEATS),
-      .QID_W           (QID_W)
-  ) tx_scheduling_inst (
-      .clk             (clk),
-      .rst             (rst),
-      .q_valid_i       (sched_q_valid),
-      .q_last_i        (sched_q_last),
-      .q_packet_ready_i(sched_q_packet_ready),
-      .fifo_full_i     (!m_axis_accept_new),
-      .fifo_grant_i    (m_axis_accept_new),
-      .dma_read_en_o   (sched_read_en),
-      .dma_queue_sel_o (sched_queue_sel),
-      .fifo_req_o      ()
+  function automatic logic [LANE_W-1:0] terminal_lane_from_keep(
+      input logic [DMA_VALID_W-1:0] keep,
+      input logic                   last
   );
-
-  always_comb begin
-    in_packet_d    = in_packet_q;
-    packet_tdest_d = packet_tdest_q;
-
-    if (axis_accept) begin
-      if (!in_packet_q) begin
-        packet_tdest_d = s_axis_dma_if.tdest;
+    logic [PCS_VALID_W-1:0] lane_keep;
+    begin
+      terminal_lane_from_keep = LANE_W'(BEATS_PER_ENTRY - 1);
+      if (last) begin
+        terminal_lane_from_keep = '0;
+        for (int i = 0; i < BEATS_PER_ENTRY; i++) begin
+          lane_keep = keep[i * PCS_VALID_W +: PCS_VALID_W];
+          if (lane_keep != '0) begin
+            terminal_lane_from_keep = LANE_W'(i);
+          end
+        end
       end
-      in_packet_d = !s_axis_dma_if.tlast;
     end
-  end
+  endfunction
 
-  always_ff @(posedge clk) begin
-    if (rst) begin
-      in_packet_q    <= 1'b0;
-      packet_tdest_q <= '0;
-      m_axis_data_q  <= '0;
-      m_axis_keep_q  <= '0;
-      m_axis_last_q  <= 1'b0;
-      m_axis_valid_q <= 1'b0;
-    end else begin
-      in_packet_q    <= in_packet_d;
-      packet_tdest_q <= packet_tdest_d;
-      m_axis_data_q  <= m_axis_data_d;
-      m_axis_keep_q  <= m_axis_keep_d;
-      m_axis_last_q  <= m_axis_last_d;
-      m_axis_valid_q <= m_axis_valid_d;
-    end
-  end
+  assign axis_accept        = s_axis_dma_tvalid_i && s_axis_dma_tready_o;
+  assign data_wr_payload    = {s_axis_dma_tdata_i, s_axis_dma_tkeep_i, s_axis_dma_tlast_i};
+  assign desc_wr_payload    = dma_packet_words_q + WORD_CNT_W'(1);
+  assign data_wr_valid      = axis_accept;
+  assign desc_wr_valid      = axis_accept && s_axis_dma_tlast_i;
+  assign s_axis_dma_tready_o = !dma_rst && data_wr_ready &&
+                               (!s_axis_dma_tlast_i || desc_wr_ready);
 
-`ifndef SYNTHESIS
-  // Accepted ingress beat must always target a legal queue.
-  property p_tdest_in_range_on_accept;
-    @(posedge clk) disable iff (rst)
-      axis_accept |-> ingress_tdest_in_range;
-  endproperty
-  a_tdest_in_range_on_accept: assert property (p_tdest_in_range_on_accept);
-
-  // While in the middle of a packet, accepted beats must keep the same TDEST.
-  property p_tdest_stable_within_packet;
-    @(posedge clk) disable iff (rst)
-      (in_packet_q && axis_accept) |-> (s_axis_dma_if.tdest == packet_tdest_q);
-  endproperty
-  a_tdest_stable_within_packet: assert property (p_tdest_stable_within_packet);
-
-  // Do not accept writes when the addressed queue is full.
-  property p_no_accept_when_target_full;
-    @(posedge clk) disable iff (rst)
-      (s_axis_dma_if.tvalid &&
-       ingress_tdest_in_range &&
-       ingress_target_full) |-> !s_axis_dma_if.tready;
-  endproperty
-  a_no_accept_when_target_full: assert property (p_no_accept_when_target_full);
-
-  // AXIS source must hold payload stable while waiting for ready.
-  property p_axis_hold_while_wait;
-    @(posedge clk) disable iff (rst)
-      (s_axis_dma_if.tvalid && !s_axis_dma_if.tready)
-      |=> (s_axis_dma_if.tvalid &&
-           $stable(s_axis_dma_if.tdata) &&
-           $stable(s_axis_dma_if.tkeep) &&
-           $stable(s_axis_dma_if.tlast) &&
-           $stable(s_axis_dma_if.tdest));
-  endproperty
-  a_axis_hold_while_wait: assert property (p_axis_hold_while_wait);
-
-  // AXIS byte-enable contract expected by downstream PCS encoder.
-  property p_non_last_keep_full;
-    @(posedge clk) disable iff (rst)
-      (axis_accept && !s_axis_dma_if.tlast) |-> (s_axis_dma_if.tkeep == DMA_KEEP_ALL);
-  endproperty
-  a_non_last_keep_full: assert property (p_non_last_keep_full);
-
-  property p_last_keep_nonzero;
-    @(posedge clk) disable iff (rst)
-      (axis_accept && s_axis_dma_if.tlast) |-> (s_axis_dma_if.tkeep != '0);
-  endproperty
-  a_last_keep_nonzero: assert property (p_last_keep_nonzero);
-
-  property p_last_keep_contiguous;
-    @(posedge clk) disable iff (rst)
-      (axis_accept && s_axis_dma_if.tlast) |-> keep_is_lsb_contiguous(s_axis_dma_if.tkeep);
-  endproperty
-  a_last_keep_contiguous: assert property (p_last_keep_contiguous);
-
-  // Scheduler is only allowed to dequeue from a non-empty selected queue.
-  property p_scheduler_dequeue_nonempty;
-    @(posedge clk) disable iff (rst)
-      sched_read_en |-> sched_q_valid[sched_queue_sel];
-  endproperty
-  a_scheduler_dequeue_nonempty: assert property (p_scheduler_dequeue_nonempty);
-
-  property p_scheduler_read_requires_output_space;
-    @(posedge clk) disable iff (rst)
-      sched_read_en |-> m_axis_accept_new;
-  endproperty
-  a_scheduler_read_requires_output_space: assert property (p_scheduler_read_requires_output_space);
-
-  // Packet-end marker cannot assert on an invalid beat.
-  property p_last_requires_valid;
-    @(posedge clk) disable iff (rst)
-      m_axis_pcs_if.tlast |-> m_axis_pcs_if.tvalid;
-  endproperty
-  a_last_requires_valid: assert property (p_last_requires_valid);
-
-  // Egress payload must be stable while downstream back-pressures.
-  property p_m_axis_hold_while_wait;
-    @(posedge clk) disable iff (rst)
-      (m_axis_pcs_if.tvalid && !m_axis_pcs_if.tready)
-      |=> (m_axis_pcs_if.tvalid &&
-           $stable(m_axis_pcs_if.tdata) &&
-           $stable(m_axis_pcs_if.tkeep) &&
-           $stable(m_axis_pcs_if.tlast));
-  endproperty
-  a_m_axis_hold_while_wait: assert property (p_m_axis_hold_while_wait);
-
-  c_multi_queue_seen: cover property (
-      @(posedge clk) disable iff (rst)
-      axis_accept && (s_axis_dma_if.tdest != '0)
+  tx_async_fifo #(
+      .DATA_W(FIFO_ENTRY_W),
+      .DEPTH (FIFO_DEPTH)
+  ) data_fifo (
+      .wr_clk_i  (dma_clk),
+      .wr_rst_i  (dma_rst),
+      .wr_data_i (data_wr_payload),
+      .wr_valid_i(data_wr_valid),
+      .wr_ready_o(data_wr_ready),
+      .wr_full_o (data_fifo_full),
+      .rd_clk_i  (tx_clk),
+      .rd_rst_i  (tx_rst),
+      .rd_data_o (data_rd_payload),
+      .rd_valid_o(data_rd_valid),
+      .rd_ready_i(data_rd_ready),
+      .rd_empty_o(data_fifo_empty)
   );
-`endif
+
+  tx_async_fifo #(
+      .DATA_W(WORD_CNT_W),
+      .DEPTH (DESC_DEPTH)
+  ) desc_fifo (
+      .wr_clk_i  (dma_clk),
+      .wr_rst_i  (dma_rst),
+      .wr_data_i (desc_wr_payload),
+      .wr_valid_i(desc_wr_valid),
+      .wr_ready_o(desc_wr_ready),
+      .wr_full_o (desc_fifo_full),
+      .rd_clk_i  (tx_clk),
+      .rd_rst_i  (tx_rst),
+      .rd_data_o (desc_rd_payload),
+      .rd_valid_o(desc_rd_valid),
+      .rd_ready_i(desc_rd_ready),
+      .rd_empty_o(desc_fifo_empty)
+  );
+
+  assign {data_rd_entry.data, data_rd_entry.valid, data_rd_entry.last} = data_rd_payload;
+
+  assign desc_rd_ready       = !packet_active_q && !word_valid_q;
+  assign desc_accept         = desc_rd_valid && desc_rd_ready;
+  assign output_accept       = word_valid_q && m_axis_pcs_tready_i;
+  assign output_terminal_lane = output_accept && (lane_idx_q == terminal_lane_q);
+  assign data_rd_ready       = packet_active_q && (words_remaining_q != '0) &&
+                               (!word_valid_q || output_terminal_lane);
+  assign load_word           = data_rd_valid && data_rd_ready;
+
+  assign m_axis_pcs_tvalid_o = word_valid_q;
+  assign m_axis_pcs_tdata_o  = word_data_q[lane_idx_q * PCS_DATA_W +: PCS_DATA_W];
+  assign m_axis_pcs_tkeep_o  = word_keep_q[lane_idx_q * PCS_VALID_W +: PCS_VALID_W];
+  assign m_axis_pcs_tlast_o  = word_valid_q && word_last_q && (lane_idx_q == terminal_lane_q);
+
+  always_comb begin
+    dma_packet_words_d = dma_packet_words_q;
+    if (axis_accept) begin
+      if (s_axis_dma_tlast_i) begin
+        dma_packet_words_d = '0;
+      end else begin
+        dma_packet_words_d = dma_packet_words_q + WORD_CNT_W'(1);
+      end
+    end
+  end
+
+  always_comb begin
+    word_data_d       = word_data_q;
+    word_keep_d       = word_keep_q;
+    word_last_d       = word_last_q;
+    word_valid_d      = word_valid_q;
+    lane_idx_d        = lane_idx_q;
+    terminal_lane_d   = terminal_lane_q;
+    packet_active_d   = packet_active_q;
+    words_remaining_d = words_remaining_q;
+
+    if (desc_accept) begin
+      packet_active_d   = 1'b1;
+      words_remaining_d = desc_rd_payload;
+    end
+
+    if (output_accept) begin
+      if (lane_idx_q == terminal_lane_q) begin
+        word_valid_d = 1'b0;
+        lane_idx_d   = '0;
+        if (word_last_q) begin
+          packet_active_d = 1'b0;
+        end
+      end else begin
+        lane_idx_d = lane_idx_q + LANE_W'(1);
+      end
+    end
+
+    if (load_word) begin
+      word_data_d       = data_rd_entry.data;
+      word_keep_d       = data_rd_entry.valid;
+      word_last_d       = data_rd_entry.last;
+      word_valid_d      = 1'b1;
+      lane_idx_d        = '0;
+      terminal_lane_d   = terminal_lane_from_keep(data_rd_entry.valid, data_rd_entry.last);
+      words_remaining_d = words_remaining_q - WORD_CNT_W'(1);
+    end
+  end
+
+  always_ff @(posedge dma_clk) begin
+    if (dma_rst) begin
+      dma_packet_words_q <= '0;
+    end else begin
+      dma_packet_words_q <= dma_packet_words_d;
+    end
+  end
+
+  always_ff @(posedge tx_clk) begin
+    if (tx_rst) begin
+      word_data_q       <= '0;
+      word_keep_q       <= '0;
+      word_last_q       <= 1'b0;
+      word_valid_q      <= 1'b0;
+      lane_idx_q        <= '0;
+      terminal_lane_q   <= '0;
+      packet_active_q   <= 1'b0;
+      words_remaining_q <= '0;
+    end else begin
+      word_data_q       <= word_data_d;
+      word_keep_q       <= word_keep_d;
+      word_last_q       <= word_last_d;
+      word_valid_q      <= word_valid_d;
+      lane_idx_q        <= lane_idx_d;
+      terminal_lane_q   <= terminal_lane_d;
+      packet_active_q   <= packet_active_d;
+      words_remaining_q <= words_remaining_d;
+    end
+  end
 
 endmodule
