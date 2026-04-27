@@ -1,6 +1,6 @@
 from cocotb import start_soon
 from cocotb.queue import Queue
-from cocotb.triggers import Event, RisingEdge, Timer
+from cocotb.triggers import Event, RisingEdge
 
 
 class TxAxisDriver:
@@ -40,12 +40,11 @@ class TxAxisDriver:
             if transaction.valid:
                 while True:
                     self._drive_transaction(transaction)
-                    await Timer(1, unit="ns")
+                    await RisingEdge(self.dut.dma_aclk)
                     try:
                         accepted = bool(self.dut.s_axis_dma_tready_o.value)
                     except (TypeError, ValueError):
                         accepted = False
-                    await RisingEdge(self.dut.dma_aclk)
                     if accepted:
                         break
             else:

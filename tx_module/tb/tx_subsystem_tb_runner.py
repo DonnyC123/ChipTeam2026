@@ -38,8 +38,8 @@ def test_tx_subsystem():
     sim = get_runner("questa")
 
     rtl_parameters = {
-        "FIFO_DEPTH": int(os.environ.get("TX_SUBSYSTEM_FIFO_DEPTH", "16")),
-        "DESC_DEPTH": int(os.environ.get("TX_SUBSYSTEM_DESC_DEPTH", "16")),
+        "FIFO_DEPTH": int(os.environ.get("TX_SUBSYSTEM_FIFO_DEPTH", "64")),
+        "DESC_DEPTH": int(os.environ.get("TX_SUBSYSTEM_DESC_DEPTH", "32")),
     }
 
     sim.build(

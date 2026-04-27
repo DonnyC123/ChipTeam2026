@@ -70,10 +70,12 @@ async def test_all_tail_keep_lengths(dut):
 @cocotb.test()
 async def test_dma_backpressure(dut):
     testbase = await _new_testbase(dut)
-    fifo_depth = int(os.environ.get("TX_SUBSYSTEM_FIFO_DEPTH", "16"))
+    fifo_depth = int(os.environ.get("TX_SUBSYSTEM_FIFO_DEPTH", "64"))
+    desc_depth = int(os.environ.get("TX_SUBSYSTEM_DESC_DEPTH", "32"))
+    pressure_words = min(fifo_depth, desc_depth) + 1
 
     await testbase.set_pcs_ready(0)
-    for idx in range(fifo_depth + 1):
+    for idx in range(pressure_words):
         await testbase.sequence.add_dma_axis_word(
             data=idx,
             keep=DMA_KEEP_ALL,
@@ -99,6 +101,27 @@ async def test_dma_backpressure(dut):
     await testbase.set_pcs_ready(1)
     await blocked
     await testbase.drain_and_check(timeout_cycles=20000)
+
+
+@cocotb.test()
+async def test_standard_frame_sizes(dut):
+    testbase = await _new_testbase(dut, dma_period_ns=6, tx_period_ns=10)
+    rng = random.Random(0x1500_2026)
+
+    for frame_bytes in (64, 512, 1500):
+        words = (frame_bytes + 31) // 32
+        tail_bytes = frame_bytes - ((words - 1) * 32)
+        for idx in range(words):
+            last = idx == (words - 1)
+            keep = _tail_keep(tail_bytes) if last else DMA_KEEP_ALL
+            await testbase.sequence.add_dma_axis_word(
+                data=rng.getrandbits(256),
+                keep=keep,
+                last=last,
+            )
+        await testbase.sequence.add_idle(2)
+
+    await testbase.drain_and_check(timeout_cycles=60000)
 
 
 @cocotb.test()

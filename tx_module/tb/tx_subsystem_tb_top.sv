@@ -1,6 +1,6 @@
 module tx_subsystem_tb_top #(
-    parameter int FIFO_DEPTH = 16,
-    parameter int DESC_DEPTH = 16
+    parameter int FIFO_DEPTH = 64,
+    parameter int DESC_DEPTH = 32
 );
 
   logic        clk;

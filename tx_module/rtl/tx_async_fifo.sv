@@ -17,10 +17,11 @@ module tx_async_fifo #(
     output logic              rd_empty_o
 );
 
-  localparam int ADDR_W = (DEPTH > 1) ? $clog2(DEPTH) : 1;
-  localparam int PTR_W  = ADDR_W + 1;
+  localparam int ADDR_W     = (DEPTH > 1) ? $clog2(DEPTH) : 1;
+  localparam int PTR_W      = ADDR_W + 1;
+  localparam int PHYS_DEPTH = 1 << ADDR_W;
 
-  logic [DATA_W-1:0] mem [DEPTH];
+  logic [DATA_W-1:0] mem [PHYS_DEPTH];
 
   logic [PTR_W-1:0] wr_bin_q, wr_bin_d;
   logic [PTR_W-1:0] wr_gray_q, wr_gray_d;

@@ -77,6 +77,7 @@ class TxSubsystemTestBase(GenericTestBase):
             await RisingEdge(self.dut.tx_aclk)
 
     async def set_pcs_ready(self, ready: int):
+        await RisingEdge(self.dut.tx_aclk)
         self.dut.m_axis_pcs_tready_i.value = 1 if ready else 0
 
     async def wait_for_expected_outputs(self, timeout_cycles=10000):
