@@ -9,7 +9,7 @@ TX_MODULE_DIR = TB_DIR.parent
 REPO_ROOT = TX_MODULE_DIR.parent
 
 SOURCES = [
-    str(TX_MODULE_DIR / "tx_fifo" / "rtl" / "tx_fifo_pkg.sv"),
+    str(TX_MODULE_DIR / "rtl" / "tx_subsystem_pkg.sv"),
     str(TX_MODULE_DIR / "rtl" / "tx_async_fifo.sv"),
     str(TX_MODULE_DIR / "rtl" / "tx_subsystem.sv"),
     str(TX_MODULE_DIR / "rtl" / "tx_subsystem_axis_1q.sv"),

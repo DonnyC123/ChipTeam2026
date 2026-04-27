@@ -1,4 +1,4 @@
-module tx_subsystem import tx_fifo_pkg::*; #(
+module tx_subsystem import tx_subsystem_pkg::*; #(
     parameter int FIFO_DEPTH = 64,
     parameter int DESC_DEPTH = 32
 ) (
