@@ -102,10 +102,10 @@ always_comb begin
                         ipg_check_en_d  = 1'b1;
                         drop_mode_d     = 1'b0;
                     end else begin
-                        drop_frame_o_d  = 1'b1;
-                        in_frame_d      = 1'b0;
-                        ipg_counter_d   = '0;
-                        drop_mode_d     = 1'b1;
+                        drop_frame_o_d = 1'b1;
+                        in_frame_d     = 1'b0;
+                        ipg_counter_d  = '0;
+                        drop_mode_d    = 1'b1;
                     end
                 end
                 SOF_L4: begin
@@ -116,10 +116,10 @@ always_comb begin
                         ipg_check_en_d  = 1'b1;
                         drop_mode_d     = 1'b0;
                     end else begin
-                        drop_frame_o_d  = 1'b1;
-                        in_frame_d      = 1'b0;
-                        ipg_counter_d   = '0;
-                        drop_mode_d     = 1'b1;
+                        drop_frame_o_d = 1'b1;
+                        in_frame_d     = 1'b0;
+                        ipg_counter_d  = '0;
+                        drop_mode_d    = 1'b1;
                     end
                 end
                 IDLE_BLK: begin
@@ -155,10 +155,10 @@ always_comb begin
                     ipg_counter_d   = '0;
                     ipg_check_en_d  = 1'b1;
                 end else begin
-                    drop_frame_o_d  = 1'b1;
-                    in_frame_d      = 1'b0;
-                    ipg_counter_d   = '0;
-                    drop_mode_d     = 1'b1;
+                    drop_frame_o_d = 1'b1;
+                    in_frame_d     = 1'b0;
+                    ipg_counter_d  = '0;
+                    drop_mode_d    = 1'b1;
                 end
             end
             SOF_L4: begin
@@ -168,10 +168,10 @@ always_comb begin
                     ipg_counter_d   = '0;
                     ipg_check_en_d  = 1'b1;
                 end else begin
-                    drop_frame_o_d  = 1'b1;
-                    in_frame_d      = 1'b0;
-                    ipg_counter_d   = '0;
-                    drop_mode_d     = 1'b1;
+                    drop_frame_o_d = 1'b1;
+                    in_frame_d     = 1'b0;
+                    ipg_counter_d  = '0;
+                    drop_mode_d    = 1'b1;
                 end
             end
 
@@ -200,7 +200,7 @@ always_comb begin
             TERM_L4: begin bytes_valid_o_d = 8'b0001_1110; in_frame_d = 1'b0; ipg_counter_d = 3; end  //b0111_1000   b0001_1110
             TERM_L5: begin bytes_valid_o_d = 8'b0011_1110; in_frame_d = 1'b0; ipg_counter_d = 2; end  //b0111_1100   b0011_1110
             TERM_L6: begin bytes_valid_o_d = 8'b0111_1110; in_frame_d = 1'b0; ipg_counter_d = 1; end  //b0111_1110   b0111_1110
-            TERM_L7: begin bytes_valid_o_d = 8'b0111_1111; in_frame_d = 1'b0; ipg_counter_d = 0; end
+            TERM_L7: begin bytes_valid_o_d = 8'b1111_1110; in_frame_d = 1'b0; ipg_counter_d = 0; end
 
             // Ordered Set + Data Headers
             OS_D6:  bytes_valid_o_d = 8'b1110_1110;  //b0111_0111  b1110_1110
