@@ -1,4 +1,4 @@
-module tx_subsystem_axis_1q #(
+module tx_subsystem_top #(
     parameter int FIFO_DEPTH = 64,
     parameter int DESC_DEPTH = 32
 ) (

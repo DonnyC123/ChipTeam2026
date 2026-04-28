@@ -22,7 +22,7 @@ module tx_subsystem_tb_top #(
 
   assign clk = tx_aclk;
 
-  tx_subsystem_axis_1q #(
+  tx_subsystem_top #(
       .FIFO_DEPTH(FIFO_DEPTH),
       .DESC_DEPTH(DESC_DEPTH)
   ) dut (

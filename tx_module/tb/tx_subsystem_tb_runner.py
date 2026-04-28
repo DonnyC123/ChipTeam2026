@@ -12,7 +12,7 @@ SOURCES = [
     str(TX_MODULE_DIR / "rtl" / "tx_subsystem_pkg.sv"),
     str(TX_MODULE_DIR / "rtl" / "tx_async_fifo.sv"),
     str(TX_MODULE_DIR / "rtl" / "tx_subsystem.sv"),
-    str(TX_MODULE_DIR / "rtl" / "tx_subsystem_axis_1q.sv"),
+    str(TX_MODULE_DIR / "rtl" / "tx_subsystem_top.sv"),
     str(TB_DIR / "tx_subsystem_tb_top.sv"),
 ]
 
@@ -45,7 +45,7 @@ def test_tx_subsystem():
     sim.build(
         sources=SOURCES,
         hdl_toplevel="tx_subsystem_tb_top",
-        build_dir=str(TX_MODULE_DIR / "sim_build_subsystem_axis_1q"),
+        build_dir=str(TX_MODULE_DIR / "sim_build_subsystem_top"),
         parameters=rtl_parameters,
         always=True,
         clean=True,
