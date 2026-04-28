@@ -10,8 +10,7 @@ module alignment_finder #(
     input  logic [DATA_WIDTH-1:0] data_i,
 
     output logic                  locked_o,
-    output logic                  bitslip_o,
-    output logic                  control_o
+    output logic                  bitslip_o
 );
 
   // WIDTHS for the good and bad counters and bitslip wait counter
@@ -138,7 +137,6 @@ module alignment_finder #(
       state_q      <= state_d;
       locked_o     <= locked_d;
       bitslip_o    <= bitslip_d;
-      control_o    <= hdr;
       good_count_q <= good_count_d;
       bad_count_q  <= bad_count_d;
       bsw_count_q  <= bsw_count_d;
