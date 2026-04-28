@@ -132,3 +132,15 @@ async def test_invalid_blocks_ignored(dut):
 
     assert scoreboard.match_count == 1
     assert scoreboard.error_count == 0
+
+@cocotb.test()
+async def enforce_12_idles(dut):
+    seq, monitor, scoreboard = await init_dut(dut)
+
+    good_frame = [0xCA, 0xFE, 0xBA, 0xBE] * 16
+    # scoreboard.add_expected(good_frame)
+
+    await seq.send_idles(5)
+    await seq.send_ethernet_frame(good_frame)
+    await seq.send_idles(5)
+    await drain_and_check(dut, monitor, scoreboard)
