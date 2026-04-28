@@ -20,6 +20,7 @@ module crc_checker #(
     logic [CRC_W-1:0]   rx_crc_reg;
     logic [DATA_W-1:0]  mask_reg;
     logic               busy;
+    logic [CRC_W-1:0]   computed;
 
     function automatic logic [CRC_W-1:0] calc_crc (input logic [DATA_W-1:0] data, input logic [DATA_W-1:0] mask);
         logic [CRC_W-1:0] crc;
@@ -54,7 +55,6 @@ module crc_checker #(
             end
 
             if (busy) begin
-                automatic logic [CRC_W-1:0] computed;
                 computed   = calc_crc(data_reg, mask_reg);
                 crc_valid_o <= (computed == rx_crc_reg);
                 data_o     <= data_reg;
@@ -64,6 +64,9 @@ module crc_checker #(
         end
     end
 
-    assign ready_o = !busy;
+    always_comb begin
+        computed = calc_crc(data_reg, mask_reg);
+        read_o = !busy;
+    end
 
 endmodule
