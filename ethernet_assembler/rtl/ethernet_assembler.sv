@@ -43,6 +43,7 @@ module ethernet_assembler #(
     input logic [DATA_IN_W-1:0] input_data_i,
     input logic [1:0]           header_bits_i, //network order header bits are seperate
 
+    output logic                  send_o, //entire frame is good
     output logic                  drop_frame_o,
     output logic                  out_valid_o,
     output logic [DATA_OUT_W-1:0] out_data_o,
@@ -59,6 +60,7 @@ logic                  ipg_check_en_d, ipg_check_en_q;
 logic                  out_valid_o_d;
 logic                  drop_frame_o_d;
 logic                  can_read;
+logic                  send_d;
 logic                  drop_mode_d, drop_mode_q;
 logic                  in_frame_d, in_frame_q;
 
@@ -70,6 +72,7 @@ assign control_byte = input_data_i[0 +: SIZE_BYTE]; // the data_type_byte is bit
 
 always_comb begin
     // defaults
+    send_d          = '0;
     out_valid_o_d   = '0;
     bytes_valid_o_d = '0;
     drop_frame_o_d  = '0;
@@ -193,14 +196,14 @@ always_comb begin
         unique case (control_byte)
         
             // End Frame Headers
-            TERM_L0: begin bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; ipg_counter_d = 7; end
-            TERM_L1: begin bytes_valid_o_d = 8'b0000_0010; in_frame_d = 1'b0; ipg_counter_d = 6; end 
-            TERM_L2: begin bytes_valid_o_d = 8'b0000_0110; in_frame_d = 1'b0; ipg_counter_d = 5; end  //b0110_0000 b0000_0110
-            TERM_L3: begin bytes_valid_o_d = 8'b0000_1110; in_frame_d = 1'b0; ipg_counter_d = 4; end  //b0111_0000   b0000_1110
-            TERM_L4: begin bytes_valid_o_d = 8'b0001_1110; in_frame_d = 1'b0; ipg_counter_d = 3; end  //b0111_1000   b0001_1110
-            TERM_L5: begin bytes_valid_o_d = 8'b0011_1110; in_frame_d = 1'b0; ipg_counter_d = 2; end  //b0111_1100   b0011_1110
-            TERM_L6: begin bytes_valid_o_d = 8'b0111_1110; in_frame_d = 1'b0; ipg_counter_d = 1; end  //b0111_1110   b0111_1110
-            TERM_L7: begin bytes_valid_o_d = 8'b1111_1110; in_frame_d = 1'b0; ipg_counter_d = 0; end
+            TERM_L0: begin bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; ipg_counter_d = 7; send_d = 1'b1; end
+            TERM_L1: begin bytes_valid_o_d = 8'b0000_0010; in_frame_d = 1'b0; ipg_counter_d = 6; send_d = 1'b1; end 
+            TERM_L2: begin bytes_valid_o_d = 8'b0000_0110; in_frame_d = 1'b0; ipg_counter_d = 5; send_d = 1'b1; end  //b0110_0000 b0000_0110
+            TERM_L3: begin bytes_valid_o_d = 8'b0000_1110; in_frame_d = 1'b0; ipg_counter_d = 4; send_d = 1'b1; end  //b0111_0000   b0000_1110
+            TERM_L4: begin bytes_valid_o_d = 8'b0001_1110; in_frame_d = 1'b0; ipg_counter_d = 3; send_d = 1'b1; end  //b0111_1000   b0001_1110
+            TERM_L5: begin bytes_valid_o_d = 8'b0011_1110; in_frame_d = 1'b0; ipg_counter_d = 2; send_d = 1'b1; end  //b0111_1100   b0011_1110
+            TERM_L6: begin bytes_valid_o_d = 8'b0111_1110; in_frame_d = 1'b0; ipg_counter_d = 1; send_d = 1'b1; end  //b0111_1110   b0111_1110
+            TERM_L7: begin bytes_valid_o_d = 8'b1111_1110; in_frame_d = 1'b0; ipg_counter_d = 0; send_d = 1'b1; end
 
             // Ordered Set + Data Headers
             OS_D6:  bytes_valid_o_d = 8'b1110_1110;  //b0111_0111  b1110_1110
@@ -330,22 +333,16 @@ data_pipeline #(
     .data_o(bytes_valid_o)
 );
 
-// Old Clocked Outputs
-// always_ff @(posedge clk) begin
-//     if (rst) begin
-//         drop_mode_q     <= 1'b0;
-//         in_frame_q      <= 1'b0;
-//         bytes_valid_o   <= 8'h00;
-//         out_valid_o     <= 1'b0; 
-//         drop_frame_o    <= 1'b0;
-//     end else begin
-//         drop_mode_q     <= drop_mode_d;
-//         in_frame_q      <= in_frame_d;
-//         bytes_valid_o   <= bytes_valid_o_d;
-//         out_data_o      <= out_data_o_d;
-//         out_valid_o     <= out_valid_o_d;
-//         drop_frame_o    <= drop_frame_o_d;
-//     end
-// end
+//send_o and send_d
+data_pipeline #(
+    .DATA_W    (1),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (1)
+) data_pipeline_inst9 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(send_d),
+    .data_o(send_o)
+);
 
 endmodule
