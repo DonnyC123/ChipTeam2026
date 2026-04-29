@@ -23,9 +23,11 @@ class PayloadMonitor(GenericValidMonitor):
             await RisingEdge(self.dut.clk)
 
             txn = RxTransaction()
-            txn.out_valid_o   = self.dut.out_valid_o.value
-            txn.out_data_o    = self.dut.out_data_o.value
-            txn.bytes_valid_o = self.dut.bytes_valid_o.value
+            txn.valid_o = self.dut.valid_o.value
+            txn.data_o  = self.dut.data_o.value
+            txn.mask_o  = self.dut.mask_o.value
+            txn.send_o  = self.dut.send_o.value
+            txn.drop_o  = self.dut.drop_o.value
 
             if txn.valid:
                 self.actual_queue.put_nowait(txn)

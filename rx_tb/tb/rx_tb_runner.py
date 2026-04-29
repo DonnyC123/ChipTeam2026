@@ -11,6 +11,7 @@ sources = [
     "ethernet_assembler/rtl/ethernet_assembler.sv",
     "bubbler/rtl/bubbler.sv",
     "descrambler/rtl/descrambler.sv",
+    "crc/rtl/crc_checker.sv",
     "rx_tb/rtl/rx_top.sv"
 ]
 

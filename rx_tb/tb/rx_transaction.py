@@ -6,23 +6,33 @@ from tb_utils.abstract_transactions import AbstractTransaction
 
 @dataclass
 class RxTransaction(AbstractTransaction):
-    out_data_o:    LogicArray = field(default_factory=lambda: LogicArray("0" * 64))
-    bytes_valid_o: LogicArray = field(default_factory=lambda: LogicArray("0" * 8))
-    out_valid_o:   Logic      = field(default_factory=lambda: Logic("0"))
+    data_o:  LogicArray = field(default_factory=lambda: LogicArray("0" * 64))
+    mask_o:  LogicArray = field(default_factory=lambda: LogicArray("0" * 8))
+    valid_o: Logic      = field(default_factory=lambda: Logic("0"))
+    send_o:  Logic      = field(default_factory=lambda: Logic("0"))
+    drop_o:  Logic      = field(default_factory=lambda: Logic("0"))
 
     @property
     def valid(self) -> bool:
-        return bool(self.out_valid_o)
+        return bool(self.valid_o)
+
+    @property
+    def send(self) -> bool:
+        return bool(self.send_o)
+
+    @property
+    def drop(self) -> bool:
+        return bool(self.drop_o)
 
     @property
     def valid_bytes(self) -> list[int]:
-        mask  = int(self.bytes_valid_o)
-        raw   = int(self.out_data_o).to_bytes(8, "little")
-        return [raw[i] for i in range(0,8,1) if (mask >> i) & 1]
+        mask = int(self.mask_o)
+        raw  = int(self.data_o).to_bytes(8, "little")
+        return [raw[i] for i in range(8) if (mask >> i) & 1]
 
     @property
     def n_valid(self) -> int:
-        return bin(int(self.bytes_valid_o)).count("1")
+        return bin(int(self.mask_o)).count("1")
 
     @property
     def to_data(self):
@@ -31,5 +41,7 @@ class RxTransaction(AbstractTransaction):
     @classmethod
     def invalid_seq_item(cls) -> Self:
         item = cls()
-        item.out_valid_o = Logic(0)
+        item.valid_o = Logic(0)
+        item.send_o  = Logic(0)
+        item.drop_o  = Logic(0)
         return item

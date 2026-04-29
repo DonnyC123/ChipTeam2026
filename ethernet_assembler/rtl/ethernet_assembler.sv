@@ -41,6 +41,7 @@ module ethernet_assembler #(
     input logic [DATA_IN_W-1:0] input_data_i,
     input logic [1:0]           header_bits_i, //network order header bits are seperate
 
+    output logic                  send_o,
     output logic                  drop_frame_o,
     output logic                  out_valid_o,
     output logic [DATA_OUT_W-1:0] out_data_o,
@@ -57,6 +58,7 @@ logic                  drop_frame_o_d;
 logic                  can_read;
 logic                  drop_mode_d, drop_mode_q;
 logic                  in_frame_d, in_frame_q;
+logic send_d;
 
 // Our team belives the sync/control bit are in network order
 assign out_data_o_d = input_data_i;
@@ -68,6 +70,7 @@ always_comb begin
     out_valid_o_d   = '0;
     bytes_valid_o_d = '0;
     drop_frame_o_d  = '0;
+    send_d         = '0;
     drop_mode_d     = drop_mode_q;
     in_frame_d      = in_frame_q;
 
@@ -125,14 +128,14 @@ always_comb begin
         unique case (control_byte)
         
             // End Frame Headers
-            TERM_L0: begin bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; end
-            TERM_L1: begin bytes_valid_o_d = 8'b0000_0010; in_frame_d = 1'b0; end 
-            TERM_L2: begin bytes_valid_o_d = 8'b0000_0110; in_frame_d = 1'b0; end  //b0110_0000 b0000_0110
-            TERM_L3: begin bytes_valid_o_d = 8'b0000_1110; in_frame_d = 1'b0; end  //b0111_0000   b0000_1110
-            TERM_L4: begin bytes_valid_o_d = 8'b0001_1110; in_frame_d = 1'b0; end  //b0111_1000   b0001_1110
-            TERM_L5: begin bytes_valid_o_d = 8'b0011_1110; in_frame_d = 1'b0; end  //b0111_1100   b0011_1110
-            TERM_L6: begin bytes_valid_o_d = 8'b0111_1110; in_frame_d = 1'b0; end  //b0111_1110   b0111_1110
-            TERM_L7: begin bytes_valid_o_d = 8'b0111_1111; in_frame_d = 1'b0; end
+            TERM_L0: begin bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; send_d = 1'b1; end
+            TERM_L1: begin bytes_valid_o_d = 8'b0000_0010; in_frame_d = 1'b0; send_d = 1'b1; end
+            TERM_L2: begin bytes_valid_o_d = 8'b0000_0110; in_frame_d = 1'b0; send_d = 1'b1; end  //b0110_0000 b0000_0110
+            TERM_L3: begin bytes_valid_o_d = 8'b0000_1110; in_frame_d = 1'b0; send_d = 1'b1; end  //b0111_0000   b0000_1110
+            TERM_L4: begin bytes_valid_o_d = 8'b0001_1110; in_frame_d = 1'b0; send_d = 1'b1; end  //b₀₁₁₁_₁₀₀₀   b₀₀₀₁_₁₁₁₀
+            TERM_L5: begin bytes_valid_o_d = 8'b0011_1110; in_frame_d = 1'b0; send_d = 1'b1; end  //b０１１１_１１００   b００１１_１１１０
+            TERM_L6: begin bytes_valid_o_d = 8'b0111_1110; in_frame_d = 1'b0; send_d = 1'b1; end  //b0111_1110   b0111_1110
+            TERM_L7: begin bytes_valid_o_d = 8'b0111_1111; in_frame_d = 1'b0; send_d = 1'b1; end
 
             // Ordered Set + Data Headers
             OS_D6:  bytes_valid_o_d = 8'b1110_1110;  //b0111_0111  b1110_1110
@@ -248,4 +251,16 @@ data_pipeline #(
 //     end
 // end
 
+data_pipeline #(
+    .DATA_W    (1),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (1)
+) data_pipeline_inst9 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(send_d),
+    .data_o(send_o)
+);
+
 endmodule
+
