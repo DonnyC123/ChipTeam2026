@@ -21,12 +21,12 @@ function automatic logic [GRAY_COUNTER_W-1:0] bin_to_gray(input logic [GRAY_COUN
     return count ^ (count >> 1);
 endfunction
 
-function automatic logic [GRAY_MODEL_W-1:0] gray_to_bin(input logic [GRAY_MODEL_W-1:0] gray);
-    logic [GRAY_MODEL_W-1:0] bin;
+function automatic logic [GRAY_BIN_W-1:0] gray_to_bin(input logic [GRAY_BIN_W-1:0] gray);
+    logic [GRAY_BIN_W-1:0] bin;
 
-    for (int i = 0; i < GRAY_MODEL_W; i++) begin
+    for (int i = 0; i < GRAY_BIN_W; i++) begin
         bin[i] = 1'b0;
-        for (int j = i; j < GRAY_MODEL_W; j++) begin
+        for (int j = i; j < GRAY_BIN_W; j++) begin
             bin[i] ^= gray[j];
         end
     end

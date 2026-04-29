@@ -9,14 +9,14 @@
 // TODO: establish if we would ever collect 2 frames at one time
 // if so then we need to know which is which for drop purposes
 
-// TODO: figure out how the rx fifo interacts with the DMA, I'm guessing, just over the AXI if, but idk about clock part
+//TODO: figure out how clocks works with the DMA (cross clock domains?)
+import rx_fifo_pkg::*;
 
 module rx_fifo #(
     parameter FIFO_DATA_WIDTH  = 64,
     parameter FIFO_BUFFER_SIZE = 4) 
 (
     //Special
-    //TODO: figure out how clocks works with the DMA (cross clock domains?)
     input  logic reset,
     input  logic wr_clk_i,
     input  logic rd_clk_i,
@@ -31,6 +31,68 @@ module rx_fifo #(
     rx_axis_if.master                  axis_if
 );
 
-//TODO: logic. Reference the fifo.sv file from 387??
+//TODO: logic. Reference the fifo.sv file from 387
+//TODO: This does synchronous clock domain crossing.
+//TODO: We need to make the read/write pointers grey coded to make it ascynchronous clock domain crossing
+
+localparam FIFO_ADDR_WIDTH = $clog2(FIFO_BUFFER_SIZE) + 1;
+logic [FIFO_DATA_WIDTH-1:0] fifo_buf [FIFO_BUFFER_SIZE-1:0];
+//TODO: need different versions for grey and the bin widths
+logic [FIFO_ADDR_WIDTH-1:0] wr_addr, wr_addr_t;
+logic [FIFO_ADDR_WIDTH-1:0] rd_addr, rd_addr_t;
+logic                       full_t, empty_t;
+
+always_ff @(posedge wr_clk) 
+begin : p_write_buffer
+    if ( (wr_en == 1'b1) && (full_t == 1'b0) ) begin
+        fifo_buf[$unsigned(wr_addr[FIFO_ADDR_WIDTH-2:0])] <= din; //TODO: din = former port
+    end
+end
+
+//TODO: wr_addr needs to be greycoded here, binary when doing full checks
+always_ff @(posedge wr_clk, posedge reset) 
+begin : p_wr_addr
+    if ( reset == 1'b1 ) 
+        wr_addr <= '0;
+    else
+        wr_addr <= wr_addr_t;
+end
+
+//TODO: 'dout' is formally a port signal, now in bundle
+always_ff @(posedge rd_clk) 
+begin : p_rd_buffer
+    dout <= to01(fifo_buf[$unsigned(rd_addr_t[FIFO_ADDR_WIDTH-2:0])]);
+end
+
+//TODO: 'rd_addr' is formally a port signal, now in bundle
+always_ff @(posedge rd_clk, posedge reset) 
+begin : p_rd_addr
+    if ( reset == 1'b1 ) 
+        rd_addr <= '0;
+    else
+        rd_addr <= rd_addr_t;
+end
+
+//TODO: 'empty' is formally a port signal, now in bundle
+always_ff @(posedge rd_clk, posedge reset) 
+begin : p_empty
+    if ( reset == 1'b1 ) 
+        empty <= '1;
+    else
+        empty <= (wr_addr == rd_addr_t) ? 1'b1 : 1'b0;
+end
+
+assign rd_addr_t = (rd_en == 1'b1 && empty_t == 1'b0) ? ($unsigned(rd_addr) + 'h1) : rd_addr;
+assign wr_addr_t = (wr_en == 1'b1 && full_t == 1'b0) ? ($unsigned(wr_addr) + 'h1) : wr_addr;
+
+assign empty_t = (wr_addr == rd_addr) ? 1'b1 : 1'b0;
+
+// TODO: wr_addr and rd_addr will be gray, this full check won't work, needs binary, indexing would be off too.
+assign full_t = (wr_addr[FIFO_ADDR_WIDTH-2:0] == rd_addr[FIFO_ADDR_WIDTH-2:0]) &&
+                (wr_addr[FIFO_ADDR_WIDTH-1] != rd_addr[FIFO_ADDR_WIDTH-1]) ? 1'b1 : 1'b0;
+assign full = full_t;
+
+
+
 
 endmodule : rx_fifo
