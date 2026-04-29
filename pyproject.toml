@@ -7,9 +7,10 @@ addopts = "-ra -q --strict-markers --import-mode=importlib"
 pythonpath = [
     ".",
 ]
+#"multiplier_demo/tb"
 testpaths = [
-    "multiplier_demo/tb",
     "median_filter/tb",
+    "pcs_generator/tb",
 ]
 
 python_files = ["*_runner.py"]
