@@ -1,20 +1,18 @@
 module rx_fifo_ctrl #(
-parameter S_DATA_W  = 64,
-localparam S_MASK_W = S_DATA_W / BYTE_W
-  )(
-    input logic                s_clk,
-    input logic                m_clk,
-    input logic [S_DATA_W-1:0] data_i,
-    input logic [S_MASK_W-1:0] mask_i,
-    input logic valid_i,
-    input logic drop_i,
-    input logic send_i,
-    output logic cancel_o,
-          axi_stream_if.master m_axi
+    parameter  S_DATA_W = 64,
+    localparam S_MASK_W = S_DATA_W / BYTE_W
+) (
+    input  logic                               s_clk,
+    input  logic                               m_clk,
+    input  logic                               rst,
+    input  logic                [S_DATA_W-1:0] data_i,
+    input  logic                [S_MASK_W-1:0] mask_i,
+    input  logic                               valid_i,
+    input  logic                               drop_i,
+    input  logic                               send_i,
+    output logic                               cancel_o,
+           axi_stream_if.master                m_axi
 );
-
-  localparam  = s_axis.DATA_W;
-  localparam  = s_axis.MASK_W;
 
   localparam M_DATA_W = m_axis.DATA_W;
   localparam M_MASK_W = m_axis.MASK_W;
