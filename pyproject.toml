@@ -7,9 +7,9 @@ addopts = "-ra -q --strict-markers --import-mode=importlib"
 pythonpath = [
     ".",
 ]
+# update the testpath
 testpaths = [
-    "multiplier_demo/tb",
-    "median_filter/tb",
+    "descrambler/tb",
 ]
 
 python_files = ["*_runner.py"]
