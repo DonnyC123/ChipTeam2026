@@ -19,7 +19,6 @@ interface axi_stream_if #(
   );
 
   modport slave(  //
-
       input data,
       input mask,
       input valid,

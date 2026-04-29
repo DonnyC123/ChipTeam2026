@@ -41,6 +41,7 @@ module rx_async_fifo
 
   fifo_row_t              rd_row_q;
 
+
   always_ff @(posedge s_clk) begin
     if (rst) begin
       wr_addr_q <= '0;
@@ -63,13 +64,23 @@ module rx_async_fifo
     end
   end
 
-  // Two FF wr sync
-
+  // Two FF Wr Sync
   always_ff @(posedge m_clk) begin
     if (rst) begin
-      wr_addr_sync_q <= '0;
+      wr_addr_sync_q <= '{default: '0};
     end else begin
-      wr_addr_sync_q <= ;
+      wr_addr_sync_q[1] <= wr_addr_sync_q[0];
+      wr_addr_sync_q[0] <= wr_addr_q;
+    end
+  end
+
+  // Two FF Rd Sync
+  always_ff @(posedge s_clk) begin
+    if (rst) begin
+      rd_addr_sync_q <= '{default: '0};
+    end else begin
+      rd_addr_sync_q[1] <= rd_addr_sync_q[0];
+      rd_addr_sync_q[0] <= rd_addr_q;
     end
   end
 
