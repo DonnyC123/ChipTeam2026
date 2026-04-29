@@ -107,14 +107,14 @@ always_comb begin
                 held_mask_d  = mask_i;
                 free_bytes_d = free_slots(mask_i);
 
-                dn_data_o  = data_i;
-                dn_mask_o  = mask_i;
-                dn_valid_o = 1'b1;
+                data_o  = data_i;
+                mask_o  = mask_i;
+                valid_o = 1'b1;
 
                 if (last_i) begin
                     ready_o = 1'b0;
                     last_o  = 1'b0;  
-                    state_d    = S_APPEND;
+                    state_d = S_APPEND;
                 end else begin
                     state_d = S_STREAM;
                 end
@@ -137,7 +137,7 @@ always_comb begin
                 if (last_i) begin
                     ready_o = 1'b0;
                     last_o  = 1'b0;
-                    state_d    = S_APPEND;
+                    state_d = S_APPEND;
                 end
             end
         end
@@ -151,6 +151,7 @@ always_comb begin
                     logic [DATA_W-1:0] out_data;
                     logic [MASK_W-1:0] out_mask;
                     int                slot;
+
                     out_data = held_data_q;
                     out_mask = held_mask_q;
                     slot     = 0;
