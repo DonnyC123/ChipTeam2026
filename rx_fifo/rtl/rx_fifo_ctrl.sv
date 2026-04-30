@@ -17,11 +17,11 @@ module rx_fifo_ctrl
            axi_stream_if.master                m_axi
 );
 
-  localparam M_DATA_W = m_axis.DATA_W;
-  localparam M_MASK_W = m_axis.MASK_W;
+  localparam M_DATA_W = m_axi.DATA_W;
+  localparam M_MASK_W = m_axi.MASK_W;
 
   localparam OUTPUT_SCALE = M_MASK_W / S_MASK_W;
-  localparam BUFF_COUNT_W = $clog2(OUTPUT_SCALE);
+  localparam BUFF_COUNT_W = (OUTPUT_SCALE > 1) ? $clog2(OUTPUT_SCALE) : 1;
 
   logic [    M_DATA_W-1:0] data_buff_d;
   logic [    M_DATA_W-1:0] data_buff_q;
@@ -49,24 +49,29 @@ module rx_fifo_ctrl
     mask_buff      = mask_buff_q;
     mask_buff_d    = mask_buff;
 
-    if (valid_i && send_i) begin
+
+    if (drop_i) begin
+      revert_data    = 1'b1;
+      buff_counter_d = '0;
+      mask_buff_d    = '0;
+    end else if (valid_i) begin
       buff_counter_d = buff_counter_q + 1;
 
-      data_buff_d    = data_buff_q << S_DATA_W | data_i;
-      mask_buff      = mask_buff_q << S_MASK_W | mask_i;
+      data_buff_d    = {data_i, data_buff_q[M_DATA_W-1:S_DATA_W]};
+      mask_buff      = {mask_i, mask_buff_q[M_MASK_W-1:S_MASK_W]};
 
       if (fifo_full) begin
         revert_data    = 1'b1;
-        buff_counter_q = '0;
+        buff_counter_d = '0;
         mask_buff_d    = '0;
       end else if (send_i) begin
         commit_data    = 1'b1;
         wr_fifo        = 1'b1;
-        buff_counter_q = '0;
+        buff_counter_d = '0;
         mask_buff_d    = '0;
       end else if (buff_counter_q == OUTPUT_SCALE - 1) begin
         wr_fifo        = 1'b1;
-        buff_counter_q = '0;
+        buff_counter_d = '0;
         mask_buff_d    = '0;
       end else begin
         mask_buff_d = mask_buff;
@@ -76,11 +81,12 @@ module rx_fifo_ctrl
 
   always_ff @(posedge s_clk) begin
     if (s_rst) begin
-      data_buff_q = '0;
-      mask_buff_q = '0;
+      mask_buff_q    <= '0;
+      buff_counter_q <= '0;
     end else begin
-      data_buff_q = data_buff_d;
-      mask_buff_q = mask_buff_d;
+      data_buff_q    <= data_buff_d;
+      mask_buff_q    <= mask_buff_d;
+      buff_counter_q <= buff_counter_d;
     end
   end
 
@@ -97,8 +103,10 @@ module rx_fifo_ctrl
       .wr_en_i (wr_fifo),
       .commit_i(commit_data),
       .revert_i(revert_data),
-      .full_o  (full),
+      .full_o  (fifo_full),
       .m_axi   (m_axi)
   );
+
+  assign cancel_o = revert_data;
 
 endmodule

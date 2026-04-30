@@ -61,7 +61,7 @@ module rx_async_fifo
 
   always_comb begin
     rd_en = m_axi.ready && !empty;
-    wr_en = wr_en_i && !full && ;
+    wr_en = wr_en_i && !full && !revert_i;
   end
 
   always_comb begin
