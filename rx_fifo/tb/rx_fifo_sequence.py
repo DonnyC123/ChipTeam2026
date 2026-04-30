@@ -165,12 +165,13 @@ class RXFifoSequence(GenericSequence):
         self,
         rng: random.Random | None = None,
         seed: int | None = None,
+        mask_toggle: bool | int = 1,
     ):
         staged_item = self._current_item
         self._reset_current_item()
         try:
             self.add_random_data(rng=rng, seed=seed)
-            self.add_random_mask(rng=rng, seed=seed)
+            self.add_random_mask(rng=rng, seed=seed, toggle=mask_toggle)
             self.add_valid(1)
             self.add_drop(0)
             self.add_send(0)
@@ -184,12 +185,13 @@ class RXFifoSequence(GenericSequence):
         rng: random.Random | None = None,
         seed: int | None = None,
         ready: bool | int | Logic = 1,
+        mask_toggle: bool | int = 1,
     ) -> None:
         staged_item = self._current_item
         self._reset_current_item()
         try:
             self.add_random_data(rng=rng, seed=seed)
-            self.add_random_mask(rng=rng, seed=seed)
+            self.add_random_mask(rng=rng, seed=seed, toggle=mask_toggle)
             self.add_valid(1)
             self.add_drop(0)
             self.add_send(1)
