@@ -132,11 +132,6 @@ always_comb begin
                         ipg_counter_d = ipg_counter_q + IPG_IDLE_BYTES;
                     end
                 end
-                default: begin
-                    bytes_valid_o_d = '0;
-                    in_frame_d      = 1'b0;
-                    drop_mode_d     = 1'b1;
-                end
             endcase
         end
 
@@ -186,9 +181,6 @@ always_comb begin
                     ipg_counter_d = ipg_counter_q + IPG_IDLE_BYTES;
                 end
             end
-
-            // Even if we see stuff like double ends, it dosen't matter because we are not in a frame
-            default: begin bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; end
         endcase
 
     // Valid input, currently in-frame, and control header.
@@ -211,6 +203,7 @@ always_comb begin
             OS_D3T: bytes_valid_o_d = 8'b0000_1110;  //b0111_0000  b0000_1110
             OS_D3B: bytes_valid_o_d = 8'b1110_0000;  //b0000_0111  b1110_0000
 
+            // anything else is invalid so needs to be dropped
             default: begin
                 bytes_valid_o_d = 8'b0000_0000;
                 in_frame_d      = 1'b0;
