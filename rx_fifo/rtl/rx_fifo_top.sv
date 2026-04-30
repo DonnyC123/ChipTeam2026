@@ -18,6 +18,7 @@ module rx_fifo_top
 );
 
   parameter M_DATA_W = 256;
+
   axi_stream_if #(.DATA_W(M_DATA_W)) axi_inst ();
 
   rx_fifo_ctrl #(

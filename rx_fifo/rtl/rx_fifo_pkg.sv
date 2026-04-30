@@ -6,10 +6,13 @@ package rx_fifo_pkg;
 
   function automatic logic [DATA_W-1:0] gray_to_bin
     #(DATA_W = 10) (input logic [DATA_W-1:0] gray);
+   
     logic [DATA_W-1:0] bin = gray;
-    for (int i = 1; i < DATA_W; i++) bin ^= gray >> i;
+    
+    for (int i = 1; i < DATA_W; i++) begin
+      bin ^= gray >> i;
+    end 
+
     return bin;
   endfunction
-
-
 endpackage
