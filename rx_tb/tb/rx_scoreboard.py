@@ -53,6 +53,7 @@ class RxScoreboard:
 
         if self.send_count < len(self._expected_payloads):
             self.error_count += 1
+            print(self._current_frame)
             cocotb.log.error(
                 f"[{self.name}] CRC FAIL: only {self.send_count} frames passed, "
                 f"expected {len(self._expected_payloads)}"
