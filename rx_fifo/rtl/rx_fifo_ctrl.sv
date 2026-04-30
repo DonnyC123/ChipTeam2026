@@ -1,10 +1,13 @@
-module rx_fifo_ctrl #(
+module rx_fifo_ctrl
+  import rx_fifo_pkg::*;
+#(
     parameter  S_DATA_W = 64,
     localparam S_MASK_W = S_DATA_W / BYTE_W
 ) (
     input  logic                               s_clk,
+    input  logic                               s_rst,
     input  logic                               m_clk,
-    input  logic                               rst,
+    input  logic                               m_rst,
     input  logic                [S_DATA_W-1:0] data_i,
     input  logic                [S_MASK_W-1:0] mask_i,
     input  logic                               valid_i,
@@ -46,17 +49,17 @@ module rx_fifo_ctrl #(
     mask_buff      = mask_buff_q;
     mask_buff_d    = mask_buff;
 
-    if (s_axi.valid && s_axi.ready) begin
+    if (valid_i && send_i) begin
       buff_counter_d = buff_counter_q + 1;
 
-      data_buff_d    = data_buff_q << S_DATA_W | s_axi.data;
-      mask_buff      = mask_buff_q << S_MASK_W | s_axi.mask;
+      data_buff_d    = data_buff_q << S_DATA_W | data_i;
+      mask_buff      = mask_buff_q << S_MASK_W | mask_i;
 
       if (fifo_full) begin
         revert_data    = 1'b1;
         buff_counter_q = '0;
         mask_buff_d    = '0;
-      end else if (s_axi.last) begin
+      end else if (send_i) begin
         commit_data    = 1'b1;
         wr_fifo        = 1'b1;
         buff_counter_q = '0;
@@ -72,7 +75,7 @@ module rx_fifo_ctrl #(
   end
 
   always_ff @(posedge s_clk) begin
-    if (rst) begin
+    if (s_rst) begin
       data_buff_q = '0;
       mask_buff_q = '0;
     end else begin
@@ -81,7 +84,21 @@ module rx_fifo_ctrl #(
     end
   end
 
-  axi_stream_if #(.DATA_W(M_DATA_W)) m_axi_fifo;
-
+  rx_async_fifo #(
+      .ROW_BYTE_LEN(32),
+      .FIFO_DEPTH  (16)
+  ) rx_async_fifo_inst (
+      .m_clk   (m_clk),
+      .m_rst   (m_rst),
+      .s_clk   (s_clk),
+      .s_rst   (s_rst),
+      .data_i  (data_buff_d),
+      .mask_i  (mask_buff),
+      .wr_en_i (wr_fifo),
+      .commit_i(commit_data),
+      .revert_i(revert_data),
+      .full_o  (full),
+      .m_axi   (m_axi)
+  );
 
 endmodule
