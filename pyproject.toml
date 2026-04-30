@@ -10,6 +10,7 @@ pythonpath = [
 testpaths = [
     "multiplier_demo/tb",
     "median_filter/tb",
+    "rx_tb/tb",
     "ethernet_assembler/tb",
 ]
 
