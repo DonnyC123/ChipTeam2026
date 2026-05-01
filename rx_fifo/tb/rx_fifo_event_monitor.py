@@ -15,11 +15,15 @@ class RXFifoEventMonitor:
         per-input-beat 64-bit lanes that contributed to it (lanes whose mask
         byte is zero are stale buffer contents and are skipped).
 
-      * ``{"type": "cancel"}`` -- one entry per ``send_i`` cycle on which the
-        DUT reverts the would-be commit (``cancel_o`` high while
-        ``send_i && valid_i && !drop_i``). Cancels caused by ``drop_i``
-        mid-packet are *not* emitted here; the model already records those
-        as dropped packets via its notification path.
+      * ``{"type": "cancel"}`` -- one entry per packet-level revert. A
+        revert fires whenever ``valid_i && !drop_i && cancel_o`` -- i.e.
+        ``fifo_full`` is asserted on any beat of a packet (not only on the
+        ``send_i`` beat). Once that happens the driver suppresses ``valid_i``
+        for the remainder of the packet, so ``cancel_o`` cannot reassert
+        until a fresh packet starts; we therefore get one cancel per dropped
+        packet. Cancels caused by ``drop_i`` mid-packet are *not* emitted
+        here; the model already records those as dropped packets via its
+        notification path.
     """
 
     DATA_IN_W = 64
@@ -75,10 +79,9 @@ class RXFifoEventMonitor:
             await RisingEdge(self.dut.s_clk)
             await ReadOnly()
 
-            send_i = bool(self._to_int(self.dut.send_i))
             valid_i = bool(self._to_int(self.dut.valid_i))
             drop_i = bool(self._to_int(self.dut.drop_i))
             cancel_o = bool(self._to_int(self.dut.cancel_o))
 
-            if send_i and valid_i and not drop_i and cancel_o:
+            if valid_i and not drop_i and cancel_o:
                 await self.actual_queue.put({"type": "cancel"})
