@@ -51,7 +51,8 @@ def test_rx_fifo():
     if sim_name == "questa":
         sim_test_args = [
             "-voptargs=+acc",
-            "-t", "ps",
+            "-t",
+            "ps",
         ]
 
     sim.build(

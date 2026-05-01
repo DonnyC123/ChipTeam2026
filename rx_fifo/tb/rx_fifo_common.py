@@ -1,23 +1,41 @@
+import random
+
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 
 
-S_CLK_PERIOD_NS = 2.48139
-M_CLK_PERIOD_NS = 4.0
+S_CLK_PERIOD_PS = 2481
+M_CLK_PERIOD_PS = 4000
 
 
 async def initialize_tb(
     dut,
-    s_clk_period_ns=S_CLK_PERIOD_NS,
-    m_clk_period_ns=M_CLK_PERIOD_NS,
+    s_clk_period_ps=S_CLK_PERIOD_PS,
+    m_clk_period_ps=M_CLK_PERIOD_PS,
+    phase_seed: int | None = None,
 ):
-    s_clk_gen = Clock(dut.s_clk, s_clk_period_ns, unit="ns")
-    m_clk_gen = Clock(dut.m_clk, m_clk_period_ns, unit="ns")
-    cocotb.start_soon(s_clk_gen.start())
-    cocotb.start_soon(m_clk_gen.start())
+    rng = random.Random(phase_seed)
+    s_clk_phase_ps = rng.randint(0, s_clk_period_ps - 1)
+    m_clk_phase_ps = rng.randint(0, m_clk_period_ps - 1)
 
-    await reset_dut(dut, 2 * max(s_clk_period_ns, m_clk_period_ns))
+    dut._log.info(
+        f"Clock phase offsets: s_clk={s_clk_phase_ps}ps, m_clk={m_clk_phase_ps}ps"
+    )
+
+    s_clk_gen = Clock(dut.s_clk, s_clk_period_ps, unit="ps")
+    m_clk_gen = Clock(dut.m_clk, m_clk_period_ps, unit="ps")
+
+    async def _start_after(delay_ps, clk_gen):
+        if delay_ps > 0:
+            await Timer(delay_ps, unit="ps")
+        await clk_gen.start()
+
+    cocotb.start_soon(_start_after(s_clk_phase_ps, s_clk_gen))
+    cocotb.start_soon(_start_after(m_clk_phase_ps, m_clk_gen))
+
+    reset_duration_ns = 2 * max(s_clk_period_ps, m_clk_period_ps) / 1000
+    await reset_dut(dut, reset_duration_ns)
 
 
 async def _wait_reset_edges(dut):
