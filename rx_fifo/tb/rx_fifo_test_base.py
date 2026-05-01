@@ -8,8 +8,8 @@ from rx_fifo.tb.rx_fifo_model import RXFifoModel
 from rx_fifo.tb.rx_fifo_output_transaction import RXFifoOutputTransaction
 from rx_fifo.tb.rx_fifo_ready_driver import RXFifoReadyDriver
 from rx_fifo.tb.rx_fifo_sequence import RXFifoSequence
+from rx_fifo.tb.rx_fifo_scoreboard import RXFifoScoreboard
 from rx_fifo.tb.rx_fifo_sequence_item import RXFifoSequenceItem
-from tb_utils.generic_scoreboard import GenericScoreboard
 from tb_utils.generic_test_base import GenericTestBase
 
 
@@ -22,7 +22,7 @@ class RXFifoTestBase(GenericTestBase):
         sequence=RXFifoSequence,
         monitor=RXFifoEventMonitor,
         output_transaction=RXFifoOutputTransaction,
-        scoreboard=GenericScoreboard,
+        scoreboard=RXFifoScoreboard,
         model=RXFifoModel,
         checker=RXFifoChecker,
     ):

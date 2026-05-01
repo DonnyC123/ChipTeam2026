@@ -106,12 +106,12 @@ module rx_async_fifo
 
   always_ff @(posedge s_clk) begin
     if (wr_en) begin
-      fifo_mem[wr_addr_q] <= {commit_i, mask_i, data_i};
+      fifo_mem[wr_addr_q.addr] <= {commit_i, mask_i, data_i};
     end
   end
 
   always_ff @(posedge m_clk) begin
-    rd_row_q <= fifo_mem[rd_addr_d];
+    rd_row_q <= fifo_mem[rd_addr_d.addr];
   end
 
   // Two FF Wr Sync

@@ -1,78 +1,91 @@
-from collections import deque
-from typing import Any, Deque, Dict
+from typing import List
 
 from tb_utils.generic_checker import GenericChecker
 
 
 class RXFifoChecker(GenericChecker):
-    """Checker that walks the model queue alongside a combined event queue.
+    """Checker that walks the model queue alongside two monitor queues.
 
-    Model queue entries: ``{"beats": [...], "dropped": bool}`` -- one per
-    packet the input sequence committed (``send_i``) or aborted (``drop_i``).
+    Inputs:
+      * ``expected_queue`` (model): ``{"beats": [...], "dropped": bool}`` per
+        packet the input sequence committed (``send_i``) or aborted
+        (``drop_i``).
+      * ``axi_queue`` (event monitor): ``{"beats": [...]}`` per AXI-stream
+        output packet the DUT actually emitted.
+      * ``cancel_queue`` (event monitor): one entry per ``cancel_o`` revert.
 
-    Event queue entries (from ``RXFifoEventMonitor``):
-      * ``{"type": "axi_packet", "beats": [...]}``
-      * ``{"type": "cancel"}``
-
-    Algorithm: for each model packet, in order,
-      * if ``dropped`` (test-side ``drop_i``): skip; no event consumed.
-      * else: pop one event:
-          - ``cancel`` -> DUT reverted this commit (fifo_full); skip.
-          - ``axi_packet`` -> beats must match.
-    Any leftover events after the model queue is drained are an error.
+    For each model packet, in order:
+      * if ``dropped`` (drop_i): skip.
+      * else: try to match the next AXI packet. If beats agree, consume it.
+        Otherwise (or if the AXI queue is exhausted) consume one cancel
+        entry to account for a fifo_full revert.
     """
 
-    async def check(self, expected_queue, actual_queue):
-        events: Deque[Dict[str, Any]] = deque()
-        while not actual_queue.empty():
-            events.append(await actual_queue.get())
+    async def _drain_axi(self, axi_queue) -> List[dict]:
+        items = []
+        while not axi_queue.empty():
+            items.append(await axi_queue.get())
+        return items
 
+    async def _drain_cancels(self, cancel_queue) -> int:
+        count = 0
+        while not cancel_queue.empty():
+            await cancel_queue.get()
+            count += 1
+        return count
+
+    async def check(self, expected_queue, axi_queue, cancel_queue):
+        axi_packets = await self._drain_axi(axi_queue)
+        cancels_remaining = await self._drain_cancels(cancel_queue)
+
+        axi_idx = 0
         idx = 0
         while not expected_queue.empty():
             model_pkt = await expected_queue.get()
             idx += 1
 
             if model_pkt["dropped"]:
-                # Aborted by drop_i; nothing should appear on either AXI or
-                # cancel-event side for this packet.
                 continue
 
-            if not events:
+            expected_beats = model_pkt["beats"]
+
+            # Prefer matching against the next AXI output.
+            if (
+                axi_idx < len(axi_packets)
+                and axi_packets[axi_idx]["beats"] == expected_beats
+            ):
+                axi_idx += 1
+                continue
+
+            # Otherwise this packet must have been reverted (fifo_full) -
+            # consume a cancel entry.
+            if cancels_remaining > 0:
+                cancels_remaining -= 1
+                continue
+
+            # No AXI match and no cancel left to absorb the gap.
+            if axi_idx < len(axi_packets):
                 msg = (
-                    f"Model packet {idx} expected an output event but the "
-                    f"event queue is empty: beats={model_pkt['beats']}"
+                    f"Packet {idx} mismatch:\n"
+                    f"  model = {expected_beats}\n"
+                    f"  next axi = {axi_packets[axi_idx]['beats']}"
                 )
-                if self.fatal:
-                    raise RuntimeError(msg)
-                print(f"[WARNING] {msg}")
-                return
-
-            event = events.popleft()
-            event_type = event.get("type")
-
-            if event_type == "cancel":
-                # DUT reverted this commit. No data check possible.
-                continue
-
-            if event_type == "axi_packet":
-                if event["beats"] != model_pkt["beats"]:
-                    msg = (
-                        f"Packet {idx} mismatch:\n"
-                        f"  model   = {model_pkt['beats']}\n"
-                        f"  monitor = {event['beats']}"
-                    )
-                    if self.fatal:
-                        raise RuntimeError(msg)
-                    print(f"[WARNING] {msg}")
-                continue
-
-            msg = f"Unknown event type at packet {idx}: {event}"
+            else:
+                msg = (
+                    f"Packet {idx} expected an output event but no AXI or "
+                    f"cancel events remain: beats={expected_beats}"
+                )
             if self.fatal:
                 raise RuntimeError(msg)
             print(f"[WARNING] {msg}")
+            return
 
-        if events:
-            msg = f"Unconsumed events after model drained: {list(events)}"
+        leftover_axi = len(axi_packets) - axi_idx
+        if leftover_axi or cancels_remaining:
+            msg = (
+                f"Unconsumed events: axi_remaining={leftover_axi}, "
+                f"cancels_remaining={cancels_remaining}"
+            )
             if self.fatal:
                 raise RuntimeError(msg)
             print(f"[WARNING] {msg}")
