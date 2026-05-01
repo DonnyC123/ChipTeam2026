@@ -8,6 +8,7 @@ from rx_fifo.tb.rx_fifo_sequence_item import (
 )
 from tb_utils.generic_sequence import GenericSequence
 
+
 class RXFifoSequence(GenericSequence):
     DATA_IN_W = RXFifoSequenceItem.DATA_IN_W
     IN_MASK_W = RXFifoSequenceItem.IN_MASK_W
@@ -15,6 +16,9 @@ class RXFifoSequence(GenericSequence):
     def __init__(self, driver, *subscribers):
         super().__init__(driver, *subscribers)
         self._reset_current_item()
+
+    def _reset_current_item(self):
+        self._current_item = RXFifoSequenceItem()
 
     @staticmethod
     def _to_logic(value: bool | int | Logic) -> Logic:
@@ -30,12 +34,8 @@ class RXFifoSequence(GenericSequence):
     def _to_logic_array(value: int | LogicArray, width: int) -> LogicArray:
         if isinstance(value, LogicArray):
             if len(value) != width:
-                raise ValueError(
-                    f"Expected LogicArray width {width}, got {len(value)}"
-                )
+                raise ValueError(f"Expected LogicArray width {width}, got {len(value)}")
             return value
-        if not isinstance(value, int):
-            raise TypeError(f"Expected int or LogicArray, got {type(value).__name__}")
         if value < 0 or value >= (1 << width):
             raise ValueError(f"Value {value} does not fit in {width} bits")
         return LogicArray.from_unsigned(value, width)

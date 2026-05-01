@@ -27,7 +27,7 @@ async def _wait_reset_edges(dut):
     await RisingEdge(dut.m_clk)
 
 
-async def reset_dut(dut, duration_ns=20):
+async def reset_dut(dut, duration_ns: float = 20):
     if hasattr(dut, "rst"):
         dut.rst.value = 1
         await Timer(duration_ns, unit="ns")
