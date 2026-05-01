@@ -28,15 +28,22 @@ async def _wait_reset_edges(dut):
 
 
 async def reset_dut(dut, duration_ns: float = 20):
-    if hasattr(dut, "rst"):
+    if hasattr(dut, "s_rst") and hasattr(dut, "m_rst"):
+        dut.s_rst.value = 1
+        dut.m_rst.value = 1
+        await Timer(duration_ns, unit="ns")
+        await _wait_reset_edges(dut)
+        dut.s_rst.value = 0
+        dut.m_rst.value = 0
+    elif hasattr(dut, "rst"):
         dut.rst.value = 1
         await Timer(duration_ns, unit="ns")
         await _wait_reset_edges(dut)
         dut.rst.value = 0
     elif hasattr(dut, "rst_n"):
-        dut.rst_n.value = 1
+        dut.rst_n.value = 0
         await Timer(duration_ns, unit="ns")
         await _wait_reset_edges(dut)
-        dut.rst_n.value = 0
+        dut.rst_n.value = 1
     else:
-        raise RuntimeError("DUT does not have 'rst' or 'rst_n' signal!")
+        raise RuntimeError("DUT does not have 'rst', 'rst_n', or 's_rst'/'m_rst' signals!")

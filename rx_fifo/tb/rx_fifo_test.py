@@ -12,11 +12,22 @@ async def run_basic_random_packet_test(dut, seed: int | None = 596):
     testbase = RXFifoTestBase(dut)
     rng = random.Random(seed)
 
-    await testbase.sequence.add_valid_random_input(rng=rng, mask_toggle=1)
+    await testbase.sequence.generate_random_valid_packet(rng=rng)
+    await testbase.wait_for_driver_done()
+    await testbase.scoreboard.check()
 
-    for _ in range(10):
-        await testbase.sequence.add_valid_random_input(rng=rng, mask_toggle=0)
 
-    await testbase.sequence.add_random_last_in(rng=rng, mask_toggle=1)
+@cocotb.test()
+async def run_random_packet_stream_test(dut, seed: int | None = 4242):
+    await initialize_tb(dut)
+    testbase = RXFifoTestBase(dut)
+    rng = random.Random(seed)
+    seq = testbase.sequence
+
+    NUM_PACKETS = 25
+    for _ in range(NUM_PACKETS):
+        await seq.generate_random_valid_packet(rng=rng)
+        await seq.apply_inter_packet_gap(rng=rng)
+
     await testbase.wait_for_driver_done()
     await testbase.scoreboard.check()

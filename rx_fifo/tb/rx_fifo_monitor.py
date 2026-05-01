@@ -1,42 +1,34 @@
 import os
 import random
 from decimal import Decimal, InvalidOperation, ROUND_FLOOR
+from typing import Type, TypeVar
 
-from cocotb import start_soon
-from cocotb.triggers import RisingEdge, ReadOnly, Timer
-from cocotb.queue import Queue
-from dataclasses import fields, is_dataclass
-from typing import Generic, TypeVar, Type
+from cocotb.triggers import ReadOnly, RisingEdge, Timer
 
 from tb_utils.abstract_transactions import (
     AbstractTransaction,
     AbstractValidTransaction,
 )
+from tb_utils.generic_monitor import GenericMonitor, GenericValidMonitor as _GenericValidMonitor
 
 OutputTransaction = TypeVar("OutputTransaction", bound=AbstractTransaction)
+OutputValidTransaction = TypeVar(
+    "OutputValidTransaction", bound=AbstractValidTransaction
+)
 STARTUP_DELAY_ENV = "RX_FIFO_MONITOR_STARTUP_DELAY_MAX_NS"
 STARTUP_DELAY_MIN_TENTHS_NS = 10
 
 
-class RXFifoMonitor(Generic[OutputTransaction]):
-    def __init__(self, dut, output_transaction: Type[OutputTransaction]):
-        self.dut = dut
-        self.output_transaction: Type[OutputTransaction] = output_transaction
-        self.actual_queue: Queue = Queue()
-        start_soon(self.monitor_loop())
-
+class _StartupDelayMixin:
     @staticmethod
     def _resolve_startup_delay_max_tenths_ns() -> tuple[int, bool]:
         raw_value = os.getenv(STARTUP_DELAY_ENV)
-
         try:
             parsed_value = Decimal(raw_value)
         except (InvalidOperation, TypeError):
             return STARTUP_DELAY_MIN_TENTHS_NS, True
-
         if parsed_value < Decimal("1.0"):
             return STARTUP_DELAY_MIN_TENTHS_NS, True
-
         resolved_tenths = int(
             (parsed_value * 10).to_integral_value(rounding=ROUND_FLOOR)
         )
@@ -56,56 +48,52 @@ class RXFifoMonitor(Generic[OutputTransaction]):
         )
         await Timer(chosen_delay_ns, unit="ns")
 
+
+class RXFifoMonitor(_StartupDelayMixin, GenericMonitor[OutputTransaction]):
+    def __init__(self, dut, output_transaction: Type[OutputTransaction], clk=None):
+        super().__init__(dut, output_transaction, clk=clk if clk is not None else dut.m_clk)
+
     async def monitor_loop(self):
         await self._wait_startup_delay()
-
-        while True:
-            output_transaction = await self.receive_transaction()
-            await self.actual_queue.put(output_transaction.to_data)
-
-    async def receive_transaction(self) -> OutputTransaction:
-        await RisingEdge(self.dut.m_clk)
-        await ReadOnly()
-
-        output_transaction = self.output_transaction()
-        await self.recursive_receive(self.dut, output_transaction)
-
-        return output_transaction
-
-    async def recursive_receive(self, input_parent, transaction):
-        for f in fields(transaction):
-            field_name = f.name
-            value = getattr(transaction, field_name)
-
-            if hasattr(input_parent, field_name):
-                signal_or_interface = getattr(input_parent, field_name)
-                if is_dataclass(value):
-                    await self.recursive_receive(signal_or_interface, value)
-                else:
-                    out_value = signal_or_interface.value
-                    setattr(transaction, field_name, out_value)
-
-            else:
-                raise AttributeError(
-                    f"Field '{field_name}' found in sequence item "
-                    f"but NOT in DUT handle '{input_parent._name}'."
-                )
+        await super().monitor_loop()
 
 
-OutputValidTransaction = TypeVar(
-    "OutputValidTransaction", bound=AbstractValidTransaction
-)
+class GenericValidMonitor(_StartupDelayMixin, _GenericValidMonitor[OutputValidTransaction]):
+    def __init__(self, dut, output_transaction: Type[OutputValidTransaction], clk=None):
+        super().__init__(dut, output_transaction, clk=clk if clk is not None else dut.m_clk)
+
+    async def monitor_loop(self):
+        await self._wait_startup_delay()
+        await super().monitor_loop()
 
 
-class GenericValidMonitor(RXFifoMonitor[OutputValidTransaction]):
+class RXFifoAxiStreamMonitor(_StartupDelayMixin, GenericMonitor[OutputValidTransaction]):
+    """AXI-stream monitor: only captures on a valid && ready handshake.
+
+    Without the ready check, a single asserted-but-not-yet-handshaken valid
+    cycle would be captured every clock until the consumer accepts it,
+    flooding the actual_queue with duplicates.
+    """
+
+    def __init__(self, dut, output_transaction: Type[OutputValidTransaction], clk=None):
+        super().__init__(dut, output_transaction, clk=clk if clk is not None else dut.m_clk)
+
     async def receive_transaction(self) -> OutputValidTransaction:
         while True:
-            await RisingEdge(self.dut.m_clk)
+            await RisingEdge(self._clk)
             await ReadOnly()
 
             output_transaction = self.output_transaction()
-
             await self.recursive_receive(self.dut, output_transaction)
 
-            if output_transaction.valid:
+            try:
+                ready = bool(int(self.dut.m_axi.ready.value))
+            except (ValueError, AttributeError):
+                ready = False
+
+            if output_transaction.valid and ready:
                 return output_transaction
+
+    async def monitor_loop(self):
+        await self._wait_startup_delay()
+        await super().monitor_loop()

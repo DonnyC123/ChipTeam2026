@@ -53,6 +53,10 @@ class RXFifoModel(GenericModel):
         return packed_data
 
     async def process_notification(self, notification: Dict[str, Any]):
+        if notification.get("cancel"):
+            self._clear_pending()
+            return
+
         # Reset and drop cancel all accumulated packet data before any commit.
         if notification["rst"]:
             self._clear_pending()
@@ -65,8 +69,9 @@ class RXFifoModel(GenericModel):
         if notification["valid_i"]:
             self._append_masked_data(notification["data_i"], notification["mask_i"])
 
-        # A ready send turns the accumulated source-side bytes into one DUT row.
-        if notification["send_i"] and notification["m_axi"]["ready"]:
+        # send_i commits the row in the DUT regardless of m_axi.ready;
+        # backpressure only delays when the row drains out to the consumer.
+        if notification["send_i"]:
             await self.expected_queue.put(
                 {
                     "data": self._packed_pending_data(),
