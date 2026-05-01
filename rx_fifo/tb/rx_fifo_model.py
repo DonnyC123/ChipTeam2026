@@ -33,12 +33,7 @@ class RXFifoModel(GenericModel):
         self._pending_beats.append((data, mask))
 
         if notification["send_i"]:
-            last_idx = len(self._pending_beats) - 1
-            for idx, (beat_data, _) in enumerate(self._pending_beats):
-                await self.expected_queue.put(
-                    {
-                        "data": beat_data,
-                        "last": idx == last_idx,
-                    }
-                )
+            await self.expected_queue.put(
+                {"beats": [beat_data for beat_data, _ in self._pending_beats]}
+            )
             self._clear_pending()
