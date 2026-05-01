@@ -1,73 +1,78 @@
-from typing import List
+from collections import deque
+from typing import Any, Deque, Dict
 
 from tb_utils.generic_checker import GenericChecker
 
 
 class RXFifoChecker(GenericChecker):
-    """Packet-aware checker that tolerates dropped packets.
+    """Checker that walks the model queue alongside a combined event queue.
 
-    The model enqueues one entry per packet committed *attempt* with a
-    ``status`` field set to either ``"valid"`` (DUT actually output it) or
-    ``"dropped"`` (DUT reverted it via cancel_o, e.g. due to fifo_full or a
-    drop_i). The monitor only sees what was actually transmitted on the AXI
-    stream, so its entries correspond one-to-one with the model's "valid"
-    entries.
+    Model queue entries: ``{"beats": [...], "dropped": bool}`` -- one per
+    packet the input sequence committed (``send_i``) or aborted (``drop_i``).
 
-    Walking the model queue in order:
-      * dropped entries are skipped (no monitor entry expected),
-      * valid entries are matched against the next monitor packet.
+    Event queue entries (from ``RXFifoEventMonitor``):
+      * ``{"type": "axi_packet", "beats": [...]}``
+      * ``{"type": "cancel"}``
+
+    Algorithm: for each model packet, in order,
+      * if ``dropped`` (test-side ``drop_i``): skip; no event consumed.
+      * else: pop one event:
+          - ``cancel`` -> DUT reverted this commit (fifo_full); skip.
+          - ``axi_packet`` -> beats must match.
+    Any leftover events after the model queue is drained are an error.
     """
 
-    async def _drain_monitor_packets(self, actual_queue) -> List[List[int]]:
-        packets: List[List[int]] = []
-        current: List[int] = []
-        while not actual_queue.empty():
-            entry = await actual_queue.get()
-            current.append(entry["data"])
-            if entry["last"]:
-                packets.append(current)
-                current = []
-        if current:
-            raise RuntimeError(
-                f"Monitor produced trailing beats with no `last`: {current}"
-            )
-        return packets
-
     async def check(self, expected_queue, actual_queue):
-        monitor_packets = await self._drain_monitor_packets(actual_queue)
-        monitor_idx = 0
+        events: Deque[Dict[str, Any]] = deque()
+        while not actual_queue.empty():
+            events.append(await actual_queue.get())
 
+        idx = 0
         while not expected_queue.empty():
             model_pkt = await expected_queue.get()
-            if model_pkt.get("status") == "dropped":
+            idx += 1
+
+            if model_pkt["dropped"]:
+                # Aborted by drop_i; nothing should appear on either AXI or
+                # cancel-event side for this packet.
                 continue
 
-            if monitor_idx >= len(monitor_packets):
+            if not events:
                 msg = (
-                    "Model expected a valid packet but no more monitor "
-                    f"packets remain: {model_pkt['beats']}"
+                    f"Model packet {idx} expected an output event but the "
+                    f"event queue is empty: beats={model_pkt['beats']}"
                 )
                 if self.fatal:
                     raise RuntimeError(msg)
                 print(f"[WARNING] {msg}")
                 return
 
-            expected_beats = model_pkt["beats"]
-            observed_beats = monitor_packets[monitor_idx]
-            if expected_beats != observed_beats:
-                msg = (
-                    f"Packet {monitor_idx} mismatch:\n"
-                    f"  model   = {expected_beats}\n"
-                    f"  monitor = {observed_beats}"
-                )
-                if self.fatal:
-                    raise RuntimeError(msg)
-                print(f"[WARNING] {msg}")
-            monitor_idx += 1
+            event = events.popleft()
+            event_type = event.get("type")
 
-        if monitor_idx < len(monitor_packets):
-            extras = monitor_packets[monitor_idx:]
-            msg = f"Monitor produced {len(extras)} unexpected packet(s): {extras}"
+            if event_type == "cancel":
+                # DUT reverted this commit. No data check possible.
+                continue
+
+            if event_type == "axi_packet":
+                if event["beats"] != model_pkt["beats"]:
+                    msg = (
+                        f"Packet {idx} mismatch:\n"
+                        f"  model   = {model_pkt['beats']}\n"
+                        f"  monitor = {event['beats']}"
+                    )
+                    if self.fatal:
+                        raise RuntimeError(msg)
+                    print(f"[WARNING] {msg}")
+                continue
+
+            msg = f"Unknown event type at packet {idx}: {event}"
+            if self.fatal:
+                raise RuntimeError(msg)
+            print(f"[WARNING] {msg}")
+
+        if events:
+            msg = f"Unconsumed events after model drained: {list(events)}"
             if self.fatal:
                 raise RuntimeError(msg)
             print(f"[WARNING] {msg}")
