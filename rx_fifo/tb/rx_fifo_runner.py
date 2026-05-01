@@ -11,6 +11,7 @@ sources = [
     REPO_ROOT / "rtl_utils" / "if" / "axi_stream_if.sv",
     RX_FIFO_ROOT / "rtl" / "rx_async_fifo.sv",
     RX_FIFO_ROOT / "rtl" / "rx_fifo_ctrl.sv",
+    RX_FIFO_ROOT / "rtl" / "rx_fifo_top.sv",
 ]
 
 
@@ -54,7 +55,7 @@ def test_rx_fifo():
 
     sim.build(
         sources=sources,
-        hdl_toplevel="rx_fifo_ctrl",
+        hdl_toplevel="rx_fifo_top",
         build_dir=str(REPO_ROOT / "sim_build" / "rx_fifo"),
         parameters=rtl_parameters,
         always=True,
@@ -62,7 +63,7 @@ def test_rx_fifo():
     )
 
     sim.test(
-        hdl_toplevel="rx_fifo_ctrl",
+        hdl_toplevel="rx_fifo_top",
         test_module="rx_fifo.tb.rx_fifo_test",
         waves=True,
         test_args=sim_test_args,
