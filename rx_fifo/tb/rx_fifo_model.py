@@ -46,9 +46,10 @@ class RXFifoModel(GenericModel):
                 f"got {len(self._pending_bytes)} bytes"
             )
 
-        # Left-shifting each byte keeps the newest appended byte at bits [7:0].
+        # First-appended byte sits at the LSB of the packed word, matching
+        # the DUT's bottom-up fill of the 256-bit output buffer.
         packed_data = 0
-        for byte in self._pending_bytes:
+        for byte in reversed(self._pending_bytes):
             packed_data = (packed_data << 8) | byte
         return packed_data
 
