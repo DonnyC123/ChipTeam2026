@@ -22,7 +22,6 @@ class RXFifoSequenceItem(AbstractTransaction):
         default_factory=lambda: LogicArray("X" * RXFifoSequenceItem.IN_MASK_W)
     )
     valid_i: Logic = field(default_factory=lambda: Logic("0"))
-    rst: Logic = field(default_factory=lambda: Logic("0"))
 
     drop_i: Logic = field(default_factory=lambda: Logic("0"))
     send_i: Logic = field(default_factory=lambda: Logic("0"))
@@ -39,7 +38,6 @@ class RXFifoSequenceItem(AbstractTransaction):
         return cls(
             data_i=LogicArray("X" * cls.DATA_IN_W),
             mask_i=LogicArray("X" * cls.IN_MASK_W),
-            rst=Logic(0),
             valid_i=Logic(0),
             drop_i=Logic(0),
             send_i=Logic(0),
@@ -56,7 +54,6 @@ class RXFifoSequenceItem(AbstractTransaction):
     @property
     def to_data(self) -> Dict[str, Any]:
         return {
-            "rst": bool(self._to_int(self.rst, 0)),
             "data_i": self._to_int(self.data_i, 0),
             "mask_i": self._to_int(self.mask_i, 0),
             "valid_i": bool(self._to_int(self.valid_i, 0)),

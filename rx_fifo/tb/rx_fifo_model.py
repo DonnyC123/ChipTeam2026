@@ -57,11 +57,7 @@ class RXFifoModel(GenericModel):
             self._clear_pending()
             return
 
-        # Reset and drop cancel all accumulated packet data before any commit.
-        if notification["rst"]:
-            self._clear_pending()
-            return
-
+        # Drop cancels all accumulated packet data before any commit.
         if notification["drop_i"]:
             self._clear_pending()
             return
