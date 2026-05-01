@@ -4,22 +4,6 @@ from cocotb.triggers import ReadOnly, RisingEdge
 
 
 class RXFifoEventMonitor:
-    """Two queues: ``actual_queue`` for AXI output packets,
-    ``cancel_queue`` for ``cancel_o`` events.
-
-    AXI queue entries: ``{"beats": [d0, d1, ...]}`` -- the per-input-beat
-    64-bit values reconstructed from each 256-bit row that handshakes on
-    ``m_axi`` with ``last=1`` (lanes whose mask byte is zero are skipped as
-    stale buffer contents).
-
-    Cancel queue entries: ``{}`` -- one entry per ``s_clk`` cycle on which
-    ``cancel_o`` pulses high while ``valid_i && !drop_i``. Once the driver
-    enters dropping mode it suppresses ``valid_i`` for the rest of the
-    packet, so this gives one entry per packet-level revert. Cancels caused
-    by ``drop_i`` are not emitted here -- the model already records those
-    as dropped packets via its notification path.
-    """
-
     DATA_IN_W = 64
     IN_MASK_W = 8
     OUT_BEATS = 4
