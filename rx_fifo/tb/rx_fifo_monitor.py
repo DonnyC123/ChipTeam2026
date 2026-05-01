@@ -70,13 +70,24 @@ class GenericValidMonitor(_StartupDelayMixin, _GenericValidMonitor[OutputValidTr
 class RXFifoAxiStreamMonitor(_StartupDelayMixin, GenericMonitor[OutputValidTransaction]):
     """AXI-stream monitor: only captures on a valid && ready handshake.
 
-    Without the ready check, a single asserted-but-not-yet-handshaken valid
-    cycle would be captured every clock until the consumer accepts it,
-    flooding the actual_queue with duplicates.
+    Each captured 256-bit output row is split back into per-input-beat
+    entries (64-bit data + last). Lanes whose mask byte is zero are
+    skipped — they are stale buffer contents, not committed input beats.
     """
+
+    DATA_IN_W = 64
+    IN_MASK_W = 8
+    OUT_BEATS = 4
 
     def __init__(self, dut, output_transaction: Type[OutputValidTransaction], clk=None):
         super().__init__(dut, output_transaction, clk=clk if clk is not None else dut.m_clk)
+
+    @staticmethod
+    def _to_int(value, default: int = 0) -> int:
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return default
 
     async def receive_transaction(self) -> OutputValidTransaction:
         while True:
@@ -96,4 +107,29 @@ class RXFifoAxiStreamMonitor(_StartupDelayMixin, GenericMonitor[OutputValidTrans
 
     async def monitor_loop(self):
         await self._wait_startup_delay()
-        await super().monitor_loop()
+
+        data_lane_mask = (1 << self.DATA_IN_W) - 1
+        mask_lane_mask = (1 << self.IN_MASK_W) - 1
+
+        while True:
+            output_transaction = await self.receive_transaction()
+            data_full = self._to_int(output_transaction.m_axi.data, 0)
+            mask_full = self._to_int(output_transaction.m_axi.mask, 0)
+            row_last = bool(self._to_int(output_transaction.m_axi.last, 0))
+
+            valid_lanes = []
+            for slot in range(self.OUT_BEATS):
+                slot_mask = (mask_full >> (slot * self.IN_MASK_W)) & mask_lane_mask
+                if slot_mask == 0:
+                    continue
+                slot_data = (data_full >> (slot * self.DATA_IN_W)) & data_lane_mask
+                valid_lanes.append(slot_data)
+
+            last_idx = len(valid_lanes) - 1
+            for idx, lane_data in enumerate(valid_lanes):
+                await self.actual_queue.put(
+                    {
+                        "data": lane_data,
+                        "last": row_last and idx == last_idx,
+                    }
+                )
