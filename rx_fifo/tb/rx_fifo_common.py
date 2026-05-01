@@ -5,7 +5,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 
 
-S_CLK_PERIOD_PS = 2481
+S_CLK_PERIOD_PS = 2482
 M_CLK_PERIOD_PS = 4000
 
 
