@@ -1,10 +1,13 @@
-module rx_fifo_ctrl #(
+module rx_fifo_ctrl
+  import rx_fifo_pkg::*;
+#(
     parameter  S_DATA_W = 64,
     localparam S_MASK_W = S_DATA_W / BYTE_W
 ) (
     input  logic                               s_clk,
+    input  logic                               s_rst,
     input  logic                               m_clk,
-    input  logic                               rst,
+    input  logic                               m_rst,
     input  logic                [S_DATA_W-1:0] data_i,
     input  logic                [S_MASK_W-1:0] mask_i,
     input  logic                               valid_i,
@@ -14,11 +17,11 @@ module rx_fifo_ctrl #(
            axi_stream_if.master                m_axi
 );
 
-  localparam M_DATA_W = m_axis.DATA_W;
-  localparam M_MASK_W = m_axis.MASK_W;
+  localparam M_DATA_W = m_axi.DATA_W;
+  localparam M_MASK_W = m_axi.MASK_W;
 
   localparam OUTPUT_SCALE = M_MASK_W / S_MASK_W;
-  localparam BUFF_COUNT_W = $clog2(OUTPUT_SCALE);
+  localparam BUFF_COUNT_W = (OUTPUT_SCALE > 1) ? $clog2(OUTPUT_SCALE) : 1;
 
   logic [    M_DATA_W-1:0] data_buff_d;
   logic [    M_DATA_W-1:0] data_buff_q;
@@ -46,24 +49,29 @@ module rx_fifo_ctrl #(
     mask_buff      = mask_buff_q;
     mask_buff_d    = mask_buff;
 
-    if (s_axi.valid && s_axi.ready) begin
+
+    if (drop_i) begin
+      revert_data    = 1'b1;
+      buff_counter_d = '0;
+      mask_buff_d    = '0;
+    end else if (valid_i) begin
       buff_counter_d = buff_counter_q + 1;
 
-      data_buff_d    = data_buff_q << S_DATA_W | s_axi.data;
-      mask_buff      = mask_buff_q << S_MASK_W | s_axi.mask;
+      data_buff_d    = {data_i, data_buff_q[M_DATA_W-1:S_DATA_W]};
+      mask_buff      = {mask_i, mask_buff_q[M_MASK_W-1:S_MASK_W]};
 
       if (fifo_full) begin
         revert_data    = 1'b1;
-        buff_counter_q = '0;
+        buff_counter_d = '0;
         mask_buff_d    = '0;
-      end else if (s_axi.last) begin
+      end else if (send_i) begin
         commit_data    = 1'b1;
         wr_fifo        = 1'b1;
-        buff_counter_q = '0;
+        buff_counter_d = '0;
         mask_buff_d    = '0;
       end else if (buff_counter_q == OUTPUT_SCALE - 1) begin
         wr_fifo        = 1'b1;
-        buff_counter_q = '0;
+        buff_counter_d = '0;
         mask_buff_d    = '0;
       end else begin
         mask_buff_d = mask_buff;
@@ -72,16 +80,33 @@ module rx_fifo_ctrl #(
   end
 
   always_ff @(posedge s_clk) begin
-    if (rst) begin
-      data_buff_q = '0;
-      mask_buff_q = '0;
+    if (s_rst) begin
+      mask_buff_q    <= '0;
+      buff_counter_q <= '0;
     end else begin
-      data_buff_q = data_buff_d;
-      mask_buff_q = mask_buff_d;
+      data_buff_q    <= data_buff_d;
+      mask_buff_q    <= mask_buff_d;
+      buff_counter_q <= buff_counter_d;
     end
   end
 
-  axi_stream_if #(.DATA_W(M_DATA_W)) m_axi_fifo;
+  rx_async_fifo #(
+      .ROW_BYTE_LEN(32),
+      .FIFO_DEPTH  (16)
+  ) rx_async_fifo_inst (
+      .m_clk   (m_clk),
+      .m_rst   (m_rst),
+      .s_clk   (s_clk),
+      .s_rst   (s_rst),
+      .data_i  (data_buff_d),
+      .mask_i  (mask_buff),
+      .wr_en_i (wr_fifo),
+      .commit_i(commit_data),
+      .revert_i(revert_data),
+      .full_o  (fifo_full),
+      .m_axi   (m_axi)
+  );
 
+  assign cancel_o = revert_data;
 
 endmodule
