@@ -5,8 +5,8 @@ from tb_utils.generic_model import GenericModel
 
 
 def _mask_from_bytes_valid(mask: int) -> Tuple[bool, ...]:
-    # Mask bit 7 controls the MSB byte; bit 0 controls the LSB byte.
-    return tuple(bool((mask >> (7 - idx)) & 1) for idx in range(8))
+    # Mask bit i controls byte i of the input beat (byte 0 = LSB byte).
+    return tuple(bool((mask >> idx) & 1) for idx in range(8))
 
 
 class RXFifoModel(GenericModel):
@@ -23,8 +23,9 @@ class RXFifoModel(GenericModel):
 
     @staticmethod
     def _bytes_from_data(data: int) -> Tuple[int, ...]:
-        # Process input data in bus order: MSB byte first, LSB byte last.
-        return tuple((data >> shift) & 0xFF for shift in range(56, -1, -8))
+        # LSB byte first, matching the DUT's bit-ordered packing into the
+        # 256-bit output buffer (byte 0 of beat 0 lands at output bits [7:0]).
+        return tuple((data >> (idx * 8)) & 0xFF for idx in range(8))
 
     def _clear_pending(self):
         self._pending_bytes.clear()
@@ -46,11 +47,11 @@ class RXFifoModel(GenericModel):
                 f"got {len(self._pending_bytes)} bytes"
             )
 
-        # First-appended byte sits at the LSB of the packed word, matching
-        # the DUT's bottom-up fill of the 256-bit output buffer.
+        # First-appended byte lands at output bits [7:0]; subsequent bytes
+        # stack upward, matching the DUT's bottom-up beat fill.
         packed_data = 0
-        for byte in reversed(self._pending_bytes):
-            packed_data = (packed_data << 8) | byte
+        for idx, byte in enumerate(self._pending_bytes):
+            packed_data |= byte << (idx * 8)
         return packed_data
 
     async def process_notification(self, notification: Dict[str, Any]):
