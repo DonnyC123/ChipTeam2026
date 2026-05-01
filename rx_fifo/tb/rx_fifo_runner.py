@@ -58,6 +58,7 @@ def test_rx_fifo():
         hdl_toplevel="rx_fifo_top",
         build_dir=str(REPO_ROOT / "sim_build" / "rx_fifo"),
         parameters=rtl_parameters,
+        timescale=("1ns", "1ps"),
         always=True,
         clean=True,
     )
@@ -67,6 +68,7 @@ def test_rx_fifo():
         test_module="rx_fifo.tb.rx_fifo_test",
         waves=True,
         test_args=sim_test_args,
+        timescale=("1ns", "1ps"),
         extra_env={
             "TOPLEVEL_LANG": "verilog",
             "PYTHONPATH": new_pythonpath,
