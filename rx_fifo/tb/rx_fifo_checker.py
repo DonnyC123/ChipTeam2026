@@ -4,27 +4,10 @@ from tb_utils.generic_checker import GenericChecker
 
 
 class RXFifoChecker(GenericChecker):
-    """Checker that walks the model queue alongside two monitor queues.
-
-    Inputs:
-      * ``expected_queue`` (model): ``{"beats": [...], "dropped": bool}`` per
-        packet the input sequence committed (``send_i``) or aborted
-        (``drop_i``).
-      * ``axi_queue`` (event monitor): ``{"beats": [...]}`` per AXI-stream
-        output packet the DUT actually emitted.
-      * ``cancel_queue`` (event monitor): one entry per ``cancel_o`` revert.
-
-    For each model packet, in order:
-      * if ``dropped`` (drop_i): skip.
-      * else: try to match the next AXI packet. If beats agree, consume it.
-        Otherwise (or if the AXI queue is exhausted) consume one cancel
-        entry to account for a fifo_full revert.
-    """
-
-    async def _drain_axi(self, axi_queue) -> List[dict]:
+    async def _drain_axi(self, actual_queue) -> List[dict]:
         items = []
-        while not axi_queue.empty():
-            items.append(await axi_queue.get())
+        while not actual_queue.empty():
+            items.append(await actual_queue.get())
         return items
 
     async def _drain_cancels(self, cancel_queue) -> int:
@@ -34,8 +17,10 @@ class RXFifoChecker(GenericChecker):
             count += 1
         return count
 
-    async def check(self, expected_queue, axi_queue, cancel_queue):
-        axi_packets = await self._drain_axi(axi_queue)
+    async def check(self, expected_queue, actual_queue, cancel_queue=None):
+        if cancel_queue is None:
+            raise ValueError("RXFifoChecker.check requires a cancel_queue")
+        axi_packets = await self._drain_axi(actual_queue)
         cancels_remaining = await self._drain_cancels(cancel_queue)
 
         axi_idx = 0
@@ -49,7 +34,6 @@ class RXFifoChecker(GenericChecker):
 
             expected_beats = model_pkt["beats"]
 
-            # Prefer matching against the next AXI output.
             if (
                 axi_idx < len(axi_packets)
                 and axi_packets[axi_idx]["beats"] == expected_beats
@@ -57,8 +41,6 @@ class RXFifoChecker(GenericChecker):
                 axi_idx += 1
                 continue
 
-            # Otherwise this packet must have been reverted (fifo_full) -
-            # consume a cancel entry.
             if cancels_remaining > 0:
                 cancels_remaining -= 1
                 continue

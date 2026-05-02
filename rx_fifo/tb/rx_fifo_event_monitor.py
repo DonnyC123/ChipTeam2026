@@ -1,44 +1,51 @@
-import cocotb
-from cocotb.queue import Queue
-from cocotb.triggers import ReadOnly, RisingEdge
+from typing import List
+
+from tb_utils.generic_monitor import GenericMonitor, GenericValidMonitor
+
+from rx_fifo.tb.rx_fifo_output_transaction import (
+    RXFifoCancelEventTransaction,
+    RXFifoOutputTransaction,
+)
 
 
-class RXFifoEventMonitor:
+class _CancelEventObserver(GenericValidMonitor[RXFifoCancelEventTransaction]):
+    def __init__(self, dut):
+        super().__init__(dut, RXFifoCancelEventTransaction, clk=dut.s_clk)
+
+
+class RXFifoEventMonitor(GenericMonitor[RXFifoOutputTransaction]):
     DATA_IN_W = 64
     IN_MASK_W = 8
     OUT_BEATS = 4
 
-    def __init__(self, dut, output_transaction=None):
-        self.dut = dut
-        self.actual_queue = Queue()
-        self.cancel_queue = Queue()
-        cocotb.start_soon(self._axi_observer())
-        cocotb.start_soon(self._cancel_observer())
+    def __init__(self, dut, output_transaction=RXFifoOutputTransaction):
+        super().__init__(dut, output_transaction, clk=dut.m_clk)
+        self._cancel_observer = _CancelEventObserver(dut)
+        self.cancel_queue = self._cancel_observer.actual_queue
 
     @staticmethod
-    def _to_int(signal, default: int = 0) -> int:
+    def _to_int(value, default: int = 0) -> int:
         try:
-            return int(signal.value)
-        except (ValueError, AttributeError, TypeError):
+            return int(value)
+        except (ValueError, TypeError):
             return default
 
-    async def _axi_observer(self):
+    async def monitor_loop(self):
         data_lane_mask = (1 << self.DATA_IN_W) - 1
         mask_lane_mask = (1 << self.IN_MASK_W) - 1
-        current_beats = []
+        current_beats: List[int] = []
 
         while True:
-            await RisingEdge(self.dut.m_clk)
-            await ReadOnly()
+            txn = await self.receive_transaction()
 
-            valid = bool(self._to_int(self.dut.m_axi.valid))
-            ready = bool(self._to_int(self.dut.m_axi.ready))
+            valid = bool(self._to_int(txn.m_axi.valid))
+            ready = bool(self._to_int(txn.m_axi.ready))
             if not (valid and ready):
                 continue
 
-            data = self._to_int(self.dut.m_axi.data)
-            mask = self._to_int(self.dut.m_axi.mask)
-            row_last = bool(self._to_int(self.dut.m_axi.last))
+            data = self._to_int(txn.m_axi.data)
+            mask = self._to_int(txn.m_axi.mask)
+            row_last = bool(self._to_int(txn.m_axi.last))
 
             for slot in range(self.OUT_BEATS):
                 slot_mask = (mask >> (slot * self.IN_MASK_W)) & mask_lane_mask
@@ -50,15 +57,3 @@ class RXFifoEventMonitor:
             if row_last and current_beats:
                 await self.actual_queue.put({"beats": current_beats})
                 current_beats = []
-
-    async def _cancel_observer(self):
-        while True:
-            await RisingEdge(self.dut.s_clk)
-            await ReadOnly()
-
-            valid_i = bool(self._to_int(self.dut.valid_i))
-            drop_i = bool(self._to_int(self.dut.drop_i))
-            cancel_o = bool(self._to_int(self.dut.cancel_o))
-
-            if valid_i and not drop_i and cancel_o:
-                await self.cancel_queue.put({})

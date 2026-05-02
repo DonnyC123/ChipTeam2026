@@ -10,21 +10,16 @@ class RXFifoModel(GenericModel):
 
     def __init__(self):
         super().__init__()
-        # (data, mask) per accepted input beat in the current packet.
         self._pending_beats: List[Tuple[int, int]] = []
 
     def _clear_pending(self):
         self._pending_beats.clear()
 
     async def process_notification(self, notification: Dict[str, Any]):
-        # Cancel notifications are observed by RXFifoEventMonitor; the model
-        # only cares about the input-side stimulus.
         if notification.get("cancel"):
             return
 
         if notification["drop_i"]:
-            # Test deliberately aborted this packet via drop_i. Forward what
-            # we have so the checker can account for it.
             if self._pending_beats:
                 await self.expected_queue.put(
                     {

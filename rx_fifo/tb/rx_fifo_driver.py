@@ -43,9 +43,11 @@ class RXFifoDriver(GenericDriver[GenericSequenceItem]):
     @staticmethod
     def _resolve_startup_delay_max_tenths_ns() -> tuple[int, bool]:
         raw_value = os.getenv(STARTUP_DELAY_ENV)
+        if raw_value is None:
+            return STARTUP_DELAY_MIN_TENTHS_NS, True
         try:
             parsed_value = Decimal(raw_value)
-        except (InvalidOperation, TypeError):
+        except InvalidOperation:
             return STARTUP_DELAY_MIN_TENTHS_NS, True
         if parsed_value < Decimal("1.0"):
             return STARTUP_DELAY_MIN_TENTHS_NS, True

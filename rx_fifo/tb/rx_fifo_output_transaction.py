@@ -16,6 +16,7 @@ class AXIStreamOutputTransaction:
         default_factory=lambda: LogicArray("X" * RXFifoSequenceItem.OUT_MASK_W)
     )
     valid: Logic = field(default_factory=lambda: Logic("0"))
+    ready: Logic = field(default_factory=lambda: Logic("0"))
     last: Logic = field(default_factory=lambda: Logic("0"))
 
 
@@ -56,6 +57,40 @@ class RXFifoOutputTransaction(AbstractTransaction):
             "last_mask": self._to_int(self.m_axi.mask, 0) & 0xFF,
             "last": bool(self._to_int(self.m_axi.last, 0)),
         }
+
+
+@dataclass
+class RXFifoCancelEventTransaction(AbstractValidTransaction):
+    valid_i: Logic = field(default_factory=lambda: Logic("0"))
+    drop_i: Logic = field(default_factory=lambda: Logic("0"))
+    cancel_o: Logic = field(default_factory=lambda: Logic("0"))
+
+    @staticmethod
+    def _to_int(value: Any, default: int = 0) -> int:
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return default
+
+    @classmethod
+    def invalid_seq_item(cls) -> Self:
+        return cls()
+
+    @property
+    def valid(self) -> bool:
+        return (
+            bool(self._to_int(self.valid_i, 0))
+            and not bool(self._to_int(self.drop_i, 0))
+            and bool(self._to_int(self.cancel_o, 0))
+        )
+
+    @valid.setter
+    def valid(self, value: bool):
+        self.cancel_o = Logic(value)
+
+    @property
+    def to_data(self) -> Dict[str, Any]:
+        return {"cancel": True}
 
 
 @dataclass
