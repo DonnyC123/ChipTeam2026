@@ -19,6 +19,7 @@ class RxScoreboard:
         self._expected_payloads.append(list(frame))
 
     def ingest(self, txn: RxTransaction):
+        print("starting ingest")
         if txn.valid:
             bytes_ = txn.valid_bytes
             self._stream_bytes.extend(bytes_)

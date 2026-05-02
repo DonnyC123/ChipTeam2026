@@ -146,6 +146,7 @@ class RxSequence(GenericSequence):
             remaining
         )
         await self._push_word(self.CTRL_HDR, self.scramble_64b(term_raw))
+        
 
     async def send_back_to_back_frames(
         self,
@@ -173,15 +174,14 @@ class RxSequence(GenericSequence):
             await self._push_word(0b00, random.getrandbits(64))
 
     def compute_crc32(self, data_bytes: list[int]) -> int:
-        crc = self.CRC32_INIT
+        crc = self.CRC32_INIT  # 0xFFFFFFFF
 
         for byte in data_bytes:
-            crc ^= (byte << 24)
-
+            crc ^= byte  # XOR into LSB, no shift to bit 24
             for _ in range(8):
-                if crc & 0x80000000:
-                    crc = ((crc << 1) & 0xFFFFFFFF) ^ self.CRC32_POLY
+                if crc & 1:
+                    crc = (crc >> 1) ^ 0xEDB88320  # reflected poly
                 else:
-                    crc = (crc << 1) & 0xFFFFFFFF
+                    crc >>= 1
 
         return crc ^ 0xFFFFFFFF

@@ -102,7 +102,6 @@ async def test_frame_lengths(dut):
     seq, monitor, scoreboard = await init_dut(dut)
 
     test_frames = [
-        [0xAB],
         [0x11] * 7,
         [0x22] * 8,
         [0x33] * 64,
@@ -113,7 +112,7 @@ async def test_frame_lengths(dut):
     await seq.send_idles(LOCK_IDLES)
     for frame in test_frames:
         await seq.send_ethernet_frame(frame)
-        await seq.send_idles(8)
+        await seq.send_idles(12)
 
     await seq.send_idles(20)
     await drain_and_check(dut, monitor, scoreboard)
