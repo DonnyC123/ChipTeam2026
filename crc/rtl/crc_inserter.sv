@@ -67,6 +67,10 @@ logic [MASK_W-1:0] held_mask_d;
 logic [2:0]        free_bytes_q;
 logic [2:0]        free_bytes_d; 
 
+logic [DATA_W-1:0] data_d;
+logic [MASK_W-1:0] mask_d;
+logic              last_d;
+
 function automatic logic [2:0] free_slots(input logic [MASK_W-1:0] mask);
     logic [2:0] cnt;
     cnt = '0;
@@ -88,10 +92,11 @@ always_comb begin
     free_bytes_d = free_bytes_q;
 
     ready_o = 1'b0;
-    data_o  = '0;
-    mask_o  = '0;
+    data_d = data_i;
+    mask_d = mask_i;
     valid_o = 1'b0;
     last_o  = 1'b0;
+    last_d  = 1'b0;
 
     crc_next = crc32_word(crc_q, data_i, mask_i);
 
@@ -103,21 +108,13 @@ always_comb begin
 
             if (valid_i) begin
                 crc_d        = crc32_word(CRC_INIT, data_i, mask_i);
+                free_bytes_d = free_slots(mask_i);
                 held_data_d  = data_i;
                 held_mask_d  = mask_i;
-                free_bytes_d = free_slots(mask_i);
 
-                data_o  = data_i;
-                mask_o  = mask_i;
                 valid_o = 1'b1;
 
-                if (last_i) begin
-                    ready_o = 1'b0;
-                    last_o  = 1'b0;  
-                    state_d = S_APPEND;
-                end else begin
-                    state_d = S_STREAM;
-                end
+                state_d = S_STREAM;
             end
         end
 
@@ -130,120 +127,166 @@ always_comb begin
                 held_mask_d  = mask_i;
                 free_bytes_d = free_slots(mask_i);
 
-                data_o  = data_i;
-                mask_o  = mask_i;
                 valid_o = 1'b1;
 
                 if (last_i) begin
-                    ready_o = 1'b0;
-                    last_o  = 1'b0;
-                    state_d = S_APPEND;
+                    if (free_bytes_q >= 3'd4) begin
+                        logic [DATA_W-1:0] out_data;
+                        logic [MASK_W-1:0] out_mask;
+                        int                slot;
+
+                        out_data = data_i;
+                        out_mask = mask_i;
+                        slot     = 0;
+
+                        for (int b = 0; b < MASK_W; b++) begin
+                            if (!mask_i[b] && slot < 4) begin
+                                case (slot)
+                                    0: out_data[b*8 +: 8] = crc_d[31:24];
+                                    1: out_data[b*8 +: 8] = crc_d[23:16];
+                                    2: out_data[b*8 +: 8] = crc_d[15:8];
+                                    3: out_data[b*8 +: 8] = crc_d[7:0];
+                                endcase
+                                out_mask[b] = 1'b1;
+                                slot++;
+                            end
+                        end
+
+                        data_d = out_data;
+                        mask_d = out_mask;
+                        last_d = 1'b1;
+                        state_d = S_IDLE;
+                    end else begin
+                        logic [DATA_W-1:0] out_data;
+                        logic [MASK_W-1:0] out_mask;
+                        int                slot;
+
+                        out_data = data_i;
+                        out_mask = mask_i;
+                        slot     = 0;
+
+                        for (int b = 0; b < MASK_W; b++) begin
+                            if (!mask_i[b]) begin
+                                case (slot)
+                                    0: out_data[b*8 +: 8] = crc_d[31:24];
+                                    1: out_data[b*8 +: 8] = crc_d[23:16];
+                                    2: out_data[b*8 +: 8] = crc_d[15:8];
+                                    3: out_data[b*8 +: 8] = crc_d[7:0];
+                                    default: ;
+                                endcase
+                                out_mask[b] = 1'b1;
+                                slot++;
+                            end
+                        end
+
+                        data_d = out_data;
+                        mask_d = out_mask;
+                        last_d = 1'b0;  
+
+                        free_bytes_d = free_bytes_q;
+                        state_d      = S_TAIL;
+                    end
                 end
             end
         end
 
-        S_APPEND: begin
-            ready_o = 1'b0;
-            valid_o = 1'b1;
+        // S_APPEND: begin
+        //     ready_o = 1'b0;
+        //     valid_o = 1'b1;
 
-            if (free_bytes_q >= 3'd4) begin
-                begin
-                    logic [DATA_W-1:0] out_data;
-                    logic [MASK_W-1:0] out_mask;
-                    int                slot;
+        //     if (free_bytes_q >= 3'd4) begin
+        //         begin
+        //             logic [DATA_W-1:0] out_data;
+        //             logic [MASK_W-1:0] out_mask;
+        //             int                slot;
 
-                    out_data = held_data_q;
-                    out_mask = held_mask_q;
-                    slot     = 0;
+        //             out_data = held_data_q;
+        //             out_mask = held_mask_q;
+        //             slot     = 0;
 
-                    for (int b = 0; b < MASK_W; b++) begin
-                        if (!held_mask_q[b] && slot < 4) begin
-                            case (slot)
-                                0: out_data[b*8 +: 8] = crc_final[31:24];
-                                1: out_data[b*8 +: 8] = crc_final[23:16];
-                                2: out_data[b*8 +: 8] = crc_final[15:8];
-                                3: out_data[b*8 +: 8] = crc_final[7:0];
-                                default: ;
-                            endcase
-                            out_mask[b] = 1'b1;
-                            slot++;
-                        end
-                    end
+        //             for (int b = 0; b < MASK_W; b++) begin
+        //                 if (!held_mask_q[b] && slot < 4) begin
+        //                     case (slot)
+        //                         0: out_data[b*8 +: 8] = crc_final[31:24];
+        //                         1: out_data[b*8 +: 8] = crc_final[23:16];
+        //                         2: out_data[b*8 +: 8] = crc_final[15:8];
+        //                         3: out_data[b*8 +: 8] = crc_final[7:0];
+        //                         default: ;
+        //                     endcase
+        //                     out_mask[b] = 1'b1;
+        //                     slot++;
+        //                 end
+        //             end
 
-                    data_o = out_data;
-                    mask_o = out_mask;
-                    last_o = 1'b1;
-                end
-                state_d = S_IDLE;
+        //             data_o = out_data;
+        //             mask_o = out_mask;
+        //             last_o = 1'b1;
+        //         end
+        //         state_d = S_IDLE;
 
-            end else begin
-                begin
-                    logic [DATA_W-1:0] out_data;
-                    logic [MASK_W-1:0] out_mask;
-                    int                slot;
-                    out_data = held_data_q;
-                    out_mask = held_mask_q;
-                    slot     = 0;
+        //     end else begin
+        //         begin
+        //             logic [DATA_W-1:0] out_data;
+        //             logic [MASK_W-1:0] out_mask;
+        //             int                slot;
+        //             out_data = held_data_q;
+        //             out_mask = held_mask_q;
+        //             slot     = 0;
 
-                    for (int b = 0; b < MASK_W; b++) begin
-                        if (!held_mask_q[b]) begin
-                            case (slot)
-                                0: out_data[b*8 +: 8] = crc_final[31:24];
-                                1: out_data[b*8 +: 8] = crc_final[23:16];
-                                2: out_data[b*8 +: 8] = crc_final[15:8];
-                                3: out_data[b*8 +: 8] = crc_final[7:0];
-                                default: ;
-                            endcase
-                            out_mask[b] = 1'b1;
-                            slot++;
-                        end
-                    end
+        //             for (int b = 0; b < MASK_W; b++) begin
+        //                 if (!held_mask_q[b]) begin
+        //                     case (slot)
+        //                         0: out_data[b*8 +: 8] = crc_final[31:24];
+        //                         1: out_data[b*8 +: 8] = crc_final[23:16];
+        //                         2: out_data[b*8 +: 8] = crc_final[15:8];
+        //                         3: out_data[b*8 +: 8] = crc_final[7:0];
+        //                         default: ;
+        //                     endcase
+        //                     out_mask[b] = 1'b1;
+        //                     slot++;
+        //                 end
+        //             end
 
-                    data_o = out_data;
-                    mask_o = out_mask;
-                    last_o = 1'b0;  
-                end
+        //             data_o = out_data;
+        //             mask_o = out_mask;
+        //             last_o = 1'b0;  
+        //         end
 
-                free_bytes_d = free_bytes_q;
-                state_d      = S_TAIL;
-            end
-        end
+        //         free_bytes_d = free_bytes_q;
+        //         state_d      = S_TAIL;
+        //     end
+        // end
 
         S_TAIL: begin
+            logic [DATA_W-1:0] out_data;
+            logic [MASK_W-1:0] out_mask;
+            int                remaining;
+            int                sent;
+
             ready_o = 1'b0;
             valid_o = 1'b1;
             last_o  = 1'b1;
 
-            begin
-                logic [DATA_W-1:0] out_data;
-                logic [MASK_W-1:0] out_mask;
-                int                remaining;
-                int                sent;
-                out_data  = '0;
-                out_mask  = '0;
-                sent      = int'(free_bytes_q); 
-                remaining = 4 - sent;
+            out_data  = '0;
+            out_mask  = '0;
+            sent      = int'(free_bytes_q); 
+            remaining = 4 - sent;
 
-                for (int b = 0; b < remaining; b++) begin
-                    case (sent + b)
-                        0: out_data[b*8 +: 8] = crc_final[31:24];
-                        1: out_data[b*8 +: 8] = crc_final[23:16];
-                        2: out_data[b*8 +: 8] = crc_final[15:8];
-                        3: out_data[b*8 +: 8] = crc_final[7:0];
-                        default: ;
-                    endcase
-                    out_mask[b] = 1'b1;
-                end
-
-                data_o = out_data;
-                mask_o = out_mask;
+            for (int b = 0; b < remaining; b++) begin
+                case (sent + b)
+                    0: out_data[b*8 +: 8] = crc_q[31:24];
+                    1: out_data[b*8 +: 8] = crc_q[23:16];
+                    2: out_data[b*8 +: 8] = crc_q[15:8];
+                    3: out_data[b*8 +: 8] = crc_q[7:0];
+                endcase
+                out_mask[b] = 1'b1;
             end
+
+            data_d = out_data;
+            mask_d = out_mask;
 
             state_d = S_IDLE;
         end
-
-        default: state_d = S_IDLE;
-
     endcase
 end
 
@@ -255,6 +298,8 @@ always_ff @(posedge clk or posedge rst) begin
         held_mask_q  <= '0;
         free_bytes_q <= '0;
     end else begin
+        data_o       <= data_d;
+        mask_o       <= mask_d;
         state_q      <= state_d;
         crc_q        <= crc_d;
         held_data_q  <= held_data_d;
