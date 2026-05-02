@@ -10,7 +10,8 @@ pythonpath = [
 testpaths = [
     "multiplier_demo/tb",
     "median_filter/tb",
-    "rx_fifo/tb",
+    "rx_tb/tb",
+    "ethernet_assembler/tb",
 ]
 
 python_files = ["*_runner.py"]
