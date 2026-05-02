@@ -12,8 +12,6 @@ module crc_checker #(
     input  logic              drop_i,
     input  logic              cancel_i,
 
-    output logic              ready_o,
-
     output logic [DATA_W-1:0] data_o,
     output logic [MASK_W-1:0] mask_o,
     output logic              valid_o,
@@ -35,17 +33,13 @@ typedef enum logic [2:0] {
     S_DROP
 } state_e;
 
-state_e state_q, state_d;
+state_e                 state_q, state_d;
 
-logic [31:0] crc_q, crc_d;
+logic [31:0]            crc_q, crc_d;
+logic [DATA_W-1:0]      data_q;
+logic [MASK_W-1:0]      mask_q;
 
-// latch last beat so CHECK is stable
-logic [31:0] crc_final_q, crc_final_d;
-
-logic [DATA_W-1:0] data_q;
-logic [MASK_W-1:0] mask_q;
-
-logic              valid_d;
+logic                   valid_d;
 
 function automatic logic [31:0] crc32_byte(input logic [31:0] crc_in, input logic [7:0]  byte_in);
     logic [31:0] crc;
@@ -54,18 +48,14 @@ function automatic logic [31:0] crc32_byte(input logic [31:0] crc_in, input logi
     crc = crc_in;
 
     for (int i = 0; i < 8; i++) begin
-        fb  = crc[0] ^ byte_in[i];
+        fb  = crc[0] ^ byte_in[i];       
         crc = {1'b0, crc[31:1]} ^ (fb ? 32'hEDB88320 : 32'h0); 
     end
 
     return crc;
 endfunction
 
-function automatic logic [31:0] crc32_word(
-    input logic [31:0] crc_in,
-    input logic [DATA_W-1:0] data,
-    input logic [MASK_W-1:0] mask
-);
+function automatic logic [31:0] crc32_word(input logic [31:0] crc_in, input logic [DATA_W-1:0] data, input logic [MASK_W-1:0] mask);
     logic [31:0] crc;
     crc = crc_in;
 
@@ -80,9 +70,7 @@ endfunction
 always_comb begin
     state_d      = state_q;
     crc_d        = crc_q;
-    crc_final_d  = crc_final_q;
 
-    ready_o  = 1'b0;
     valid_d  = 1'b0;
     send_o   = 1'b0;
     drop_o   = 1'b0;
@@ -93,8 +81,6 @@ always_comb begin
 
     case (state_q)
         S_IDLE: begin
-            ready_o = 1'b1;
-
             if (cancel_i) begin
                 state_d = S_IDLE;
                 crc_d   = CRC_INIT;
@@ -111,8 +97,6 @@ always_comb begin
         end
 
         S_STREAM: begin
-            ready_o = 1'b1;
-
             if (cancel_i) begin
                 state_d = S_IDLE;
                 crc_d   = CRC_INIT;
@@ -131,8 +115,6 @@ always_comb begin
             end
         end
         S_CHECK: begin
-            ready_o = 1'b0;
-
             if (crc_q == CRC32_RESIDUE) begin
                 send_o  = 1'b1;
             end else begin
@@ -144,7 +126,6 @@ always_comb begin
         end
 
         S_DROP: begin
-            ready_o = 1'b0;
             drop_o  = 1'b1;
 
             state_d = S_IDLE;
@@ -160,14 +141,12 @@ always_ff @(posedge clk or posedge rst) begin
     if (rst) begin
         state_q     <= S_IDLE;
         crc_q       <= CRC_INIT;
-        crc_final_q <= CRC_INIT;
         data_q      <= '0;
         mask_q      <= '0;
         valid_o     <= 1'b0;
     end else begin
         state_q     <= state_d;
         crc_q       <= crc_d;
-        crc_final_q <= crc_final_d;
         valid_o     <= valid_d;
 
         if (valid_i) begin
