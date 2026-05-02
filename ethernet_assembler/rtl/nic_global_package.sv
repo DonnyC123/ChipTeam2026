@@ -1,5 +1,8 @@
 package nic_global_pkg;
 
+localparam int SIZE_BYTE   = 8;
+localparam int BYTES_64B66 = 64 / SIZE_BYTE;
+
 // These are parameters from the ethernet_assembler module, used in 64b/66b
 // We dont care about C's or O's
 // T = terminate (ignore all bytes to the right of the T, including the T)
@@ -19,9 +22,15 @@ localparam logic [7:0] OS_D6    = 8'h66; // O0 D1..D3 O4 D5..D7 (2 Ordered Set, 
 localparam logic [7:0] OS_D5    = 8'h55; // O0 D1..D3 O4 O5 D6..D7 (3 Ordered Set, 5 data lanes)
 localparam logic [7:0] OS_D3T   = 8'h4B; // O0 D1..D3 O4 C5..C7
 localparam logic [7:0] OS_D3B   = 8'h2D; // C0..C3 O4 D5..D7
+
 localparam logic [1:0] CTRL_HDR = 2'b10;
 localparam logic [1:0] DATA_HDR = 2'b01;
 
-localparam int SIZE_BYTE = 8;
+localparam int IPG_MIN                            = 12;
+localparam int IPG_BIT_W                          = $clog2(IPG_MIN);
+localparam logic [IPG_BIT_W-1:0] IPG_MIN_BYTES    = IPG_BIT_W'(IPG_MIN);
+localparam logic [IPG_BIT_W-1:0] IPG_SOF_L4_BYTES = IPG_BIT_W'(IPG_MIN - 4);
+localparam logic [IPG_BIT_W-1:0] IPG_IDLE_BYTES   = IPG_BIT_W'(BYTES_64B66);
+localparam logic [IPG_BIT_W-1:0] IPG_IDLE_SAT     = IPG_BIT_W'(IPG_MIN - BYTES_64B66);
 
 endpackage

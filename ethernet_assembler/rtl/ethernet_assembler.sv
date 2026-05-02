@@ -26,6 +26,8 @@
 
 //IMPORTANT UPDATE network order is not a real thing.
 
+// IPG counting uses TERM tail bytes, IDLE_BLK bytes, and SOF_L4 lead-in bytes.
+
 import nic_global_pkg::*;
 
 module ethernet_assembler #(
@@ -53,12 +55,16 @@ localparam PIPE_DEPTH = 1;
 logic [BYTES_OUT-1:0]  bytes_valid_o_d;
 logic [DATA_OUT_W-1:0] out_data_o_d;
 logic [SIZE_BYTE-1:0]  control_byte;
+logic [IPG_BIT_W-1:0]  ipg_counter_d, ipg_counter_q;
+logic                  ipg_check_en_d, ipg_check_en_q;
 logic                  out_valid_o_d;
 logic                  drop_frame_o_d;
 logic                  can_read;
+logic                  send_d;
 logic                  drop_mode_d, drop_mode_q;
 logic                  in_frame_d, in_frame_q;
 logic send_d;
+
 
 // Our team belives the sync/control bit are in network order
 assign out_data_o_d = input_data_i;
@@ -67,6 +73,7 @@ assign control_byte = input_data_i[0 +: SIZE_BYTE]; // the data_type_byte is bit
 
 always_comb begin
     // defaults
+    send_d          = '0;
     out_valid_o_d   = '0;
     bytes_valid_o_d = '0;
     drop_frame_o_d  = '0;
@@ -79,6 +86,7 @@ always_comb begin
         drop_frame_o_d  = 1'b1;
         in_frame_d      = 1'b0;
         bytes_valid_o_d = '0;
+        ipg_counter_d   = '0;
         drop_mode_d     = 1'b1;
 
     // Drop mode: ignore everything until cancel is low and a new start frame arrives
@@ -86,23 +94,43 @@ always_comb begin
         in_frame_d      = 1'b0;
         bytes_valid_o_d = '0;
 
-        // 
+        // start and exit drop mode
         if (!cancel_frame_i && can_read && (header_bits_i == CTRL_HDR)) begin
             unique case (control_byte)
                 SOF_L0: begin
-                    bytes_valid_o_d = 8'b1111_1110;
-                    in_frame_d      = 1'b1;
-                    drop_mode_d     = 1'b0;
+                    if (!ipg_check_en_q || (ipg_counter_q >= IPG_MIN_BYTES)) begin
+                        bytes_valid_o_d = 8'b1111_1110;
+                        in_frame_d      = 1'b1;
+                        ipg_counter_d   = '0;
+                        ipg_check_en_d  = 1'b1;
+                        drop_mode_d     = 1'b0;
+                    end else begin
+                        drop_frame_o_d = 1'b1;
+                        in_frame_d     = 1'b0;
+                        ipg_counter_d  = '0;
+                        drop_mode_d    = 1'b1;
+                    end
                 end
                 SOF_L4: begin
-                    bytes_valid_o_d = 8'b1110_0000;
-                    in_frame_d      = 1'b1;
-                    drop_mode_d     = 1'b0;
+                    if (!ipg_check_en_q || (ipg_counter_q >= IPG_SOF_L4_BYTES)) begin
+                        bytes_valid_o_d = 8'b1110_0000;
+                        in_frame_d      = 1'b1;
+                        ipg_counter_d   = '0;
+                        ipg_check_en_d  = 1'b1;
+                        drop_mode_d     = 1'b0;
+                    end else begin
+                        drop_frame_o_d = 1'b1;
+                        in_frame_d     = 1'b0;
+                        ipg_counter_d  = '0;
+                        drop_mode_d    = 1'b1;
+                    end
                 end
-                default: begin
-                    bytes_valid_o_d = '0;
-                    in_frame_d      = 1'b0;
-                    drop_mode_d     = 1'b1;
+                IDLE_BLK: begin
+                    if (ipg_counter_q >= IPG_IDLE_SAT) begin
+                        ipg_counter_d = IPG_MIN_BYTES;
+                    end else begin
+                        ipg_counter_d = ipg_counter_q + IPG_IDLE_BYTES;
+                    end
                 end
             endcase
         end
@@ -112,15 +140,47 @@ always_comb begin
         drop_frame_o_d  = 1'b1;
         in_frame_d      = 1'b0;
         bytes_valid_o_d = '0;
+        ipg_counter_d   = '0;
+        drop_mode_d     = 1'b1;
 
     end else if (can_read && !in_frame_q && (header_bits_i == CTRL_HDR)) begin
         unique case (control_byte)
             // Start Frame Headers
-            SOF_L0: begin bytes_valid_o_d = 8'b1111_1110; in_frame_d = 1'b1; end
-            SOF_L4: begin bytes_valid_o_d = 8'b1110_0000; in_frame_d = 1'b1; end
+            SOF_L0: begin
+                if (!ipg_check_en_q || (ipg_counter_q >= IPG_MIN_BYTES)) begin
+                    bytes_valid_o_d = 8'b1111_1110;
+                    in_frame_d      = 1'b1;
+                    ipg_counter_d   = '0;
+                    ipg_check_en_d  = 1'b1;
+                end else begin
+                    drop_frame_o_d = 1'b1;
+                    in_frame_d     = 1'b0;
+                    ipg_counter_d  = '0;
+                    drop_mode_d    = 1'b1;
+                end
+            end
+            SOF_L4: begin
+                if (!ipg_check_en_q || (ipg_counter_q >= IPG_SOF_L4_BYTES)) begin
+                    bytes_valid_o_d = 8'b1110_0000;
+                    in_frame_d      = 1'b1;
+                    ipg_counter_d   = '0;
+                    ipg_check_en_d  = 1'b1;
+                end else begin
+                    drop_frame_o_d = 1'b1;
+                    in_frame_d     = 1'b0;
+                    ipg_counter_d  = '0;
+                    drop_mode_d    = 1'b1;
+                end
+            end
 
-            // Even if we see stuff like double ends, it dosen't matter because we are not in a frame
-            default: begin bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; end
+            // When out of frame, only IDLE_BLK grows the IPG byte counter.
+            IDLE_BLK: begin
+                if (ipg_counter_q >= IPG_IDLE_SAT) begin
+                    ipg_counter_d = IPG_MIN_BYTES;
+                end else begin
+                    ipg_counter_d = ipg_counter_q + IPG_IDLE_BYTES;
+                end
+            end
         endcase
 
     // Valid input, currently in-frame, and control header.
@@ -143,7 +203,14 @@ always_comb begin
             OS_D3T: bytes_valid_o_d = 8'b0000_1110;  //b0111_0000  b0000_1110
             OS_D3B: bytes_valid_o_d = 8'b1110_0000;  //b0000_0111  b1110_0000
 
-            default: begin bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; drop_frame_o_d = 1'b1; end
+            // anything else is invalid so needs to be dropped
+            default: begin
+                bytes_valid_o_d = 8'b0000_0000;
+                in_frame_d      = 1'b0;
+                drop_frame_o_d  = 1'b1;
+                ipg_counter_d   = '0;
+                drop_mode_d     = 1'b1;
+            end
         endcase
 
     // Valid input, currently in frame and its a data header.
@@ -155,6 +222,32 @@ always_comb begin
 end
 
 // Clocked Outputs //
+
+// ipg_counter_q
+data_pipeline #(
+    .DATA_W    (IPG_BIT_W),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (1),
+    .RST_VAL   (0)
+) data_pipeline_inst2 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(ipg_counter_d),
+    .data_o(ipg_counter_q)
+);
+
+// ipg_check_en_d, ipg_check_en_q;
+data_pipeline #(
+    .DATA_W    (1),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (1),
+    .RST_VAL   (0)
+) data_pipeline_inst8 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(ipg_check_en_d),
+    .data_o(ipg_check_en_q)
+);
 
 // drop_frame_o_d;
 data_pipeline #(
@@ -175,7 +268,7 @@ data_pipeline #(
     .PIPE_DEPTH(PIPE_DEPTH),
     .RST_EN    (1),
     .RST_VAL   (0)
-) data_pipeline_inst2 (
+) data_pipeline_inst3 (
     .clk   (clk),
     .rst   (rst),
     .data_i(drop_mode_d),
@@ -188,7 +281,7 @@ data_pipeline #(
     .PIPE_DEPTH(PIPE_DEPTH),
     .RST_EN    (1),
     .RST_VAL   (0)
-) data_pipeline_inst3 (
+) data_pipeline_inst4 (
     .clk   (clk),
     .rst   (rst),
     .data_i(in_frame_d),
@@ -201,7 +294,7 @@ data_pipeline #(
     .PIPE_DEPTH(PIPE_DEPTH),
     .RST_EN    (1),
     .RST_VAL   (0)
-) data_pipeline_inst4 (
+) data_pipeline_inst5 (
     .clk   (clk),
     .rst   (rst),
     .data_i(out_valid_o_d),
@@ -214,7 +307,7 @@ data_pipeline #(
     .PIPE_DEPTH(PIPE_DEPTH),
     .RST_EN    (0)
     // theres another parameter for reset value
-) data_pipeline_inst5 (
+) data_pipeline_inst6 (
     .clk   (clk),
     .rst   (rst),
     .data_i(out_data_o_d),
@@ -226,30 +319,24 @@ data_pipeline #(
     .DATA_W    (BYTES_OUT),
     .PIPE_DEPTH(PIPE_DEPTH),
     .RST_EN    (0)
-) data_pipeline_inst6 (
+) data_pipeline_inst7 (
     .clk   (clk),
     .rst   (rst),
     .data_i(bytes_valid_o_d),
     .data_o(bytes_valid_o)
 );
 
-// Old Clocked Outputs
-// always_ff @(posedge clk) begin
-//     if (rst) begin
-//         drop_mode_q     <= 1'b0;
-//         in_frame_q      <= 1'b0;
-//         bytes_valid_o   <= 8'h00;
-//         out_valid_o     <= 1'b0; 
-//         drop_frame_o    <= 1'b0;
-//     end else begin
-//         drop_mode_q     <= drop_mode_d;
-//         in_frame_q      <= in_frame_d;
-//         bytes_valid_o   <= bytes_valid_o_d;
-//         out_data_o      <= out_data_o_d;
-//         out_valid_o     <= out_valid_o_d;
-//         drop_frame_o    <= drop_frame_o_d;
-//     end
-// end
+//send_o and send_d
+data_pipeline #(
+    .DATA_W    (1),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (1)
+) data_pipeline_inst9 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(send_d),
+    .data_o(send_o)
+);
 
 data_pipeline #(
     .DATA_W    (1),

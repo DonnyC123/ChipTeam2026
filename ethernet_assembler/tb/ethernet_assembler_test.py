@@ -23,8 +23,16 @@ def _sample_outputs(dut) -> dict[str, int]:
     return {
         "drop_frame": int(dut.drop_frame_o.value),
         "out_valid": int(dut.out_valid_o.value),
+        "out_data": int(dut.out_data_o.value),
         "bytes_valid": int(dut.bytes_valid_o.value),
     }
+
+
+def _phase_contains_control_block(samples, *, block_type: int, bytes_valid: int) -> bool:
+    return any(
+        sample["bytes_valid"] == bytes_valid and (sample["out_data"] & 0xFF) == block_type
+        for sample in samples
+    )
 
 
 async def _drain_driver_and_capture(testbase: EthernetAssemblerTestBase, settle_cycles: int = 2):
@@ -72,6 +80,32 @@ def _pick_unknown_control_block_type(seq, rng: random.Random) -> int:
     return block_type
 
 
+_TERM_IPG_BYTES = {
+    0x87: 7,
+    0x99: 6,
+    0xAA: 5,
+    0xB4: 4,
+    0xCC: 3,
+    0xD2: 2,
+    0xE1: 1,
+    0xFF: 0,
+}
+
+_START_IPG_MIN = {
+    0x78: 12,
+    0x33: 8,
+}
+
+_START_BYTES_VALID = {
+    0x78: 0b1111_1110,
+    0x33: 0b1110_0000,
+}
+
+
+def _restart_ipg_is_legal(term_block_type: int, idle_count: int, start_block_type: int) -> bool:
+    return (_TERM_IPG_BYTES[term_block_type] + (8 * idle_count)) >= _START_IPG_MIN[start_block_type]
+
+
 async def _enqueue_random_sequence_action(
     seq,
     rng: random.Random,
@@ -97,6 +131,8 @@ async def _enqueue_random_sequence_action(
 
     action_pool = [
         "add_idle_blk",
+        "add_manual_idle_chunk",
+        "add_random_idle_chunk",
         "add_random_data",
         "add_bad_header",
         "add_random_start",
@@ -125,6 +161,22 @@ async def _enqueue_random_sequence_action(
             in_valid=in_valid,
             locked=locked,
             cancel_frame=False,
+        )
+    elif action == "add_manual_idle_chunk":
+        await seq.add_manual_idle_chunk(
+            count=rng.randint(0, 4),
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=False,
+        )
+    elif action == "add_random_idle_chunk":
+        await seq.add_random_idle_chunk(
+            min_count=0,
+            max_count=4,
+            in_valid=in_valid,
+            locked=locked,
+            cancel_frame=False,
+            rng=rng,
         )
     elif action == "add_random_data":
         await seq.add_random_data(
@@ -277,11 +329,17 @@ async def batch_valid_frame_start_to_end_test(dut):
         frame_count,
     )
 
-    for _ in range(frame_count):
+    for frame_idx in range(frame_count):
         await seq.add_random_start(rng=rng)
         for _ in range(rng.randint(0, max_extra_data)):
             await seq.add_random_data(rng=rng)
         await seq.add_random_end(rng=rng)
+        if frame_idx != (frame_count - 1):
+            await seq.add_random_idle_chunk(
+                min_count=2,
+                max_count=4,
+                rng=rng,
+            )
 
     await _finalize_and_check(testbase)
 
@@ -320,6 +378,11 @@ async def batch_helper_function_matrix_test(dut):
     for _ in range(rounds):
         await seq.add_idle_blk()
         await seq.add_random_data(rng=rng)
+        await seq.add_random_idle_chunk(
+            min_count=2,
+            max_count=4,
+            rng=rng,
+        )
         await rng.choice(start_helpers)()
         for _ in range(rng.randint(1, max_os_data_pairs)):
             await rng.choice(ordered_set_helpers)()
@@ -362,6 +425,11 @@ async def batch_cancel_recovery_contract_test(dut):
         "Expected out_valid_o to stay low after cancel until a new start frame arrives"
     )
 
+    await seq.add_random_idle_chunk(
+        min_count=2,
+        max_count=4,
+        rng=rng,
+    )
     await seq.add_random_start(rng=rng)
     recover_phase = await _drain_driver_and_capture(testbase)
     assert any(sample["out_valid"] == 1 for sample in recover_phase), (
@@ -381,6 +449,11 @@ async def batch_cancel_recovery_contract_test(dut):
         "Expected out_valid_o to remain low after len=0 cancel until start"
     )
 
+    await seq.add_random_idle_chunk(
+        min_count=2,
+        max_count=4,
+        rng=rng,
+    )
     await seq.add_random_start(rng=rng)
     recover_phase_len0 = await _drain_driver_and_capture(testbase)
     assert any(sample["out_valid"] == 1 for sample in recover_phase_len0), (
@@ -491,10 +564,18 @@ async def edge_case_bad_header_valid_drops_frame_test(dut):
         "Expected out_valid_o low after frame drop until a new start frame"
     )
 
-    await seq.add_random_start(rng=rng)
+    await seq.add_manual_idle_chunk(count=0)
+    await seq.add_sof_l4(in_valid=True, locked=True, cancel_frame=False)
+    blocked_recovery_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["drop_frame"] == 1 for sample in blocked_recovery_phase), (
+        "Expected immediate restart after bad-header drop to violate minimum IPG"
+    )
+
+    await seq.add_manual_idle_chunk(count=1)
+    await seq.add_sof_l4(in_valid=True, locked=True, cancel_frame=False)
     recovery_phase = await _drain_driver_and_capture(testbase)
-    assert any(sample["out_valid"] == 1 for sample in recovery_phase), (
-        "Expected out_valid_o recovery after fresh start frame"
+    assert any(sample["bytes_valid"] == 0b1110_0000 for sample in recovery_phase), (
+        "Expected out_valid_o recovery after fresh start frame with legal IPG"
     )
 
     await seq.add_random_end(rng=rng)
@@ -539,10 +620,18 @@ async def edge_case_lock_loss_requires_in_valid_test(dut):
         "Expected out_valid_o low after lock-loss drop until new start frame"
     )
 
-    await seq.add_random_start(rng=rng)
+    await seq.add_manual_idle_chunk(count=0)
+    await seq.add_sof_l4(in_valid=True, locked=True, cancel_frame=False)
+    blocked_recovery_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["drop_frame"] == 1 for sample in blocked_recovery_phase), (
+        "Expected immediate restart after lock-loss drop to violate minimum IPG"
+    )
+
+    await seq.add_manual_idle_chunk(count=1)
+    await seq.add_sof_l4(in_valid=True, locked=True, cancel_frame=False)
     recovery_phase = await _drain_driver_and_capture(testbase)
-    assert any(sample["out_valid"] == 1 for sample in recovery_phase), (
-        "Expected output recovery after valid start frame"
+    assert any(sample["bytes_valid"] == 0b1110_0000 for sample in recovery_phase), (
+        "Expected output recovery after valid start frame with legal IPG"
     )
 
     await seq.add_random_end(rng=rng)
@@ -583,13 +672,250 @@ async def edge_case_cancel_in_frame_ignores_in_valid_test(dut):
         "Expected no recovery when SOF is not qualified (in_valid_i=0)"
     )
 
-    await seq.add_sof_l0(in_valid=True, locked=True, cancel_frame=False)
+    await seq.add_manual_idle_chunk(count=0)
+    await seq.add_sof_l4(in_valid=True, locked=True, cancel_frame=False)
+    ipg_blocked_recovery_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["drop_frame"] == 1 for sample in ipg_blocked_recovery_phase), (
+        "Expected immediate restart after cancel drop to violate minimum IPG"
+    )
+
+    await seq.add_manual_idle_chunk(count=1)
+    await seq.add_sof_l4(in_valid=True, locked=True, cancel_frame=False)
     recovered_phase = await _drain_driver_and_capture(testbase)
-    assert any(sample["out_valid"] == 1 for sample in recovered_phase), (
-        "Expected recovery on first qualified SOF after cancel drop"
+    assert any(sample["bytes_valid"] == 0b1110_0000 for sample in recovered_phase), (
+        "Expected recovery on first qualified SOF after cancel drop and legal IPG"
     )
 
     await seq.add_random_end(rng=rng)
+    await _finalize_and_check(testbase)
+
+
+# Manual IPG edge cases.
+@cocotb.test()
+async def edge_case_ipg_term_l7_idle_sof_l4_accepts_test(dut):
+    await initialize_tb(dut, clk_period_ns=_env_int("EA_CLK_PERIOD_NS", 10))
+    testbase = EthernetAssemblerTestBase(dut)
+    seq = testbase.sequence
+
+    await seq.add_sof_l0()
+    _ = await _drain_driver_and_capture(testbase)
+
+    await seq.add_term_l7()
+    await seq.add_manual_idle_chunk(count=1)
+    await seq.add_sof_l4()
+    accept_phase = await _drain_driver_and_capture(testbase)
+    assert all(sample["drop_frame"] == 0 for sample in accept_phase), (
+        "Expected TERM_L7 + IDLE_BLK + SOF_L4 to satisfy the 12-byte IPG"
+    )
+    assert any(sample["bytes_valid"] == 0b1110_0000 for sample in accept_phase), (
+        "Expected SOF_L4 bytes to be emitted after a legal minimum IPG"
+    )
+
+    await seq.add_term_l7()
+    await _finalize_and_check(testbase)
+
+
+@cocotb.test()
+async def edge_case_ipg_term_l7_idle_sof_l0_drops_test(dut):
+    await initialize_tb(dut, clk_period_ns=_env_int("EA_CLK_PERIOD_NS", 10))
+    testbase = EthernetAssemblerTestBase(dut)
+    seq = testbase.sequence
+
+    await seq.add_sof_l0()
+    _ = await _drain_driver_and_capture(testbase)
+
+    await seq.add_term_l7()
+    await seq.add_manual_idle_chunk(count=1)
+    await seq.add_sof_l0()
+    violation_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["drop_frame"] == 1 for sample in violation_phase), (
+        "Expected TERM_L7 + IDLE_BLK + SOF_L0 to violate the 12-byte IPG"
+    )
+    assert not _phase_contains_control_block(
+        violation_phase,
+        block_type=seq.SOF_L0,
+        bytes_valid=0b1111_1110,
+    ), (
+        "Expected the violating SOF_L0 block to be suppressed"
+    )
+
+    await seq.add_manual_idle_chunk(count=2)
+    await seq.add_sof_l0()
+    recovery_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["bytes_valid"] == 0b1111_1110 for sample in recovery_phase), (
+        "Expected SOF_L0 recovery after restoring the full minimum IPG"
+    )
+
+    await seq.add_term_l7()
+    await _finalize_and_check(testbase)
+
+
+@cocotb.test()
+async def edge_case_ipg_term_l0_sof_l4_drops_test(dut):
+    await initialize_tb(dut, clk_period_ns=_env_int("EA_CLK_PERIOD_NS", 10))
+    testbase = EthernetAssemblerTestBase(dut)
+    seq = testbase.sequence
+
+    await seq.add_sof_l0()
+    _ = await _drain_driver_and_capture(testbase)
+
+    await seq.add_term_l0()
+    await seq.add_manual_idle_chunk(count=0)
+    await seq.add_sof_l4()
+    violation_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["drop_frame"] == 1 for sample in violation_phase), (
+        "Expected TERM_L0 + SOF_L4 to violate the 12-byte IPG"
+    )
+    assert all(sample["bytes_valid"] != 0b1110_0000 for sample in violation_phase), (
+        "Expected the violating SOF_L4 block to be suppressed"
+    )
+
+    await seq.add_manual_idle_chunk(count=1)
+    await seq.add_sof_l4()
+    recovery_phase = await _drain_driver_and_capture(testbase)
+    assert any(sample["bytes_valid"] == 0b1110_0000 for sample in recovery_phase), (
+        "Expected SOF_L4 recovery after restoring the full minimum IPG"
+    )
+
+    await seq.add_term_l7()
+    await _finalize_and_check(testbase)
+
+
+@cocotb.test()
+async def edge_case_ipg_term_l0_idle_sof_l4_accepts_test(dut):
+    await initialize_tb(dut, clk_period_ns=_env_int("EA_CLK_PERIOD_NS", 10))
+    testbase = EthernetAssemblerTestBase(dut)
+    seq = testbase.sequence
+
+    await seq.add_sof_l0()
+    _ = await _drain_driver_and_capture(testbase)
+
+    await seq.add_term_l0()
+    await seq.add_manual_idle_chunk(count=1)
+    await seq.add_sof_l4()
+    accept_phase = await _drain_driver_and_capture(testbase)
+    assert all(sample["drop_frame"] == 0 for sample in accept_phase), (
+        "Expected TERM_L0 + IDLE_BLK + SOF_L4 to satisfy the 12-byte IPG"
+    )
+    assert any(sample["bytes_valid"] == 0b1110_0000 for sample in accept_phase), (
+        "Expected SOF_L4 bytes to be emitted after a legal minimum IPG"
+    )
+
+    await seq.add_term_l7()
+    await _finalize_and_check(testbase)
+
+
+# Section F: Constrained-random IPG restart coverage.
+@cocotb.test()
+async def constrained_random_ipg_restart_test(dut):
+    await initialize_tb(dut, clk_period_ns=_env_int("EA_CLK_PERIOD_NS", 10))
+    testbase = EthernetAssemblerTestBase(dut)
+    seq = testbase.sequence
+
+    seed = _env_int("EA_RANDOM_IPG_SEED", 0x1F6A2B3C)
+    trials = _env_int("EA_RANDOM_IPG_TRIALS", 48)
+    max_idle_blocks = max(0, _env_int("EA_RANDOM_IPG_MAX_IDLE_BLOCKS", 3))
+    rng = random.Random(seed)
+
+    start_helpers = (
+        (seq.SOF_L0, seq.add_sof_l0),
+        (seq.SOF_L4, seq.add_sof_l4),
+    )
+    term_helpers = (
+        (seq.TERM_L0, seq.add_term_l0),
+        (seq.TERM_L1, seq.add_term_l1),
+        (seq.TERM_L2, seq.add_term_l2),
+        (seq.TERM_L3, seq.add_term_l3),
+        (seq.TERM_L4, seq.add_term_l4),
+        (seq.TERM_L5, seq.add_term_l5),
+        (seq.TERM_L6, seq.add_term_l6),
+        (seq.TERM_L7, seq.add_term_l7),
+    )
+
+    cocotb.log.info(
+        "constrained_random_ipg_restart_test seed=0x%08X trials=%d max_idle_blocks=%d",
+        seed,
+        trials,
+        max_idle_blocks,
+    )
+
+    await seq.add_sof_l0()
+    initial_start_phase = await _drain_driver_and_capture(testbase)
+    assert _phase_contains_control_block(
+        initial_start_phase,
+        block_type=seq.SOF_L0,
+        bytes_valid=_START_BYTES_VALID[seq.SOF_L0],
+    ), (
+        "Expected initial SOF_L0 to enter a frame before constrained-random IPG trials"
+    )
+
+    for trial_idx in range(trials):
+        term_block_type, term_helper = rng.choice(term_helpers)
+        start_block_type, start_helper = rng.choice(start_helpers)
+        idle_count = rng.randint(0, max_idle_blocks)
+        expected_legal = _restart_ipg_is_legal(
+            term_block_type=term_block_type,
+            idle_count=idle_count,
+            start_block_type=start_block_type,
+        )
+        expected_start_mask = _START_BYTES_VALID[start_block_type]
+
+        if trial_idx < 10 or (trial_idx % 16 == 0):
+            cocotb.log.info(
+                "ipg-trial=%02d term=0x%02X idle_blocks=%d start=0x%02X legal=%d",
+                trial_idx,
+                term_block_type,
+                idle_count,
+                start_block_type,
+                int(expected_legal),
+            )
+
+        await term_helper()
+        await seq.add_manual_idle_chunk(count=idle_count)
+        await start_helper()
+        restart_phase = await _drain_driver_and_capture(testbase)
+
+        if expected_legal:
+            assert all(sample["drop_frame"] == 0 for sample in restart_phase), (
+                f"Expected legal IPG restart to avoid drop_frame_o "
+                f"(term=0x{term_block_type:02X}, idle_blocks={idle_count}, start=0x{start_block_type:02X})"
+            )
+            assert _phase_contains_control_block(
+                restart_phase,
+                block_type=start_block_type,
+                bytes_valid=expected_start_mask,
+            ), (
+                f"Expected legal IPG restart to emit the start bytes_valid mask "
+                f"(term=0x{term_block_type:02X}, idle_blocks={idle_count}, start=0x{start_block_type:02X})"
+            )
+            await seq.add_term_l7()
+            _ = await _drain_driver_and_capture(testbase)
+        else:
+            assert any(sample["drop_frame"] == 1 for sample in restart_phase), (
+                f"Expected IPG violation to pulse drop_frame_o "
+                f"(term=0x{term_block_type:02X}, idle_blocks={idle_count}, start=0x{start_block_type:02X})"
+            )
+            assert not _phase_contains_control_block(
+                restart_phase,
+                block_type=start_block_type,
+                bytes_valid=expected_start_mask,
+            ), (
+                f"Expected violating start to be suppressed "
+                f"(term=0x{term_block_type:02X}, idle_blocks={idle_count}, start=0x{start_block_type:02X})"
+            )
+
+        await seq.add_manual_idle_chunk(count=2)
+        await seq.add_sof_l0()
+        recovery_phase = await _drain_driver_and_capture(testbase)
+        assert _phase_contains_control_block(
+            recovery_phase,
+            block_type=seq.SOF_L0,
+            bytes_valid=_START_BYTES_VALID[seq.SOF_L0],
+        ), (
+            "Expected deterministic SOF_L0 recovery after restoring a legal IPG"
+        )
+
+    await seq.add_term_l7()
     await _finalize_and_check(testbase)
 
 
