@@ -1,0 +1,12 @@
+{
+    "[systemverilog]": {
+    "editor.defaultFormatter": "jkillian.custom-local-formatters",
+    "editor.formatOnSave": true
+  },
+  "customLocalFormatters.formatters": [
+    {
+      "command": "python3 /home/lvr4818/ieee/ChipTeam2026/scripts/sv_formatter.py -",
+      "languages": ["systemverilog"]
+    }
+  ]
+}
