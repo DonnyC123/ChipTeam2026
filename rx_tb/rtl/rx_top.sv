@@ -108,8 +108,7 @@ module rx_top #(
         .drop_i   (drop_frame_reg),
         .cancel_i (1'b0), //from the rx fifo
         .cancel_o (cancel_reg),
-
-        .ready_o  (),
+        
         .data_o   (data_o),
         .mask_o   (mask_o),
         .valid_o  (valid_o),
