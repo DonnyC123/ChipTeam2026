@@ -12,8 +12,6 @@ module crc_checker #(
     input  logic              drop_i,
     input  logic              cancel_i,
 
-    output logic              ready_o,
-
     output logic [DATA_W-1:0] data_o,
     output logic [MASK_W-1:0] mask_o,
     output logic              valid_o,
@@ -24,7 +22,7 @@ module crc_checker #(
 );
 
 localparam logic [31:0] CRC32_POLY    = 32'h04C11DB7;
-localparam logic [31:0] CRC32_RESIDUE = 32'hC704DD7B;
+localparam logic [31:0] CRC32_RESIDUE = 32'hDEBB20E3;
 localparam logic [31:0] CRC_INIT      = 32'hFFFFFFFF;
 
 typedef enum logic [2:0] {
@@ -35,7 +33,11 @@ typedef enum logic [2:0] {
     S_DROP
 } state_e;
 
-state_e state_q, state_d;
+state_e             state_q, state_d;
+logic [31:0]        crc_q, crc_d;
+logic [DATA_W-1:0]  data_q;
+logic [MASK_W-1:0]  mask_q;
+logic               valid_d;
 
 logic [31:0] crc_q, crc_d;
 
@@ -57,17 +59,14 @@ function automatic logic [31:0] crc32_byte(
     crc = crc_in;
 
     for (int i = 0; i < 8; i++) begin
-        fb  = crc[31] ^ byte_in[7-i];
-        crc = {crc[30:0], 1'b0} ^ (fb ? CRC32_POLY : 32'h0);
+        fb  = crc[0] ^ byte_in[i];       
+        crc = {1'b0, crc[31:1]} ^ (fb ? 32'hEDB88320 : 32'h0); 
     end
 
     return crc;
 endfunction
 
-function automatic logic [31:0] crc32_word(
-    input logic [31:0] crc_in,
-    input logic [DATA_W-1:0] data,
-    input logic [MASK_W-1:0] mask
+function automatic logic [31:0] crc32_word(input logic [31:0] crc_in, input logic [DATA_W-1:0] data, input logic [MASK_W-1:0] mask
 );
     logic [31:0] crc;
     crc = crc_in;
@@ -83,10 +82,8 @@ endfunction
 always_comb begin
     state_d      = state_q;
     crc_d        = crc_q;
-    crc_final_d  = crc_final_q;
 
-    ready_o  = 1'b0;
-    valid_o  = 1'b0;
+    valid_d  = 1'b0;
     send_o   = 1'b0;
     drop_o   = 1'b0;
     cancel_o = 1'b0;
@@ -96,8 +93,6 @@ always_comb begin
 
     case (state_q)
         S_IDLE: begin
-            ready_o = 1'b1;
-
             if (cancel_i) begin
                 state_d = S_IDLE;
                 crc_d   = CRC_INIT;
@@ -108,18 +103,12 @@ always_comb begin
 
             end else if (valid_i) begin
                 crc_d   = crc32_word(CRC_INIT, data_i, mask_i);
-
-                data_o  = data_i;
-                mask_o  = mask_i;
-                valid_o = 1'b1;
-
-                state_d = send_i ? S_FLUSH : S_STREAM;
+                valid_d = 1'b1;
+                state_d = send_i ? S_CHECK : S_STREAM;
             end
         end
 
         S_STREAM: begin
-            ready_o = 1'b1;
-
             if (cancel_i) begin
                 state_d = S_IDLE;
                 crc_d   = CRC_INIT;
@@ -131,26 +120,14 @@ always_comb begin
 
             end else if (valid_i) begin
                 crc_d   = crc32_word(crc_q, data_i, mask_i);
-
-                data_o  = data_i;
-                mask_o  = mask_i;
-                valid_o = 1'b1;
+                valid_d = 1'b1;
 
                 if (send_i)
                     state_d = S_FLUSH;
             end
         end
-
-        S_FLUSH: begin
-            ready_o = 1'b0;
-            crc_final_d = crc_q;  
-            state_d = S_CHECK;
-        end
-
         S_CHECK: begin
-            ready_o = 1'b0;
-
-            if (crc_final_q == CRC32_RESIDUE) begin
+            if (crc_q == CRC32_RESIDUE) begin
                 send_o  = 1'b1;
             end else begin
                 drop_o  = 1'b1;
@@ -159,17 +136,13 @@ always_comb begin
             state_d = S_IDLE;
             crc_d   = CRC_INIT;
         end
-
         S_DROP: begin
-            ready_o = 1'b0;
             drop_o  = 1'b1;
 
             state_d = S_IDLE;
             crc_d   = CRC_INIT;
         end
-
         default: state_d = S_IDLE;
-
     endcase
 end
 
@@ -177,21 +150,18 @@ always_ff @(posedge clk or posedge rst) begin
     if (rst) begin
         state_q     <= S_IDLE;
         crc_q       <= CRC_INIT;
-        crc_final_q <= CRC_INIT;
         data_q      <= '0;
         mask_q      <= '0;
-        send_q      <= 1'b0;
+        valid_o     <= 1'b0;
     end else begin
         state_q     <= state_d;
         crc_q       <= crc_d;
-        crc_final_q <= crc_final_d;
+        valid_o     <= valid_d;
 
         if (valid_i) begin
             data_q <= data_i;
             mask_q <= mask_i;
         end
-
-        send_q <= send_i;
     end
 end
 
