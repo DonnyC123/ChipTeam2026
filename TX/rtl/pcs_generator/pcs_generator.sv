@@ -95,7 +95,7 @@ always_comb begin
                 end
                 out_valid_d = 1'b1;
 
-            end else begin // Output an IDLE chunk
+            end else if(out_ready_i) begin // Output an IDLE chunk
                 out_control_d   = CTRL_HDR;
                 out_data_d      = {{7{8'd0}}, IDLE_BLK};
                 out_valid_d     = 1'b1;
@@ -217,21 +217,23 @@ always_comb begin
         end
 
         IDLE_OUT : begin
-            // Output a single IDLE chunk
             tready_d      = '0;
-            next_state    = WAIT_START;
-            out_control_d = CTRL_HDR;
-            out_data_d    = {{7{8'd0}}, IDLE_BLK};
-            out_valid_d   = 1'b1;
-            // if we need a beat away, use either sof4 or sof0, otherwise use sof0
-            if (skid_value_q.valid_data_i || get_axi) begin
-                if (use_sof0) begin
-                    held_byte_cnt_d = 3'd1;
+            if(out_ready_i) begin
+                // Output a single IDLE chunk
+                next_state    = WAIT_START;
+                out_control_d = CTRL_HDR;
+                out_data_d    = {{7{8'd0}}, IDLE_BLK};
+                out_valid_d   = 1'b1;
+                // if we need a beat away, use either sof4 or sof0, otherwise use sof0
+                if (skid_value_q.valid_data_i || get_axi) begin
+                    if (use_sof0) begin
+                        held_byte_cnt_d = 3'd1;
+                    end else begin
+                        held_byte_cnt_d = 3'd5;
+                    end
                 end else begin
-                    held_byte_cnt_d = 3'd5;
+                    held_byte_cnt_d = 3'd1;
                 end
-                end else begin
-                    held_byte_cnt_d = 3'd1;
             end
 
         end
