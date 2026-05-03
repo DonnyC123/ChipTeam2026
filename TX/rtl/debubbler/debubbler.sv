@@ -30,7 +30,7 @@ always_comb begin
         valid_d          = '1;
     end else begin
         output_d         = remainder_q | 64'(_66b_i << bits_remaining_q);
-        remainder_d      = 64'(_66b_i >> (BIT_IN_W-bits_remaining_q));
+        remainder_d      = 64'(_66b_i >> (BIT_OUT_W-bits_remaining_q));
         bits_remaining_d = bits_remaining_q + (BIT_IN_W - BIT_OUT_W);
         valid_d          = valid_i;
     end
