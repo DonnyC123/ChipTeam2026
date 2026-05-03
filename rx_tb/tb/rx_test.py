@@ -76,3 +76,23 @@ async def test_long_mixed_traffic(dut, seed: int = 0xC0FFEE):
     await tb.sequence.send_idles(20)
     await tb.wait_for_driver_done(settle_ns=5000)
     await tb.scoreboard.check()
+
+
+@cocotb.test()
+async def test_stress_mixed_traffic(dut, seed: int = 0xDEADBEEF):
+    await initialize_tb(dut)
+    tb = RxTestBase(dut, ready_probability=0.5)
+    rng = random.Random(seed)
+
+    NUM_FRAMES = 1000
+
+    await tb.sequence.send_idles(LOCK_IDLES)
+    for _ in range(NUM_FRAMES):
+        size = rng.randint(8, 256)
+        frame = [rng.randint(0, 255) for _ in range(size)]
+        await tb.sequence.send_ethernet_frame(frame)
+        await tb.sequence.send_idles(rng.randint(2, 24))
+
+    await tb.sequence.send_idles(40)
+    await tb.wait_for_driver_done(settle_ns=10000)
+    await tb.scoreboard.check()

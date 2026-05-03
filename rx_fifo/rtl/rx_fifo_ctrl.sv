@@ -55,7 +55,6 @@ module rx_fifo_ctrl
       buff_counter_d = '0;
       mask_buff_d    = '0;
     end else begin
-      // Stage the incoming beat into the buffer when valid.
       if (valid_i) begin
         buff_counter_d = buff_counter_q + 1;
         data_buff_d    = {data_i, data_buff_q[M_DATA_W-1:S_DATA_W]};
