@@ -9,6 +9,7 @@ RX_FIFO_ROOT = REPO_ROOT / "rx_fifo"
 
 sources = [
     REPO_ROOT / "rtl_utils" / "if" / "axi_stream_if.sv",
+    REPO_ROOT / "rtl_utils" / "data_pipeline.sv",
     RX_FIFO_ROOT / "rtl" / "rx_fifo_pkg.sv",
     RX_FIFO_ROOT / "rtl" / "rx_async_fifo.sv",
     RX_FIFO_ROOT / "rtl" / "rx_fifo_ctrl.sv",
