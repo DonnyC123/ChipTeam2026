@@ -12,6 +12,7 @@ module debubbler #(
 );
 
 localparam BIT_OUT_COUNT_W = $clog2(BIT_IN_W);
+localparam READY_STOP_THRESHOLD = BIT_OUT_W - (2 * (BIT_IN_W - BIT_OUT_W));
 
 logic [BIT_OUT_W-1:0]           remainder_d, remainder_q;
 logic [BIT_OUT_COUNT_W-1:0]     bits_remaining_d, bits_remaining_q;
@@ -58,7 +59,7 @@ end
 //Assign outputs
 assign _64b_o  = output_q;
 assign valid_o = valid_q;
-assign ready_o = ready_d;
+assign ready_o = ready_d && (bits_remaining_q < READY_STOP_THRESHOLD);
 
 //For testing ONLY
 always_ff @(posedge clk) begin
