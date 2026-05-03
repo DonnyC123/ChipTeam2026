@@ -11,6 +11,7 @@ testpaths = [
     "multiplier_demo/tb",
     "median_filter/tb",
     "rx_tb/tb",
+    "rx_fifo/tb",
     "ethernet_assembler/tb",
 ]
 

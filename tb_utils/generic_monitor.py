@@ -13,10 +13,11 @@ OutputTransaction = TypeVar("OutputTransaction", bound=AbstractTransaction)
 
 
 class GenericMonitor(Generic[OutputTransaction]):
-    def __init__(self, dut, output_transaction: Type[OutputTransaction]):
+    def __init__(self, dut, output_transaction: Type[OutputTransaction], clk=None):
         self.dut = dut
         self.output_transaction: Type[OutputTransaction] = output_transaction
         self.actual_queue: Queue = Queue()
+        self._clk = clk if clk is not None else dut.clk
         start_soon(self.monitor_loop())
 
     async def monitor_loop(self):
@@ -25,7 +26,7 @@ class GenericMonitor(Generic[OutputTransaction]):
             await self.actual_queue.put(output_transaction.to_data)
 
     async def receive_transaction(self) -> OutputTransaction:
-        await RisingEdge(self.dut.clk)
+        await RisingEdge(self._clk)
         await ReadOnly()
 
         output_transaction = self.output_transaction()
@@ -61,7 +62,7 @@ OutputValidTransaction = TypeVar(
 class GenericValidMonitor(GenericMonitor[OutputValidTransaction]):
     async def receive_transaction(self) -> OutputValidTransaction:
         while True:
-            await RisingEdge(self.dut.clk)
+            await RisingEdge(self._clk)
             await ReadOnly()
 
             output_transaction = self.output_transaction()

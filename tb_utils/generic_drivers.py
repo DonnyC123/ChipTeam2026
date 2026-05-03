@@ -13,10 +13,11 @@ GenericSequenceItem = TypeVar("GenericSequenceItem", bound=AbstractTransaction)
 
 
 class GenericDriver(Generic[GenericSequenceItem]):
-    def __init__(self, dut, seq_item_type: GenericSequenceItem):
+    def __init__(self, dut, seq_item_type: GenericSequenceItem, clk=None):
         self.dut = dut
         self.seq_item_type = seq_item_type
         self.seq_item_queue: Queue[GenericSequenceItem] = Queue()
+        self._clk = clk if clk is not None else dut.clk
 
         start_soon(self.driver_loop())
 
@@ -31,7 +32,7 @@ class GenericDriver(Generic[GenericSequenceItem]):
                 seq_item = self.seq_item_type.invalid_seq_item()
 
             await self.drive_transaction(seq_item)
-            await RisingEdge(self.dut.clk)
+            await RisingEdge(self._clk)
 
     async def busy(self):
         return not self.seq_item_queue.empty()
@@ -61,7 +62,7 @@ class GenericDriver(Generic[GenericSequenceItem]):
 
     async def wait_until_idle(self):
         while not self.seq_item_queue.empty():
-            await RisingEdge(self.dut.clk)
+            await RisingEdge(self._clk)
 
     # GenericValidSequenceItem = TypeVar(
     #    "GenericValidSequenceItem", bound=AbstractValidSequenceItem
