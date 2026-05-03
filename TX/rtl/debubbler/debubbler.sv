@@ -55,7 +55,7 @@ end
 //Assign outputs
 assign _64b_o  = output_q;
 assign valid_o = valid_q;
-assign ready_o = ready_q;
+assign ready_o = ready_d;
 
 //For testing ONLY
 always_ff @(posedge clk) begin
