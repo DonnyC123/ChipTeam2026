@@ -81,12 +81,4 @@ assign _64b_o  = output_q;
 assign valid_o = valid_q;
 assign ready_o = ready_d && !pending_valid_q;
 
-//For testing ONLY
-always_ff @(posedge clk) begin
-    if(valid_i) begin
-        $display("time=%0t | DeBUBBLER | 66i=%02h | 64o=%02h",
-                 $time, _66b_i, _64b_o);
-    end
-end
-
 endmodule
