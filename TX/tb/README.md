@@ -1,11 +1,10 @@
 # TX Full-Chain Testbench
 
-`TX/tb` is the cocotb full-chain testbench for the normalized RTL under
-`TX/rtl`. It does not compile the older `tx_module/rtl` copy.
+`TX/tb` is the cocotb full-chain testbench
 
 ## DUT Path
 
-The testbench wrapper is `TX/tb/rtl/tx_top.sv`:
+The testbench wrapper is `TX/tx_top.sv`:
 
 ```text
 DMA AXIS -> tx_subsystem -> crc_inserter -> pcs_generator
@@ -13,7 +12,7 @@ DMA AXIS -> tx_subsystem -> crc_inserter -> pcs_generator
 ```
 
 The runner compiles the normalized RTL under `TX/rtl`, excludes standalone PCS
-test tops, then adds `TX/tb/rtl/tx_top.sv`.
+test tops, then adds `TX/tx_top.sv`.
 
 ## Running
 

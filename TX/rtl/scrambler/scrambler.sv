@@ -10,7 +10,7 @@ module scrambler #(
     input  logic                     valid_i,
     input  logic [HEAD_W-1:0]        _2b_header_i,
     output logic [BIT_OUT_W-1:0]     _66b_o,
-    output logic                     valid_o,
+    output logic                     valid_o
 );
 
 localparam TAP_1 = 19;

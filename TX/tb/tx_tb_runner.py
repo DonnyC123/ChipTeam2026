@@ -31,7 +31,7 @@ sources = [
     *_pcs_sources(),
     TX_DIR / "rtl" / "scrambler" / "scrambler.sv",
     TX_DIR / "rtl" / "debubbler" / "debubbler.sv",
-    TX_TB_DIR / "rtl" / "tx_top.sv",
+    TX_TB_DIR / "tx_top.sv",
 ]
 
 SMOKE_FILTER = (
