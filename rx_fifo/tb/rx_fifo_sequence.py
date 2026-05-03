@@ -46,11 +46,6 @@ class RXFifoSequence(GenericSequence):
             return rng
         return random.Random(seed)
 
-    async def reset_dut(self):
-        reset_item = RXFifoSequenceItem(rst=Logic("1"))
-        await self.notify_subscribers(reset_item.to_data)
-        await self.add_transaction(reset_item)
-
     def add_data(self, value: int | LogicArray):
         self._current_item.data_i = self._to_logic_array(value, self.DATA_IN_W)
 
