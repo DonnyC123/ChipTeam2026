@@ -218,7 +218,7 @@ always_comb begin
         bytes_valid_o_d = 8'b1111_1111;
     end
 
-    out_valid_o_d = |bytes_valid_o_d;
+    out_valid_o_d = |bytes_valid_o_d || send_d;
 end
 
 // Clocked Outputs //
