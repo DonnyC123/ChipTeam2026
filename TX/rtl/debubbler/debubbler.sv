@@ -12,13 +12,19 @@ module debubbler #(
 );
 
 localparam BIT_OUT_COUNT_W = $clog2(BIT_IN_W);
-localparam READY_STOP_THRESHOLD = BIT_OUT_W - (2 * (BIT_IN_W - BIT_OUT_W));
 
 logic [BIT_OUT_W-1:0]           remainder_d, remainder_q;
 logic [BIT_OUT_COUNT_W-1:0]     bits_remaining_d, bits_remaining_q;
 logic [BIT_OUT_W-1:0]           output_d, output_q;
 logic                           valid_d, valid_q;
 logic                           ready_d, ready_q;
+logic [BIT_IN_W-1:0]            pending_66b_d, pending_66b_q;
+logic                           pending_valid_d, pending_valid_q;
+logic [BIT_IN_W-1:0]            selected_66b;
+logic                           selected_valid;
+
+assign selected_66b   = pending_valid_q ? pending_66b_q : _66b_i;
+assign selected_valid = pending_valid_q || valid_i;
 
 always_comb begin
     output_d         = output_q;
@@ -26,17 +32,27 @@ always_comb begin
     bits_remaining_d = bits_remaining_q;
     valid_d          = 1'b0;
     ready_d          = 1'b1;
+    pending_66b_d    = pending_66b_q;
+    pending_valid_d  = pending_valid_q;
     if(bits_remaining_q == 64) begin
         output_d         = remainder_q;
         remainder_d      = '0;
         bits_remaining_d = '0;
         ready_d          = '0;
         valid_d          = '1;
-    end else if(valid_i) begin
-        output_d         = remainder_q | 64'(_66b_i << bits_remaining_q);
-        remainder_d      = 64'(_66b_i >> (BIT_OUT_W-bits_remaining_q));
+        if(valid_i) begin
+            pending_66b_d   = _66b_i;
+            pending_valid_d = 1'b1;
+        end
+    end else if(selected_valid) begin
+        output_d         = remainder_q | 64'(selected_66b << bits_remaining_q);
+        remainder_d      = 64'(selected_66b >> (BIT_OUT_W-bits_remaining_q));
         bits_remaining_d = bits_remaining_q + (BIT_IN_W - BIT_OUT_W);
         valid_d          = 1'b1;
+        if(pending_valid_q) begin
+            pending_66b_d   = _66b_i;
+            pending_valid_d = valid_i;
+        end
     end
 end
 
@@ -47,19 +63,23 @@ always_ff @(posedge clk) begin
         bits_remaining_q <= '0;
         valid_q          <= '0;
         ready_q          <= '0;
+        pending_66b_q    <= '0;
+        pending_valid_q  <= '0;
     end else begin
         ready_q          <= ready_d;
         valid_q          <= valid_d;
         bits_remaining_q <= bits_remaining_d;
         remainder_q      <= remainder_d;
         output_q         <= output_d;
+        pending_66b_q    <= pending_66b_d;
+        pending_valid_q  <= pending_valid_d;
     end
 end
 
 //Assign outputs
 assign _64b_o  = output_q;
 assign valid_o = valid_q;
-assign ready_o = ready_d && (bits_remaining_q < READY_STOP_THRESHOLD);
+assign ready_o = ready_d && !pending_valid_q;
 
 //For testing ONLY
 always_ff @(posedge clk) begin
