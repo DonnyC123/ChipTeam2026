@@ -42,3 +42,9 @@ multi-queue tagged payloads, FIFO pressure/backpressure, and queue-width
 configuration. The scoreboard descrambles and decodes the final debubbled raw
 stream using a permissive RX-style payload search. A lightweight PCS 66b checker
 also monitors `pcs_data_o`, `pcs_control_o`, and `pcs_valid_o`.
+
+The CDC/reset tests build `TX/tb/tx_cdc_top.sv`, which drives the DMA side and
+TX side with independent clocks while reusing the same generic TX sequence,
+driver, monitors, and scoreboard. These tests cover split-clock packet transfer,
+back-to-back frames across the async FIFO, reset recovery between packets, and
+DMA-side reset recovery while the TX clock keeps running.

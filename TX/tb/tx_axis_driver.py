@@ -14,13 +14,14 @@ class TxAxisDriver:
     def __init__(self, dut, seq_item_type=TxSequenceItem):
         self.dut = dut
         self.seq_item_type = seq_item_type
+        self.clk = getattr(dut, "dma_clk", dut.clk)
         self.backpressure_wait_cycles = 0
         self.accepted_words = 0
 
     async def send(self, transaction: TxSequenceItem) -> int:
         if not transaction.valid:
             self._drive_item(transaction)
-            await RisingEdge(self.dut.clk)
+            await RisingEdge(self.clk)
             return 0
 
         wait_cycles = 0
@@ -28,7 +29,7 @@ class TxAxisDriver:
 
         while True:
             ready_now = await self._sample_ready_before_edge()
-            await RisingEdge(self.dut.clk)
+            await RisingEdge(self.clk)
 
             if ready_now:
                 break

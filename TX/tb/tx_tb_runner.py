@@ -23,7 +23,7 @@ def _pcs_sources() -> list[Path]:
     )
     return [path for path in explicit_first if path.exists()] + remaining
 
-sources = [
+rtl_sources = [
     TX_DIR / "rtl" / "tx_fifo" / "tx_subsystem_pkg.sv",
     TX_DIR / "rtl" / "tx_fifo" / "tx_async_fifo.sv",
     TX_DIR / "rtl" / "tx_fifo" / "tx_subsystem.sv",
@@ -31,7 +31,16 @@ sources = [
     *_pcs_sources(),
     TX_DIR / "rtl" / "scrambler" / "scrambler.sv",
     TX_DIR / "rtl" / "debubbler" / "debubbler.sv",
+]
+
+sources = [
+    *rtl_sources,
     TX_TB_DIR / "tx_top.sv",
+]
+
+cdc_sources = [
+    *rtl_sources,
+    TX_TB_DIR / "tx_cdc_top.sv",
 ]
 
 SMOKE_FILTER = (
@@ -114,6 +123,49 @@ def _run_case(
     )
 
 
+def _run_cdc_case(case_name: str, fifo_depth: int, num_queues: int):
+    new_pythonpath = _pythonpath()
+    os.environ["PYTHONPATH"] = new_pythonpath
+
+    sim = get_runner("questa")
+    sim_args = [
+        "-64",
+        "-voptargs=+acc",
+    ]
+
+    rtl_parameters = {
+        "FIFO_DEPTH": fifo_depth,
+        "NUM_QUEUES": num_queues,
+        "MAX_BURST_BEATS": _env_int("TX_TB_MAX_BURST_BEATS", 256),
+        "DESC_DEPTH": _env_int("TX_TB_DESC_DEPTH", 32),
+    }
+    parameter_env = {f"TX_TB_{key}": str(value) for key, value in rtl_parameters.items()}
+    os.environ.update(parameter_env)
+
+    build_dir = TX_TB_DIR / f"sim_build_cdc_{case_name}"
+    sim.build(
+        sources=[str(source) for source in cdc_sources],
+        hdl_toplevel="tx_cdc_top",
+        build_dir=str(build_dir),
+        parameters=rtl_parameters,
+        always=True,
+        clean=True,
+    )
+
+    waves = os.environ.get("COCOTB_WAVES", "1") != "0"
+    sim.test(
+        hdl_toplevel="tx_cdc_top",
+        test_module="TX.tb.tx_cdc_test",
+        waves=waves,
+        test_args=sim_args,
+        extra_env={
+            "TOPLEVEL_LANG": "verilog",
+            "PYTHONPATH": new_pythonpath,
+            **parameter_env,
+        },
+    )
+
+
 @pytest.mark.parametrize(
     "case_name,fifo_depth,num_queues,max_burst_beats,cocotb_filter",
     [
@@ -132,6 +184,14 @@ def _run_case(
 )
 def test_tx_full_chain(case_name, fifo_depth, num_queues, max_burst_beats, cocotb_filter):
     _run_case(case_name, fifo_depth, num_queues, max_burst_beats, cocotb_filter)
+
+
+def test_tx_cdc_reset():
+    _run_cdc_case(
+        "split_clocks_reset",
+        _env_int("TX_TB_FIFO_DEPTH", 64),
+        _env_int("TX_TB_NUM_QUEUES", 4),
+    )
 
 
 if __name__ == "__main__":
