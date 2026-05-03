@@ -24,12 +24,13 @@ logic [HEAD_W-1:0]   header_prop_d, header_prop_q;
 
 always_comb begin
     scrambled_d          = '0;
-    state_d              = '1;
+    state_d              = state_q;
+    state_intermediate   = state_q;
     valid_o_d            = 1'b0;
-    valid_state_d        = 1'b0;
-    header_prop_d        = _2b_header_i;
-    if (valid_i && valid_state_q) begin
-        state_intermediate = state_q;
+    valid_state_d        = valid_state_q;
+    header_prop_d        = header_prop_q;
+    if (valid_i) begin
+        header_prop_d = _2b_header_i;
         for (int i = 0; i < BIT_IN_W; i++) begin
             scrambled_d[i]     = _64b_i[i] ^ state_intermediate[TAP_1] ^ state_intermediate[TAP_2];
             state_intermediate = {state_intermediate[STATE_W-2:0], (_64b_i[i] ^ state_intermediate[TAP_1] ^ state_intermediate[TAP_2])};
@@ -37,12 +38,6 @@ always_comb begin
         state_d = state_intermediate;
         valid_o_d          = 1'b1;
         valid_state_d      = 1'b1;
-    end else if(valid_i) begin
-        valid_o_d          = 1'b0;
-        valid_state_d      = 1'b1;
-    end else begin
-        valid_o_d          = 1'b0;
-        valid_state_d      = 1'b0;
     end
 end
 
