@@ -91,7 +91,7 @@ module rx_fifo_ctrl
   end
 
   rx_async_fifo #(
-      .ROW_BYTE_LEN(32),
+      .ROW_BYTE_LEN(M_MASK_W),
       .FIFO_DEPTH  (16)
   ) rx_async_fifo_inst (
       .m_clk   (m_clk),
