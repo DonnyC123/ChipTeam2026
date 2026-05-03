@@ -76,6 +76,10 @@ module rx_fifo_ctrl
       end else begin
         mask_buff_d = mask_buff;
       end
+    end else if (send_i) begin
+      commit_data    = 1'b1;
+      buff_counter_d = '0;
+      mask_buff_d    = '0;
     end
   end
 
