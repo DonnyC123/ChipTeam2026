@@ -20,19 +20,22 @@ logic                           valid_d, valid_q;
 logic                           ready_d, ready_q;
 
 always_comb begin
-    valid_d          = '0;
-    ready_d          = '1;
+    output_d         = output_q;
+    remainder_d      = remainder_q;
+    bits_remaining_d = bits_remaining_q;
+    valid_d          = 1'b0;
+    ready_d          = 1'b1;
     if(bits_remaining_q == 64) begin
         output_d         = remainder_q;
         remainder_d      = '0;
         bits_remaining_d = '0;
         ready_d          = '0;
         valid_d          = '1;
-    end else begin
+    end else if(valid_i) begin
         output_d         = remainder_q | 64'(_66b_i << bits_remaining_q);
         remainder_d      = 64'(_66b_i >> (BIT_OUT_W-bits_remaining_q));
         bits_remaining_d = bits_remaining_q + (BIT_IN_W - BIT_OUT_W);
-        valid_d          = valid_i;
+        valid_d          = 1'b1;
     end
 end
 
