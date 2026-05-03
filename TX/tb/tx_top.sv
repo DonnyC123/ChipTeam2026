@@ -73,6 +73,7 @@ module tx_top #(
       .mask_i(subsystem_tkeep),
       .valid_i(subsystem_tvalid),
       .last_i(subsystem_tlast),
+      .ready_i(subsystem_to_pcs_if.tready),
       .ready_o(crc_ready),
       .data_o(crc_tdata),
       .mask_o(crc_tkeep),

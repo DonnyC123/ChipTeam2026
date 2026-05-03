@@ -9,6 +9,7 @@ module crc_inserter #(
     input  logic [MASK_W-1:0] mask_i, 
     input  logic              valid_i,
     input  logic              last_i, 
+    input  logic              ready_i,
 
     output logic              ready_o,  
 
@@ -82,8 +83,10 @@ endfunction
 
 logic [31:0] crc_final;   
 logic [31:0] crc_next; 
+logic        output_ready;
 
 assign crc_final = ~crc_q;  
+assign output_ready = ready_i || !valid_o;
 
 always_comb begin
     state_d      = state_q;
@@ -103,10 +106,10 @@ always_comb begin
     unique case (state_q)
 
         S_IDLE: begin
-            ready_o = 1'b1;
+            ready_o = output_ready;
             crc_d      = CRC_INIT;
 
-            if (valid_i) begin
+            if (valid_i && output_ready) begin
                 crc_d        = crc32_word(CRC_INIT, data_i, mask_i);
                 free_bytes_d = free_slots(mask_i);
                 held_data_d  = data_i;
@@ -119,9 +122,9 @@ always_comb begin
         end
 
         S_STREAM: begin
-            ready_o = 1'b1;
+            ready_o = output_ready;
 
-            if (valid_i) begin
+            if (valid_i && output_ready) begin
                 crc_d        = crc_next;
                 held_data_d  = data_i;
                 held_mask_d  = mask_i;
@@ -301,7 +304,7 @@ always_ff @(posedge clk or posedge rst) begin
         mask_o       <= '0;
         valid_o      <= 1'b0;
         last_o       <= 1'b0;
-    end else begin
+    end else if (output_ready) begin
         data_o       <= data_d;
         mask_o       <= mask_d;
         valid_o      <= valid_d;
