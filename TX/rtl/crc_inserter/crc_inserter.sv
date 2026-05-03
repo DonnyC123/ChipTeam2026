@@ -69,6 +69,7 @@ logic [2:0]        free_bytes_d;
 
 logic [DATA_W-1:0] data_d;
 logic [MASK_W-1:0] mask_d;
+logic              valid_d;
 logic              last_d;
 
 function automatic logic [2:0] free_slots(input logic [MASK_W-1:0] mask);
@@ -94,8 +95,7 @@ always_comb begin
     ready_o = 1'b0;
     data_d = data_i;
     mask_d = mask_i;
-    valid_o = 1'b0;
-    last_o  = 1'b0;
+    valid_d = 1'b0;
     last_d  = 1'b0;
 
     crc_next = crc32_word(crc_q, data_i, mask_i);
@@ -112,7 +112,7 @@ always_comb begin
                 held_data_d  = data_i;
                 held_mask_d  = mask_i;
 
-                valid_o = 1'b1;
+                valid_d = 1'b1;
 
                 state_d = S_STREAM;
             end
@@ -127,7 +127,7 @@ always_comb begin
                 held_mask_d  = mask_i;
                 free_bytes_d = free_slots(mask_i);
 
-                valid_o = 1'b1;
+                valid_d = 1'b1;
 
                 if (last_i) begin
                     if (free_bytes_q >= 3'd4) begin
@@ -264,8 +264,8 @@ always_comb begin
             int                sent;
 
             ready_o = 1'b0;
-            valid_o = 1'b1;
-            last_o  = 1'b1;
+            valid_d = 1'b1;
+            last_d  = 1'b1;
 
             out_data  = '0;
             out_mask  = '0;
@@ -297,9 +297,15 @@ always_ff @(posedge clk or posedge rst) begin
         held_data_q  <= '0;
         held_mask_q  <= '0;
         free_bytes_q <= '0;
+        data_o       <= '0;
+        mask_o       <= '0;
+        valid_o      <= 1'b0;
+        last_o       <= 1'b0;
     end else begin
         data_o       <= data_d;
         mask_o       <= mask_d;
+        valid_o      <= valid_d;
+        last_o       <= last_d;
         state_q      <= state_d;
         crc_q        <= crc_d;
         held_data_q  <= held_data_d;
