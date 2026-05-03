@@ -4,13 +4,6 @@ from tb_utils.generic_checker import GenericChecker
 
 
 class RxChecker(GenericChecker):
-    """In-order subset matcher for rx_tb.
-
-    Each received packet must equal the next un-consumed expected packet.
-    Expected packets that don't match the head of the received stream are
-    treated as FIFO drops and skipped. A received packet that matches no
-    expected packet is a hard error (corruption)."""
-
     async def _drain(self, queue) -> List[dict]:
         items = []
         while not queue.empty():
@@ -38,7 +31,7 @@ class RxChecker(GenericChecker):
 
         leftover = len(received) - rx_idx
         if leftover:
-            preview = received[rx_idx:rx_idx + 3]
+            preview = received[rx_idx : rx_idx + 3]
             msg = (
                 f"{leftover} received packet(s) did not match any expected "
                 f"packet. First unmatched: {preview}"

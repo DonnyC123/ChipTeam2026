@@ -1,3 +1,4 @@
+import random
 import cocotb
 
 from rx_fifo.tb.rx_fifo_common import initialize_tb
@@ -44,9 +45,6 @@ async def test_back_to_back_frames(dut):
 
 @cocotb.test()
 async def test_backpressure_drops(dut):
-    """Stress test with frequent backpressure to exercise FIFO drops.
-    Checker performs in-order subset matching, so missing packets are
-    tolerated as long as the received packets match expected packets in order."""
     await initialize_tb(dut)
     tb = RxTestBase(dut, ready_probability=0.3)
 
@@ -56,5 +54,25 @@ async def test_backpressure_drops(dut):
     await tb.sequence.send_back_to_back_frames(frames, gap_idles=4)
     await tb.sequence.send_idles(20)
 
+    await tb.wait_for_driver_done(settle_ns=2000)
+    await tb.scoreboard.check()
+
+
+@cocotb.test()
+async def test_long_mixed_traffic(dut, seed: int = 0xC0FFEE):
+    await initialize_tb(dut)
+    tb = RxTestBase(dut, ready_probability=0.7)
+    rng = random.Random(seed)
+
+    NUM_FRAMES = 60
+
+    await tb.sequence.send_idles(LOCK_IDLES)
+    for _ in range(NUM_FRAMES):
+        size = rng.randint(16, 128)
+        frame = [rng.randint(0, 255) for _ in range(size)]
+        await tb.sequence.send_ethernet_frame(frame)
+        await tb.sequence.send_idles(rng.randint(2, 16))
+
+    await tb.sequence.send_idles(20)
     await tb.wait_for_driver_done(settle_ns=5000)
     await tb.scoreboard.check()
