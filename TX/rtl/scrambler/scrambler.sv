@@ -20,7 +20,7 @@ logic [BIT_IN_W-1:0] scrambled_d, scrambled_q;
 logic [STATE_W-1:0]  state_d, state_q, state_intermediate;
 logic                valid_o_d, valid_o_q;
 logic                valid_state_d, valid_state_q;
-logic                header_prop_d, header_prop_q;
+logic [HEAD_W-1:0]   header_prop_d, header_prop_q;
 
 always_comb begin
     scrambled_d          = '0;
