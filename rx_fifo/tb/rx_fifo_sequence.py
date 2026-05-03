@@ -212,10 +212,6 @@ class RXFifoSequence(GenericSequence):
         await self.add_transaction(item)
         self._reset_current_item()
 
-    # ---- High-level packet generators -------------------------------------
-    # These wrap the primitive add_* / send_current helpers so tests can
-    # express intent at the packet level instead of beat-by-beat.
-
     async def drive_idle(self, count: int = 1):
         for _ in range(count):
             self.add_data(0)
@@ -239,9 +235,7 @@ class RXFifoSequence(GenericSequence):
         if length < 1:
             raise ValueError(f"Packet length must be >= 1, got {length}")
         if data is not None and len(data) != length:
-            raise ValueError(
-                f"Expected {length} data words, got {len(data)}"
-            )
+            raise ValueError(f"Expected {length} data words, got {len(data)}")
 
         resolved_rng = self._resolve_rng(rng, seed)
         resolved_last_mask = mid_mask if last_mask is None else last_mask
@@ -271,9 +265,7 @@ class RXFifoSequence(GenericSequence):
         idle_drop_prob: float = 0.3,
     ):
         if min_beats < 1 or max_beats < min_beats:
-            raise ValueError(
-                f"Invalid beat range: min={min_beats}, max={max_beats}"
-            )
+            raise ValueError(f"Invalid beat range: min={min_beats}, max={max_beats}")
         resolved_rng = self._resolve_rng(rng, seed)
         length = resolved_rng.randint(min_beats, max_beats)
         await self.generate_valid_packet(
@@ -303,8 +295,6 @@ class RXFifoSequence(GenericSequence):
         max_idle: int = 4,
     ):
         if min_idle < 0 or max_idle < min_idle:
-            raise ValueError(
-                f"Invalid idle range: min={min_idle}, max={max_idle}"
-            )
+            raise ValueError(f"Invalid idle range: min={min_idle}, max={max_idle}")
         resolved_rng = self._resolve_rng(rng, seed)
         await self.drive_idle(resolved_rng.randint(min_idle, max_idle))
