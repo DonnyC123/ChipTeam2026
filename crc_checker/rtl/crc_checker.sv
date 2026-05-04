@@ -34,11 +34,7 @@ typedef enum logic [2:0] {
 } state_e;
 
 state_e                 state_q, state_d;
-
 logic [31:0]            crc_q, crc_d;
-logic [DATA_W-1:0]      data_q;
-logic [MASK_W-1:0]      mask_q;
-
 logic                   valid_d;
 
 function automatic logic [31:0] crc32_byte(input logic [31:0] crc_in, input logic [7:0]  byte_in);
@@ -76,8 +72,8 @@ always_comb begin
     drop_o   = 1'b0;
     cancel_o = 1'b0;
 
-    data_o = data_q;
-    mask_o = mask_q;
+    data_o = data_i;
+    mask_o = mask_i;
 
     case (state_q)
         S_IDLE: begin
@@ -148,11 +144,6 @@ always_ff @(posedge clk or posedge rst) begin
         state_q     <= state_d;
         crc_q       <= crc_d;
         valid_o     <= valid_d;
-
-        if (valid_i) begin
-            data_q <= data_i;
-            mask_q <= mask_i;
-        end
     end
 end
 
