@@ -21,9 +21,11 @@ module crc_checker #(
     output logic              cancel_o
 );
 
-localparam logic [31:0] CRC32_POLY    = 32'h04C11DB7;
-localparam logic [31:0] CRC32_RESIDUE = 32'hDEBB20E3;
-localparam logic [31:0] CRC_INIT      = 32'hFFFFFFFF;
+localparam CRC_W = 32;
+
+localparam logic [CRC_W-1:0] CRC32_POLY    = 32'h04C11DB7;
+localparam logic [CRC_W-1:0] CRC32_RESIDUE = 32'hDEBB20E3;
+localparam logic [CRC_W-1:0] CRC_INIT      = 32'hFFFFFFFF;
 
 typedef enum logic [2:0] {
     S_IDLE,
@@ -31,9 +33,9 @@ typedef enum logic [2:0] {
     S_FLUSH,
     S_CHECK,
     S_DROP
-} state_e;
+} state_t;
 
-state_e                 state_q, state_d;
+state_t                 state_q, state_d;
 
 logic [31:0]            crc_q, crc_d;
 logic [DATA_W-1:0]      data_q;
@@ -137,7 +139,7 @@ always_comb begin
     endcase
 end
 
-always_ff @(posedge clk or posedge rst) begin
+always_ff @(posedge clk) begin
     if (rst) begin
         state_q     <= S_IDLE;
         crc_q       <= CRC_INIT;
