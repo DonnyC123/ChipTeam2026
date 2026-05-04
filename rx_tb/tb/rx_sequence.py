@@ -52,6 +52,9 @@ class RxSequence(GenericSequence):
     CTRL_HDR = 0b10
     DATA_HDR = 0b01
 
+    CRC32_POLY = 0x04C11DB7
+    CRC32_INIT = 0xFFFFFFFF
+
     def __init__(self, driver):
         super().__init__(driver)
         self.scrambler_state = (1 << self.SCRAMBLER_STATE_W) - 1
@@ -99,19 +102,34 @@ class RxSequence(GenericSequence):
             await self._push_word(self.CTRL_HDR, self.scramble_64b(idle_payload))
 
     async def send_ethernet_frame(self, frame_bytes: list[int]):
-        await self.notify_subscribers({"frame": list(frame_bytes)})
+        crc = self.compute_crc32(frame_bytes)
 
-        sof_raw = self._build_ctrl_payload(self.SOF_L0, frame_bytes[:7])
+        crc_bytes = [
+            (crc >> 0) & 0xFF,
+            (crc >> 8) & 0xFF,
+            (crc >> 16) & 0xFF,
+            (crc >> 24) & 0xFF,
+        ]
+
+        stream_bytes = frame_bytes + crc_bytes
+        await self.notify_subscribers({"frame": list(stream_bytes)})
+
+        sof_raw = self._build_ctrl_payload(
+            self.SOF_L0,
+            stream_bytes[:7]
+        )
         await self._push_word(self.CTRL_HDR, self.scramble_64b(sof_raw))
 
-        remaining = frame_bytes[7:]
+        remaining = stream_bytes[7:]
         while len(remaining) > 7:
             word = int.from_bytes(remaining[:8], "little")
             await self._push_word(self.DATA_HDR, self.scramble_64b(word))
             remaining = remaining[8:]
 
-        n_valid  = len(remaining)
-        term_raw = self._build_ctrl_payload(self.TERM_CODES[n_valid], remaining)
+        term_raw = self._build_ctrl_payload(
+            self.TERM_CODES[len(remaining)],
+            remaining
+        )
         await self._push_word(self.CTRL_HDR, self.scramble_64b(term_raw))
 
     async def send_back_to_back_frames(
@@ -138,3 +156,16 @@ class RxSequence(GenericSequence):
     async def send_invalid_blocks(self, count: int = 10):
         for _ in range(count):
             await self._push_word(0b00, random.getrandbits(64))
+
+    def compute_crc32(self, data_bytes: list[int]) -> int:
+        crc = self.CRC32_INIT 
+
+        for byte in data_bytes:
+            crc ^= byte 
+            for _ in range(8):
+                if crc & 1:
+                    crc = (crc >> 1) ^ 0xEDB88320 
+                else:
+                    crc >>= 1
+
+        return crc ^ 0xFFFFFFFF

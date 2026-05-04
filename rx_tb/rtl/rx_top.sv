@@ -17,7 +17,6 @@ module rx_top #(
     axi_stream_if.master m_axi
 );
   localparam DATA_W = DIN_W;
-
   localparam PCS_W      = 66;
   localparam HEADER_W   = 2;
   localparam ETH_DATA_W = 64;
@@ -39,7 +38,11 @@ module rx_top #(
   logic                  drop_frame;
   logic                  send_frame;
 
-
+  logic                  valid_reg;
+  logic [ETH_DATA_W-1:0] data_reg;
+  logic [ETH_MASK_W-1:0] mask_reg;
+  logic                  drop_reg;
+  logic                  send_reg;
 
   bubbler #(
       .BIT_IN_W (DIN_W),
@@ -97,6 +100,27 @@ module rx_top #(
       .bytes_valid_o (eth_valid_mask)
   );
 
+  crc_checker #(
+        .DATA_W (ETH_DATA_W),
+        .MASK_W (ETH_DATA_W/8)
+    ) u_crc_checker (
+        .clk      (rx_clk),
+        .rst      (rx_rst),
+        .data_i   (eth_data),
+        .mask_i   (eth_valid_mask),
+        .valid_i  (eth_valid),
+        .send_i   (send_frame),
+        .drop_i   (drop_frame),
+        .cancel_i (cancel_reg), 
+        .cancel_o (cancel_frame),
+        
+        .data_o   (data_reg),
+        .mask_o   (mask_reg),
+        .valid_o  (valid_reg),
+        .send_o   (send_reg),
+        .drop_o   (drop_reg)
+    );
+
   rx_fifo_ctrl #(
       .S_DATA_W(ETH_DATA_W)
   ) rx_fifo_ctrl_inst (
@@ -104,14 +128,16 @@ module rx_top #(
       .s_rst   (rx_rst),
       .m_clk   (axi_clk),
       .m_rst   (axi_rst),
-      .data_i  (eth_data),
-      .mask_i  (eth_valid_mask),
-      .valid_i (eth_valid),
-      .drop_i  (drop_frame),
-      .send_i  (send_frame),
-      .cancel_o(cancel_frame),
+
+      .data_i  (data_reg),
+      .mask_i  (mask_reg),
+      .valid_i (valid_reg),
+      .drop_i  (drop_reg),
+      .send_i  (send_reg),
+      .cancel_o(cancel_reg),
       .m_axi   (m_axi)
   );
+
   always_ff @(posedge rx_clk) begin
     if (rx_rst) begin
       header_bits_q <= '0;

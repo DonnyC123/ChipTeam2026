@@ -18,6 +18,7 @@ sources = [
     REPO_ROOT / "ethernet_assembler" / "rtl" / "ethernet_assembler.sv",
     REPO_ROOT / "bubbler" / "rtl" / "bubbler.sv",
     REPO_ROOT / "descrambler" / "rtl" / "descrambler.sv",
+    REPO_ROOT / "crc_checker" / "rtl" / "crc_checker.sv",
     RX_TB_ROOT / "rtl" / "rx_top.sv",
     RX_TB_ROOT / "rtl" / "rx_top_wrapper.sv",
 ]
