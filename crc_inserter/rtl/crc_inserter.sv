@@ -9,6 +9,7 @@ module crc_inserter #(
     input  logic [MASK_W-1:0] mask_i, 
     input  logic              valid_i,
     input  logic              last_i, 
+    input  logic              ready_i,
 
     output logic              ready_o,  
 
@@ -69,6 +70,7 @@ logic [2:0]        free_bytes_d;
 
 logic [DATA_W-1:0] data_d;
 logic [MASK_W-1:0] mask_d;
+logic              valid_d;
 logic              last_d;
 
 function automatic logic [2:0] free_slots(input logic [MASK_W-1:0] mask);
@@ -81,8 +83,10 @@ endfunction
 
 logic [31:0] crc_final;   
 logic [31:0] crc_next; 
+logic        output_ready;
 
 assign crc_final = ~crc_q;  
+assign output_ready = ready_i || !valid_o;
 
 always_comb begin
     state_d      = state_q;
@@ -94,8 +98,7 @@ always_comb begin
     ready_o = 1'b0;
     data_d = data_i;
     mask_d = mask_i;
-    valid_o = 1'b0;
-    last_o  = 1'b0;
+    valid_d = 1'b0;
     last_d  = 1'b0;
 
     crc_next = crc32_word(crc_q, data_i, mask_i);
@@ -103,31 +106,31 @@ always_comb begin
     unique case (state_q)
 
         S_IDLE: begin
-            ready_o = 1'b1;
+            ready_o = output_ready;
             crc_d      = CRC_INIT;
 
-            if (valid_i) begin
+            if (valid_i && output_ready) begin
                 crc_d        = crc32_word(CRC_INIT, data_i, mask_i);
                 free_bytes_d = free_slots(mask_i);
                 held_data_d  = data_i;
                 held_mask_d  = mask_i;
 
-                valid_o = 1'b1;
+                valid_d = 1'b1;
 
                 state_d = S_STREAM;
             end
         end
 
         S_STREAM: begin
-            ready_o = 1'b1;
+            ready_o = output_ready;
 
-            if (valid_i) begin
+            if (valid_i && output_ready) begin
                 crc_d        = crc_next;
                 held_data_d  = data_i;
                 held_mask_d  = mask_i;
                 free_bytes_d = free_slots(mask_i);
 
-                valid_o = 1'b1;
+                valid_d = 1'b1;
 
                 if (last_i) begin
                     if (free_bytes_q >= 3'd4) begin
@@ -190,73 +193,6 @@ always_comb begin
             end
         end
 
-        // S_APPEND: begin
-        //     ready_o = 1'b0;
-        //     valid_o = 1'b1;
-
-        //     if (free_bytes_q >= 3'd4) begin
-        //         begin
-        //             logic [DATA_W-1:0] out_data;
-        //             logic [MASK_W-1:0] out_mask;
-        //             int                slot;
-
-        //             out_data = held_data_q;
-        //             out_mask = held_mask_q;
-        //             slot     = 0;
-
-        //             for (int b = 0; b < MASK_W; b++) begin
-        //                 if (!held_mask_q[b] && slot < 4) begin
-        //                     case (slot)
-        //                         0: out_data[b*8 +: 8] = crc_final[31:24];
-        //                         1: out_data[b*8 +: 8] = crc_final[23:16];
-        //                         2: out_data[b*8 +: 8] = crc_final[15:8];
-        //                         3: out_data[b*8 +: 8] = crc_final[7:0];
-        //                         default: ;
-        //                     endcase
-        //                     out_mask[b] = 1'b1;
-        //                     slot++;
-        //                 end
-        //             end
-
-        //             data_o = out_data;
-        //             mask_o = out_mask;
-        //             last_o = 1'b1;
-        //         end
-        //         state_d = S_IDLE;
-
-        //     end else begin
-        //         begin
-        //             logic [DATA_W-1:0] out_data;
-        //             logic [MASK_W-1:0] out_mask;
-        //             int                slot;
-        //             out_data = held_data_q;
-        //             out_mask = held_mask_q;
-        //             slot     = 0;
-
-        //             for (int b = 0; b < MASK_W; b++) begin
-        //                 if (!held_mask_q[b]) begin
-        //                     case (slot)
-        //                         0: out_data[b*8 +: 8] = crc_final[31:24];
-        //                         1: out_data[b*8 +: 8] = crc_final[23:16];
-        //                         2: out_data[b*8 +: 8] = crc_final[15:8];
-        //                         3: out_data[b*8 +: 8] = crc_final[7:0];
-        //                         default: ;
-        //                     endcase
-        //                     out_mask[b] = 1'b1;
-        //                     slot++;
-        //                 end
-        //             end
-
-        //             data_o = out_data;
-        //             mask_o = out_mask;
-        //             last_o = 1'b0;  
-        //         end
-
-        //         free_bytes_d = free_bytes_q;
-        //         state_d      = S_TAIL;
-        //     end
-        // end
-
         S_TAIL: begin
             logic [DATA_W-1:0] out_data;
             logic [MASK_W-1:0] out_mask;
@@ -264,8 +200,8 @@ always_comb begin
             int                sent;
 
             ready_o = 1'b0;
-            valid_o = 1'b1;
-            last_o  = 1'b1;
+            valid_d = 1'b1;
+            last_d  = 1'b1;
 
             out_data  = '0;
             out_mask  = '0;
@@ -297,9 +233,15 @@ always_ff @(posedge clk or posedge rst) begin
         held_data_q  <= '0;
         held_mask_q  <= '0;
         free_bytes_q <= '0;
-    end else begin
+        data_o       <= '0;
+        mask_o       <= '0;
+        valid_o      <= 1'b0;
+        last_o       <= 1'b0;
+    end else if (output_ready) begin
         data_o       <= data_d;
         mask_o       <= mask_d;
+        valid_o      <= valid_d;
+        last_o       <= last_d;
         state_q      <= state_d;
         crc_q        <= crc_d;
         held_data_q  <= held_data_d;
