@@ -54,13 +54,15 @@ module rx_fifo_ctrl
       revert_data    = 1'b1;
       buff_counter_d = '0;
       mask_buff_d    = '0;
-    end else if (valid_i) begin
-      buff_counter_d = buff_counter_q + 1;
+    end else begin
+      if (valid_i) begin
+        buff_counter_d = buff_counter_q + 1;
+        data_buff_d    = {data_i, data_buff_q[M_DATA_W-1:S_DATA_W]};
+        mask_buff      = {mask_i, mask_buff_q[M_MASK_W-1:S_MASK_W]};
+        mask_buff_d    = mask_buff;
+      end
 
-      data_buff_d    = {data_i, data_buff_q[M_DATA_W-1:S_DATA_W]};
-      mask_buff      = {mask_i, mask_buff_q[M_MASK_W-1:S_MASK_W]};
-
-      if (fifo_full) begin
+      if (fifo_full && (valid_i || send_i)) begin
         revert_data    = 1'b1;
         buff_counter_d = '0;
         mask_buff_d    = '0;
@@ -69,12 +71,10 @@ module rx_fifo_ctrl
         wr_fifo        = 1'b1;
         buff_counter_d = '0;
         mask_buff_d    = '0;
-      end else if (buff_counter_q == OUTPUT_SCALE - 1) begin
+      end else if (valid_i && buff_counter_q == OUTPUT_SCALE - 1) begin
         wr_fifo        = 1'b1;
         buff_counter_d = '0;
         mask_buff_d    = '0;
-      end else begin
-        mask_buff_d = mask_buff;
       end
     end
   end
@@ -92,7 +92,7 @@ module rx_fifo_ctrl
 
   rx_async_fifo #(
       .ROW_BYTE_LEN(M_MASK_W),
-      .FIFO_DEPTH  (16)
+      .FIFO_DEPTH  (32)
   ) rx_async_fifo_inst (
       .m_clk   (m_clk),
       .m_rst   (m_rst),

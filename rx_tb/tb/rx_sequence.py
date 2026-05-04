@@ -99,6 +99,8 @@ class RxSequence(GenericSequence):
             await self._push_word(self.CTRL_HDR, self.scramble_64b(idle_payload))
 
     async def send_ethernet_frame(self, frame_bytes: list[int]):
+        await self.notify_subscribers({"frame": list(frame_bytes)})
+
         sof_raw = self._build_ctrl_payload(self.SOF_L0, frame_bytes[:7])
         await self._push_word(self.CTRL_HDR, self.scramble_64b(sof_raw))
 
