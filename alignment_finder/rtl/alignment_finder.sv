@@ -1,6 +1,6 @@
 module alignment_finder #(
     parameter int DATA_WIDTH   = 66,
-    parameter int GOOD_COUNT   = 32,
+    parameter int GOOD_COUNT   = 64,
     parameter int BAD_COUNT    = 8,
     parameter int BITSLIP_WAIT = 3
 ) (

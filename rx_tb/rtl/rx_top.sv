@@ -1,8 +1,8 @@
 module rx_top #(
     parameter int DIN_W        = 64,
-    parameter int GOOD_COUNT   = 1,
+    parameter int GOOD_COUNT   = 64,
     parameter int BAD_COUNT    = 8,
-    parameter int BITSLIP_WAIT = 3
+    parameter int BITSLIP_WAIT = 40
 ) (
     input logic             rx_clk,
     input logic             rx_rst,
