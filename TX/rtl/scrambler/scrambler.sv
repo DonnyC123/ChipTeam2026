@@ -58,6 +58,6 @@ always_ff @(posedge clk) begin
 end
 
 assign valid_o       = valid_o_q;
-assign _66b_o        = {header_prop_q[HEAD_W-1:0], scrambled_q[BIT_IN_W-1:0]};
+assign _66b_o        = {scrambled_q[BIT_IN_W-1:0], header_prop_q[HEAD_W-1:0]};
 
 endmodule

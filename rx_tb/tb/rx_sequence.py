@@ -9,7 +9,7 @@ class BitStream:
         self._len:  int = 0 
 
     def push_66b(self, header: int, payload: int):
-        word = (header << 64) | (payload & 0xFFFFFFFFFFFFFFFF)
+        word = ((payload & 0xFFFFFFFFFFFFFFFF) << 2) | (header & 0b11)
         self._bits |= (word << self._len)
         self._len  += 66
 

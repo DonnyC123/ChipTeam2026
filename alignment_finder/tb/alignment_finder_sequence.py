@@ -40,7 +40,7 @@ class AlignmentFinderSequence(GenericSequence):
     def make_66b_block(header2: int, payload64: int) -> int:
         header2 &= 0b11
         payload64 &= (1 << 64) - 1
-        return (header2 << 64) | payload64
+        return (payload64 << 2) | header2
 
     async def add_control_idle_stream(self, blocks: int, *, valid: bool = True):
         for _ in range(blocks):

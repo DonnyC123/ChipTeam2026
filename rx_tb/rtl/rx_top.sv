@@ -59,7 +59,7 @@ module rx_top #(
   ) u_descrambler (
       .clk    (rx_clk),
       .rst    (rx_rst),
-      ._64b_i (bubbler_data_66[DATA_W-1:0]),
+      ._64b_i (bubbler_data_66[PCS_W-1:HEADER_W]),
       .valid_i(bubbler_valid_66),
       ._64b_o (descrambled_data_64),
       .valid_o(descrambled_valid)
@@ -116,7 +116,7 @@ module rx_top #(
     if (rx_rst) begin
       header_bits_q <= '0;
     end else begin
-      header_bits_q <= bubbler_data_66[65:64];
+      header_bits_q <= bubbler_data_66[HEADER_W-1:0];
     end
   end
 

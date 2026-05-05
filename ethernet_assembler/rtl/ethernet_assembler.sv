@@ -1,7 +1,7 @@
 // Ethernet 'Assembler' Planning:
 // Inputs:
 // - 64 bits of input_data_i
-// - 2 header bits (techinally the left most 2 bits of the 66b stream)
+// - 2 header bits (the first 2 bits of each 66b block on the wire, IEEE 802.3 Clause 49)
 // - an bool in_valid_i signal which indicates if input_data_i is valid
 // - a 'locked_i' bool signals which indicates that we are able to process our data
 // - cancel_frame_i signal coming from the fifo we are sending data to

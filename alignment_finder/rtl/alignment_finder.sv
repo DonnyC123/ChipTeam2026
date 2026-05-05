@@ -43,7 +43,7 @@ module alignment_finder #(
   logic                     hdr_valid;
 
   //header validity check 
-  assign hdr       = data_i[DATA_WIDTH-1 : DATA_WIDTH-2];    
+  assign hdr       = data_i[1:0];
   assign hdr_valid = (hdr == 2'b01) || (hdr == 2'b10);
 
   always_comb begin

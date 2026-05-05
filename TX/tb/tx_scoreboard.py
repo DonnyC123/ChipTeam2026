@@ -33,8 +33,8 @@ class Raw66bParser:
             word = self._bits & ((1 << 66) - 1)
             self._bits >>= 66
             self._bit_count -= 66
-            header = (word >> 64) & 0x3
-            payload = word & 0xFFFFFFFFFFFFFFFF
+            header = word & 0x3
+            payload = (word >> 2) & 0xFFFFFFFFFFFFFFFF
             self.ingest_66b(header, payload)
 
     def ingest_66b(self, header: int, payload: int):

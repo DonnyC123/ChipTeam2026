@@ -6,7 +6,7 @@ from tb_utils.generic_model import GenericModel
 MASK66 = (1 << 66) - 1
 
 def get_hdr_2b(word66):
-    return (word66 >> 64) & 0b11
+    return word66 & 0b11
 
 def hdr_is_valid(header):
     return header in (0b01, 0b10)

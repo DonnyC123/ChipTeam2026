@@ -310,7 +310,7 @@ class EthernetAssemblerModel(GenericModel):
         )
         header_bits = self._to_int(
             notification.get("header_bits", notification.get("header_bits_i")),
-            default=(input_data >> 64) & 0b11,
+            default=input_data & 0b11,
         )
         in_valid = self._to_bool(notification.get("in_valid", notification.get("valid")), default=True)
         locked = self._to_bool(notification.get("locked", notification.get("locked_i")), default=True)
