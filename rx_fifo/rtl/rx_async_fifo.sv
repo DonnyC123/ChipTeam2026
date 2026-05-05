@@ -34,6 +34,10 @@ module rx_async_fifo
     logic [ADDR_W-1:0] addr;
   } addr_t;
 
+   function automatic addr_t bin_to_gray(input addr_t bin);
+        bin_to_gray = bin ^ (bin >> 1);
+    endfunction
+
   fifo_row_t fifo_mem                   [FIFO_DEPTH];
 
   logic      full;

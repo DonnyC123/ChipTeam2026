@@ -68,27 +68,13 @@ module tx_cdc_top #(
       .m_axis_pcs_tready_i(subsystem_tready)
   );
 
-  crc_inserter u_crc_inserter (
-      .clk(clk),
-      .rst(rst),
-      .data_i(subsystem_tdata),
-      .mask_i(subsystem_tkeep),
-      .valid_i(subsystem_tvalid),
-      .last_i(subsystem_tlast),
-      .ready_i(subsystem_to_pcs_if.tready),
-      .ready_o(crc_ready),
-      .data_o(crc_tdata),
-      .mask_o(crc_tkeep),
-      .valid_o(crc_tvalid),
-      .last_o(crc_tlast)
-  );
 
-  assign subsystem_tready = crc_ready;
+  assign subsystem_tready = 1'b1;
 
-  assign subsystem_to_pcs_if.tdata  = crc_tdata;
-  assign subsystem_to_pcs_if.tkeep  = crc_tkeep;
-  assign subsystem_to_pcs_if.tvalid = crc_tvalid;
-  assign subsystem_to_pcs_if.tlast  = crc_tlast;
+  assign subsystem_to_pcs_if.tdata  = subsystem_tdata;
+  assign subsystem_to_pcs_if.tkeep  = subsystem_tkeep;
+  assign subsystem_to_pcs_if.tvalid = subsystem_tvalid;
+  assign subsystem_to_pcs_if.tlast  = subsystem_tlast;
   assign subsystem_to_pcs_if.tdest  = '0;
 
   pcs_generator u_pcs_generator (
