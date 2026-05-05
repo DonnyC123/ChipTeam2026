@@ -106,8 +106,8 @@ class Raw66bParser:
 
 class DescrambledRaw66bParser(Raw66bParser):
     STATE_W = 58
-    TAP_1 = 19
-    TAP_2 = 0
+    TAP_1 = 38
+    TAP_2 = 57
 
     def __init__(self):
         super().__init__()

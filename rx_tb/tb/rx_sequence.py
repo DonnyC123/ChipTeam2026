@@ -30,8 +30,8 @@ class BitStream:
 class RxSequence(GenericSequence):
 
     SCRAMBLER_STATE_W = 58
-    SCRAMBLER_TAP_1   = 19
-    SCRAMBLER_TAP_2   = 0
+    SCRAMBLER_TAP_1   = 38
+    SCRAMBLER_TAP_2   = 57
 
     # nic_global_pkg constants
     IDLE_BLK = 0x1E
