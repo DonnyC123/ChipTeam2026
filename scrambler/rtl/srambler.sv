@@ -13,8 +13,8 @@ module scrambler #(
     output logic                     valid_o
 );
 
-localparam TAP_1 = 19;
-localparam TAP_2 = 0;
+localparam TAP_1 = 38;
+localparam TAP_2 = 57;
 
 logic [BIT_IN_W-1:0] scrambled_d, scrambled_q;
 logic [STATE_W-1:0]  state_d, state_q, state_intermediate;
