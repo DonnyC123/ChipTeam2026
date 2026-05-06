@@ -79,6 +79,10 @@ end
 //Assign outputs
 assign _64b_o  = output_q;
 assign valid_o = valid_q;
-assign ready_o = ready_d && !pending_valid_q;
+// ready only drops on the natural stall (bits_remaining_q==64). When
+// pending_valid_q=1 we're processing the pending input THIS cycle and the
+// `if (pending_valid_q)` branch at lines 52-55 absorbs a new _66b_i in the
+// same cycle, so we can still accept upstream data — no need to deassert.
+assign ready_o = ready_d;
 
 endmodule
