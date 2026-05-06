@@ -39,6 +39,7 @@ async def send_dma_frame(dut, frame: bytes, qid: int = 0):
     """Drive one ethernet frame over the 256-bit DMA AXIS in 32-byte beats."""
     beat_bytes = 32
     nbeats = (len(frame) + beat_bytes - 1) // beat_bytes
+    dut._log.info(f"send_dma_frame: {len(frame)} bytes in {nbeats} beats")
     for i in range(nbeats):
         chunk = frame[i * beat_bytes:(i + 1) * beat_bytes]
         last  = (i == nbeats - 1)
@@ -52,27 +53,37 @@ async def send_dma_frame(dut, frame: bytes, qid: int = 0):
         dut.s_axis_dma_tvalid_i.value = 1
 
         await RisingEdge(dut.dma_clk)
+        wait_cnt = 0
         while not int(dut.s_axis_dma_tready_o.value):
             await RisingEdge(dut.dma_clk)
+            wait_cnt += 1
+            if wait_cnt > 10_000:
+                raise TimeoutError(f"DMA tready never asserted on beat {i}")
+        dut._log.info(f"send_dma_frame: beat {i} accepted (waited {wait_cnt} cycles)")
 
     dut.s_axis_dma_tvalid_i.value = 0
     dut.s_axis_dma_tlast_i.value  = 0
+    dut._log.info("send_dma_frame: done")
 
 
 async def collect_rx_frame(dut, timeout_cycles: int = 200_000) -> bytes | None:
     """Block until one full frame is received (tlast), or None on timeout."""
     out = bytearray()
+    beat_count = 0
     for _ in range(timeout_cycles):
         await RisingEdge(dut.axi_clk)
         if int(dut.m_axis_rx_tvalid_o.value) and int(dut.m_axis_rx_tready_i.value):
             data = int(dut.m_axis_rx_tdata_o.value)
             keep = int(dut.m_axis_rx_tkeep_o.value)
             last = int(dut.m_axis_rx_tlast_o.value)
+            beat_count += 1
+            dut._log.info(f"rx beat #{beat_count}: keep={keep:#010x} last={last}")
             for byte_idx in range(32):
                 if (keep >> byte_idx) & 1:
                     out.append((data >> (byte_idx * 8)) & 0xFF)
             if last:
                 return bytes(out)
+    dut._log.warning(f"timeout: collected {beat_count} beats, {len(out)} bytes, no tlast")
     return None
 
 
