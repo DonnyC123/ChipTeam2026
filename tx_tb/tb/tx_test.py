@@ -5,9 +5,9 @@ import cocotb
 from cocotb.triggers import RisingEdge, Timer
 from cocotb.types import Logic, LogicArray
 
-from TX.tb.tx_sequence import TxSequence
-from TX.tb.tx_sequence_item import TxSequenceItem
-from TX.tb.tx_test_base import TxFullChainTestBase
+from tx_tb.tb.tx_sequence import TxSequence
+from tx_tb.tb.tx_sequence_item import TxSequenceItem
+from tx_tb.tb.tx_test_base import TxFullChainTestBase
 
 
 def patterned_frame(length: int, seed: int) -> list[int]:

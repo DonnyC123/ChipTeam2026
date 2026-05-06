@@ -1,8 +1,8 @@
 from cocotb.types import Logic, LogicArray
 
 from tb_utils.generic_sequence import GenericSequence
-from TX.tb.tx_axis_driver import TxAxisDriver
-from TX.tb.tx_sequence_item import TxSequenceItem
+from tx_tb.tb.tx_axis_driver import TxAxisDriver
+from tx_tb.tb.tx_sequence_item import TxSequenceItem
 
 
 class TxSequence(GenericSequence[TxSequenceItem]):
