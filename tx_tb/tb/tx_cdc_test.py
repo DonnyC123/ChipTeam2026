@@ -1,7 +1,7 @@
 import cocotb
 
-from TX.tb.tx_cdc_test_base import TxCdcResetTestBase
-from TX.tb.tx_test import patterned_frame, queue_id
+from tx_tb.tb.tx_cdc_test_base import TxCdcResetTestBase
+from tx_tb.tb.tx_test import patterned_frame, queue_id
 
 
 @cocotb.test()

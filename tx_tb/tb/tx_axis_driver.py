@@ -1,6 +1,6 @@
 from cocotb.triggers import RisingEdge, Timer
 
-from TX.tb.tx_sequence_item import TxSequenceItem
+from tx_tb.tb.tx_sequence_item import TxSequenceItem
 
 
 class TxAxisDriver:

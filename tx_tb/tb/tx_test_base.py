@@ -4,12 +4,12 @@ from cocotb.triggers import ClockCycles, RisingEdge
 
 from tb_utils.generic_test_base import GenericTestBase
 from tb_utils.generic_monitor import GenericValidMonitor
-from TX.tb.tx_axis_driver import TxAxisDriver
-from TX.tb.tx_pcs_transaction import TxPcsTransaction
-from TX.tb.tx_scoreboard import Pcs66bChecker, TxScoreboard
-from TX.tb.tx_sequence import TxSequence
-from TX.tb.tx_sequence_item import TxSequenceItem
-from TX.tb.tx_transaction import TxTransaction
+from tx_tb.tb.tx_axis_driver import TxAxisDriver
+from tx_tb.tb.tx_pcs_transaction import TxPcsTransaction
+from tx_tb.tb.tx_scoreboard import Pcs66bChecker, TxScoreboard
+from tx_tb.tb.tx_sequence import TxSequence
+from tx_tb.tb.tx_sequence_item import TxSequenceItem
+from tx_tb.tb.tx_transaction import TxTransaction
 
 
 CLK_PERIOD_NS = 10

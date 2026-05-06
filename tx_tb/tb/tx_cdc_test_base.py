@@ -3,9 +3,9 @@ from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, RisingEdge
 
 from tb_utils.generic_monitor import GenericValidMonitor
-from TX.tb.tx_pcs_transaction import TxPcsTransaction
-from TX.tb.tx_scoreboard import Pcs66bChecker, TxScoreboard
-from TX.tb.tx_test_base import RESET_CYCLES, TxFullChainTestBase
+from tx_tb.tb.tx_pcs_transaction import TxPcsTransaction
+from tx_tb.tb.tx_scoreboard import Pcs66bChecker, TxScoreboard
+from tx_tb.tb.tx_test_base import RESET_CYCLES, TxFullChainTestBase
 
 
 class TxCdcResetTestBase(TxFullChainTestBase):

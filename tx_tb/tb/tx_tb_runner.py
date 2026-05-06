@@ -5,9 +5,10 @@ import pytest
 from cocotb_tools.runner import get_runner
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-TX_DIR = REPO_ROOT / "TX"
-TX_TB_DIR = TX_DIR / "tb"
-PCS_DIR = TX_DIR / "rtl" / "pcs_generator"
+TX_TB_ROOT = REPO_ROOT / "tx_tb"
+TX_TB_DIR = TX_TB_ROOT / "tb"
+TX_TB_RTL_DIR = TX_TB_ROOT / "rtl"
+PCS_DIR = REPO_ROOT / "pcs_generator" / "rtl"
 
 
 def _pcs_sources() -> list[Path]:
@@ -24,23 +25,23 @@ def _pcs_sources() -> list[Path]:
     return [path for path in explicit_first if path.exists()] + remaining
 
 rtl_sources = [
-    TX_DIR / "rtl" / "tx_fifo" / "tx_subsystem_pkg.sv",
-    TX_DIR / "rtl" / "tx_fifo" / "tx_async_fifo.sv",
-    TX_DIR / "rtl" / "tx_fifo" / "tx_subsystem.sv",
-    TX_DIR / "rtl" / "crc_inserter" / "crc_inserter.sv",
+    REPO_ROOT / "tx_fifo" / "rtl" / "tx_subsystem_pkg.sv",
+    REPO_ROOT / "tx_fifo" / "rtl" / "tx_async_fifo.sv",
+    REPO_ROOT / "tx_fifo" / "rtl" / "tx_subsystem.sv",
+    REPO_ROOT / "crc_inserter" / "rtl" / "crc_inserter.sv",
     *_pcs_sources(),
-    TX_DIR / "rtl" / "scrambler" / "scrambler.sv",
-    TX_DIR / "rtl" / "debubbler" / "debubbler.sv",
+    REPO_ROOT / "scrambler" / "rtl" / "scrambler.sv",
+    REPO_ROOT / "debubbler" / "rtl" / "debubbler.sv",
 ]
 
 sources = [
     *rtl_sources,
-    TX_TB_DIR / "tx_top.sv",
+    TX_TB_RTL_DIR / "tx_top.sv",
 ]
 
 cdc_sources = [
     *rtl_sources,
-    TX_TB_DIR / "tx_cdc_top.sv",
+    TX_TB_RTL_DIR / "tx_cdc_top.sv",
 ]
 
 SMOKE_FILTER = (
@@ -61,7 +62,7 @@ def _env_int(name: str, default: int) -> int:
 
 def _pythonpath() -> str:
     current_pythonpath = os.environ.get("PYTHONPATH", "")
-    path_parts = [str(REPO_ROOT), str(TX_DIR), str(TX_TB_DIR)]
+    path_parts = [str(REPO_ROOT), str(TX_TB_ROOT), str(TX_TB_DIR)]
     if current_pythonpath:
         path_parts.append(current_pythonpath)
     return os.pathsep.join(path_parts)
@@ -116,7 +117,7 @@ def _run_case(
 
     sim.test(
         hdl_toplevel="tx_top",
-        test_module="TX.tb.tx_test",
+        test_module="tx_tb.tb.tx_test",
         waves=waves,
         test_args=sim_args,
         extra_env=extra_env,
@@ -155,7 +156,7 @@ def _run_cdc_case(case_name: str, fifo_depth: int, num_queues: int):
     waves = os.environ.get("COCOTB_WAVES", "1") != "0"
     sim.test(
         hdl_toplevel="tx_cdc_top",
-        test_module="TX.tb.tx_cdc_test",
+        test_module="tx_tb.tb.tx_cdc_test",
         waves=waves,
         test_args=sim_args,
         extra_env={
