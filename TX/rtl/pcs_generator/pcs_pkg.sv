@@ -20,8 +20,15 @@ localparam logic [7:0] OS_D5  = 8'h55; // O0 D1..D3 O4 O5 D6..D7 (3 Ordered Set,
 localparam logic [7:0] OS_D3T = 8'h4B; // O0 D1..D3 O4 C5..C7
 localparam logic [7:0] OS_D3B = 8'h2D; // C0..C3 O4 D5..D7
 
-localparam logic [1:0] CTRL_HDR = 2'b10; // 10 is in network order
-localparam logic [1:0] DATA_HDR = 2'b01; // 01 is network order
+// IEEE 802.3 Clause 49 sync headers, in the order they hit the wire.
+// Our 66-bit block is packed {scrambled[63:0], header[1:0]} and the debubbler
+// emits bit[0] first, so header bits go on the wire as bit[0] then bit[1].
+// IEEE Cl. 49: control = 1,0 first-then-second on the wire; data = 0,1.
+// => CTRL_HDR must have bit[0]=1, bit[1]=0 (i.e. 2'b01); DATA_HDR is 2'b10.
+// Previously these were swapped, which is why peer NICs saw control where
+// we sent data and vice versa (tcpdump silent FPGA->peer; jumbled peer->FPGA).
+localparam logic [1:0] CTRL_HDR = 2'b01;
+localparam logic [1:0] DATA_HDR = 2'b10;
 
 localparam int BYTE_W     = 8;
 localparam int CONTROL_W  = 2;

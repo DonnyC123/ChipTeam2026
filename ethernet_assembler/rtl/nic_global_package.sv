@@ -23,8 +23,11 @@ localparam logic [7:0] OS_D5    = 8'h55; // O0 D1..D3 O4 O5 D6..D7 (3 Ordered Se
 localparam logic [7:0] OS_D3T   = 8'h4B; // O0 D1..D3 O4 C5..C7
 localparam logic [7:0] OS_D3B   = 8'h2D; // C0..C3 O4 D5..D7
 
-localparam logic [1:0] CTRL_HDR = 2'b10;
-localparam logic [1:0] DATA_HDR = 2'b01;
+// IEEE 802.3 Cl. 49: header bits go on the wire as bit[0] then bit[1] (LSB
+// first per debubbler/bubbler ordering). IEEE control = wire 1,0 → bit[0]=1
+// → 2'b01. IEEE data = wire 0,1 → 2'b10. Must match pcs_pkg.
+localparam logic [1:0] CTRL_HDR = 2'b01;
+localparam logic [1:0] DATA_HDR = 2'b10;
 
 localparam int IPG_MIN                            = 12;
 localparam int IPG_BIT_W                          = $clog2(IPG_MIN);

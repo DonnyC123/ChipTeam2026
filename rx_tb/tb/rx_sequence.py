@@ -49,8 +49,8 @@ class RxSequence(GenericSequence):
         0xFF,  # TERM_L7: 7 valid data bytes
     ]
 
-    CTRL_HDR = 0b10
-    DATA_HDR = 0b01
+    CTRL_HDR = 0b01
+    DATA_HDR = 0b10
 
     def __init__(self, driver):
         super().__init__(driver)

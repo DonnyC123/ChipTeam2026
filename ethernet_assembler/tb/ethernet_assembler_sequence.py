@@ -14,8 +14,8 @@ class EthernetAssemblerSequence(GenericSequence):
     CONTROL_DATA_W = PAYLOAD_W - BLOCK_TYPE_W
     CONTROL_DATA_MASK = (1 << CONTROL_DATA_W) - 1
 
-    DATA_HDR = 0b01
-    CTRL_HDR = 0b10
+    DATA_HDR = 0b10
+    CTRL_HDR = 0b01
     BAD_HDR_00 = 0b00
     BAD_HDR_11 = 0b11
 

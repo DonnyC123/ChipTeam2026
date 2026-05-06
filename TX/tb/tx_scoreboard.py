@@ -1,6 +1,6 @@
 class Raw66bParser:
-    CTRL_HDR = 0b10
-    DATA_HDR = 0b01
+    CTRL_HDR = 0b01
+    DATA_HDR = 0b10
 
     IDLE_BLK = 0x1E
     SOF_L0 = 0x78
