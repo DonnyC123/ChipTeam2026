@@ -70,7 +70,7 @@ module tx_cdc_top #(
   );
 
 
-  assign subsystem_tready = 1'b1;
+  assign subsystem_tready = subsystem_to_pcs_if.tready;
 
   assign subsystem_to_pcs_if.tdata  = subsystem_tdata;
   assign subsystem_to_pcs_if.tkeep  = subsystem_tkeep;
