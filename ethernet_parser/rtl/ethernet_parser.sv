@@ -110,8 +110,7 @@ data_pipeline #(
 data_pipeline #(
     .DATA_W(1),
     .PIPE_DEPTH(1),
-    .RST_EN(1),
-    .RST_VAL(0)
+    .RST_EN(0)
 ) pipeline_3 (
     .clk(clk),
     .rst(rst),
