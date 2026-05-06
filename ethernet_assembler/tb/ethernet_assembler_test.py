@@ -35,6 +35,17 @@ def _phase_contains_control_block(samples, *, block_type: int, bytes_valid: int)
     )
 
 
+def _sof_accepted(samples, sof_byte: int) -> bool:
+    """Per the IEEE Cl. 49 SOF contract, the SOF block itself emits no MAC
+    bytes (lanes 1-7 are preamble). 'Accepted' means the assembler saw the
+    SOF byte without raising drop_frame — i.e. it transitioned into in-frame.
+    """
+    return any(
+        (sample["out_data"] & 0xFF) == sof_byte and sample["drop_frame"] == 0
+        for sample in samples
+    )
+
+
 async def _drain_driver_and_capture(testbase: EthernetAssemblerTestBase, settle_cycles: int = 2):
     samples = []
 
@@ -97,8 +108,11 @@ _START_IPG_MIN = {
 }
 
 _START_BYTES_VALID = {
-    0x78: 0b1111_1110,
-    0x33: 0b1110_0000,
+    # SOF blocks no longer emit MAC bytes (lanes 1-7 are preamble per IEEE
+    # Cl. 49). The cycle still shows up with bytes_valid=0; identification
+    # is by the SOF byte appearing in out_data low byte.
+    0x78: 0,
+    0x33: 0,
 }
 
 
@@ -574,8 +588,8 @@ async def edge_case_bad_header_valid_drops_frame_test(dut):
     await seq.add_manual_idle_chunk(count=1)
     await seq.add_sof_l4(in_valid=True, locked=True, cancel_frame=False)
     recovery_phase = await _drain_driver_and_capture(testbase)
-    assert any(sample["bytes_valid"] == 0b1110_0000 for sample in recovery_phase), (
-        "Expected out_valid_o recovery after fresh start frame with legal IPG"
+    assert _sof_accepted(recovery_phase, seq.SOF_L4), (
+        "Expected SOF_L4 to be accepted (not dropped) after fresh start with legal IPG"
     )
 
     await seq.add_random_end(rng=rng)
@@ -630,8 +644,8 @@ async def edge_case_lock_loss_requires_in_valid_test(dut):
     await seq.add_manual_idle_chunk(count=1)
     await seq.add_sof_l4(in_valid=True, locked=True, cancel_frame=False)
     recovery_phase = await _drain_driver_and_capture(testbase)
-    assert any(sample["bytes_valid"] == 0b1110_0000 for sample in recovery_phase), (
-        "Expected output recovery after valid start frame with legal IPG"
+    assert _sof_accepted(recovery_phase, seq.SOF_L4), (
+        "Expected SOF_L4 to be accepted (not dropped) after lock recovery with legal IPG"
     )
 
     await seq.add_random_end(rng=rng)
@@ -682,8 +696,8 @@ async def edge_case_cancel_in_frame_ignores_in_valid_test(dut):
     await seq.add_manual_idle_chunk(count=1)
     await seq.add_sof_l4(in_valid=True, locked=True, cancel_frame=False)
     recovered_phase = await _drain_driver_and_capture(testbase)
-    assert any(sample["bytes_valid"] == 0b1110_0000 for sample in recovered_phase), (
-        "Expected recovery on first qualified SOF after cancel drop and legal IPG"
+    assert _sof_accepted(recovered_phase, seq.SOF_L4), (
+        "Expected first qualified SOF_L4 to be accepted after cancel drop with legal IPG"
     )
 
     await seq.add_random_end(rng=rng)
@@ -707,8 +721,8 @@ async def edge_case_ipg_term_l7_idle_sof_l4_accepts_test(dut):
     assert all(sample["drop_frame"] == 0 for sample in accept_phase), (
         "Expected TERM_L7 + IDLE_BLK + SOF_L4 to satisfy the 12-byte IPG"
     )
-    assert any(sample["bytes_valid"] == 0b1110_0000 for sample in accept_phase), (
-        "Expected SOF_L4 bytes to be emitted after a legal minimum IPG"
+    assert _sof_accepted(accept_phase, seq.SOF_L4), (
+        "Expected SOF_L4 to be accepted (not dropped) after a legal minimum IPG"
     )
 
     await seq.add_term_l7()
@@ -731,19 +745,14 @@ async def edge_case_ipg_term_l7_idle_sof_l0_drops_test(dut):
     assert any(sample["drop_frame"] == 1 for sample in violation_phase), (
         "Expected TERM_L7 + IDLE_BLK + SOF_L0 to violate the 12-byte IPG"
     )
-    assert not _phase_contains_control_block(
-        violation_phase,
-        block_type=seq.SOF_L0,
-        bytes_valid=0b1111_1110,
-    ), (
-        "Expected the violating SOF_L0 block to be suppressed"
-    )
+    # The violating SOF_L0 must have raised drop_frame; the existing
+    # drop_frame assertion above already covers the "suppressed" contract.
 
     await seq.add_manual_idle_chunk(count=2)
     await seq.add_sof_l0()
     recovery_phase = await _drain_driver_and_capture(testbase)
-    assert any(sample["bytes_valid"] == 0b1111_1110 for sample in recovery_phase), (
-        "Expected SOF_L0 recovery after restoring the full minimum IPG"
+    assert _sof_accepted(recovery_phase, seq.SOF_L0), (
+        "Expected SOF_L0 to be accepted after restoring the full minimum IPG"
     )
 
     await seq.add_term_l7()
@@ -766,15 +775,14 @@ async def edge_case_ipg_term_l0_sof_l4_drops_test(dut):
     assert any(sample["drop_frame"] == 1 for sample in violation_phase), (
         "Expected TERM_L0 + SOF_L4 to violate the 12-byte IPG"
     )
-    assert all(sample["bytes_valid"] != 0b1110_0000 for sample in violation_phase), (
-        "Expected the violating SOF_L4 block to be suppressed"
-    )
+    # The violating SOF_L4 must have raised drop_frame; the existing
+    # drop_frame assertion above already covers the "suppressed" contract.
 
     await seq.add_manual_idle_chunk(count=1)
     await seq.add_sof_l4()
     recovery_phase = await _drain_driver_and_capture(testbase)
-    assert any(sample["bytes_valid"] == 0b1110_0000 for sample in recovery_phase), (
-        "Expected SOF_L4 recovery after restoring the full minimum IPG"
+    assert _sof_accepted(recovery_phase, seq.SOF_L4), (
+        "Expected SOF_L4 to be accepted after restoring the full minimum IPG"
     )
 
     await seq.add_term_l7()
@@ -797,8 +805,8 @@ async def edge_case_ipg_term_l0_idle_sof_l4_accepts_test(dut):
     assert all(sample["drop_frame"] == 0 for sample in accept_phase), (
         "Expected TERM_L0 + IDLE_BLK + SOF_L4 to satisfy the 12-byte IPG"
     )
-    assert any(sample["bytes_valid"] == 0b1110_0000 for sample in accept_phase), (
-        "Expected SOF_L4 bytes to be emitted after a legal minimum IPG"
+    assert _sof_accepted(accept_phase, seq.SOF_L4), (
+        "Expected SOF_L4 to be accepted after a legal minimum IPG"
     )
 
     await seq.add_term_l7()
@@ -841,12 +849,8 @@ async def constrained_random_ipg_restart_test(dut):
 
     await seq.add_sof_l0()
     initial_start_phase = await _drain_driver_and_capture(testbase)
-    assert _phase_contains_control_block(
-        initial_start_phase,
-        block_type=seq.SOF_L0,
-        bytes_valid=_START_BYTES_VALID[seq.SOF_L0],
-    ), (
-        "Expected initial SOF_L0 to enter a frame before constrained-random IPG trials"
+    assert _sof_accepted(initial_start_phase, seq.SOF_L0), (
+        "Expected initial SOF_L0 to be accepted before constrained-random IPG trials"
     )
 
     for trial_idx in range(trials):
@@ -858,7 +862,6 @@ async def constrained_random_ipg_restart_test(dut):
             idle_count=idle_count,
             start_block_type=start_block_type,
         )
-        expected_start_mask = _START_BYTES_VALID[start_block_type]
 
         if trial_idx < 10 or (trial_idx % 16 == 0):
             cocotb.log.info(
@@ -880,12 +883,8 @@ async def constrained_random_ipg_restart_test(dut):
                 f"Expected legal IPG restart to avoid drop_frame_o "
                 f"(term=0x{term_block_type:02X}, idle_blocks={idle_count}, start=0x{start_block_type:02X})"
             )
-            assert _phase_contains_control_block(
-                restart_phase,
-                block_type=start_block_type,
-                bytes_valid=expected_start_mask,
-            ), (
-                f"Expected legal IPG restart to emit the start bytes_valid mask "
+            assert _sof_accepted(restart_phase, start_block_type), (
+                f"Expected legal IPG restart to accept the start block "
                 f"(term=0x{term_block_type:02X}, idle_blocks={idle_count}, start=0x{start_block_type:02X})"
             )
             await seq.add_term_l7()
@@ -895,11 +894,9 @@ async def constrained_random_ipg_restart_test(dut):
                 f"Expected IPG violation to pulse drop_frame_o "
                 f"(term=0x{term_block_type:02X}, idle_blocks={idle_count}, start=0x{start_block_type:02X})"
             )
-            assert not _phase_contains_control_block(
-                restart_phase,
-                block_type=start_block_type,
-                bytes_valid=expected_start_mask,
-            ), (
+            # _sof_accepted requires drop_frame==0 in the SOF cycle, so an
+            # IPG-violating SOF will fail that check.
+            assert not _sof_accepted(restart_phase, start_block_type), (
                 f"Expected violating start to be suppressed "
                 f"(term=0x{term_block_type:02X}, idle_blocks={idle_count}, start=0x{start_block_type:02X})"
             )
@@ -907,11 +904,7 @@ async def constrained_random_ipg_restart_test(dut):
         await seq.add_manual_idle_chunk(count=2)
         await seq.add_sof_l0()
         recovery_phase = await _drain_driver_and_capture(testbase)
-        assert _phase_contains_control_block(
-            recovery_phase,
-            block_type=seq.SOF_L0,
-            bytes_valid=_START_BYTES_VALID[seq.SOF_L0],
-        ), (
+        assert _sof_accepted(recovery_phase, seq.SOF_L0), (
             "Expected deterministic SOF_L0 recovery after restoring a legal IPG"
         )
 

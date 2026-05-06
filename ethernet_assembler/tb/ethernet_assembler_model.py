@@ -40,15 +40,19 @@ class EthernetAssemblerModel(GenericModel):
     }
 
     CONTROL_BLOCK_LUT: Dict[int, ControlBlockSpec] = {
-        # Start blocks.
+        # Start blocks. Per IEEE Cl. 49 the SOF block carries the trailing
+        # preamble+SFD bytes in lanes 1-7 (SOF_L0) or 5-7 (SOF_L4) — those
+        # are NOT MAC frame data, so the assembler emits zero valid bytes
+        # for the SOF block itself. The actual frame starts at lane 0 of
+        # the next block.
         0x78: ControlBlockSpec(
             kind="start",
-            valid_mask=_mask_from_bytes_valid(0b1111_1110),
+            valid_mask=_mask_from_bytes_valid(0b0000_0000),
             enters_frame=True,
         ),
         0x33: ControlBlockSpec(
             kind="start",
-            valid_mask=_mask_from_bytes_valid(0b1110_0000),
+            valid_mask=_mask_from_bytes_valid(0b0000_0000),
             enters_frame=True,
         ),
         # Terminate blocks.
