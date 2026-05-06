@@ -97,10 +97,12 @@ module nic_top_xsim_tb;
     initial begin
         $display("[%0t] sim start, waiting for rx_locked...", $time);
 
-        // Watch for lock. GT reset sequencing alone takes microseconds.
+        // Watch for lock, then run for a long time to confirm it stays locked
+        // (alignment_finder will unlock after BAD_COUNT=8 invalid sync headers
+        // in a row, so any glitch will show up as rx_locked dropping).
         fork
             begin : timeout
-                #100us;
+                #500us;
                 $display("[%0t] TIMEOUT — rx_locked never asserted", $time);
                 $display("  freerun_rst=%b loopback_mode=%b",
                          u_dut.freerun_rst, u_dut.loopback_mode);
@@ -109,9 +111,22 @@ module nic_top_xsim_tb;
             begin : success
                 @(posedge rx_locked);
                 $display("[%0t] rx_locked HIGH — block lock achieved", $time);
-                #1us;  // settle
-                $display("[%0t] sim done", $time);
-                $finish;
+
+                // Hold for a long stretch and watch for any unlock event.
+                fork
+                    begin : hold
+                        #500us;
+                        $display("[%0t] sim done — rx_locked stayed high for 500us", $time);
+                        $finish;
+                    end
+                    begin : unlock_watch
+                        @(negedge rx_locked);
+                        $display("[%0t] FAIL — rx_locked dropped after lock", $time);
+                        #1us;
+                        $finish;
+                    end
+                join_any
+                disable fork;
             end
         join_any
         disable fork;
