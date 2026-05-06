@@ -97,9 +97,12 @@ always_comb begin
         // start and exit drop mode
         if (!cancel_frame_i && can_read && (header_bits_i == CTRL_HDR)) begin
             unique case (control_byte)
+                // IEEE 802.3 Cl. 49: SOF block lanes 1-7 are the trailing
+                // preamble + SFD (0x55..0xd5), NOT MAC frame data. Discard
+                // them — the real frame starts at lane 0 of the next block.
                 SOF_L0: begin
                     if (!ipg_check_en_q || (ipg_counter_q >= IPG_MIN_BYTES)) begin
-                        bytes_valid_o_d = 8'b1111_1110;
+                        bytes_valid_o_d = 8'b0000_0000;
                         in_frame_d      = 1'b1;
                         ipg_counter_d   = '0;
                         ipg_check_en_d  = 1'b1;
@@ -113,7 +116,7 @@ always_comb begin
                 end
                 SOF_L4: begin
                     if (!ipg_check_en_q || (ipg_counter_q >= IPG_SOF_L4_BYTES)) begin
-                        bytes_valid_o_d = 8'b1110_0000;
+                        bytes_valid_o_d = 8'b0000_0000;
                         in_frame_d      = 1'b1;
                         ipg_counter_d   = '0;
                         ipg_check_en_d  = 1'b1;
@@ -145,10 +148,11 @@ always_comb begin
 
     end else if (can_read && !in_frame_q && (header_bits_i == CTRL_HDR)) begin
         unique case (control_byte)
-            // Start Frame Headers
+            // Start Frame Headers — lanes 1-7 are preamble per IEEE Cl. 49
+            // and must NOT be forwarded as MAC frame data.
             SOF_L0: begin
                 if (!ipg_check_en_q || (ipg_counter_q >= IPG_MIN_BYTES)) begin
-                    bytes_valid_o_d = 8'b1111_1110;
+                    bytes_valid_o_d = 8'b0000_0000;
                     in_frame_d      = 1'b1;
                     ipg_counter_d   = '0;
                     ipg_check_en_d  = 1'b1;
@@ -161,7 +165,7 @@ always_comb begin
             end
             SOF_L4: begin
                 if (!ipg_check_en_q || (ipg_counter_q >= IPG_SOF_L4_BYTES)) begin
-                    bytes_valid_o_d = 8'b1110_0000;
+                    bytes_valid_o_d = 8'b0000_0000;
                     in_frame_d      = 1'b1;
                     ipg_counter_d   = '0;
                     ipg_check_en_d  = 1'b1;
