@@ -60,8 +60,8 @@ module nic_top_xsim_tb;
     wire [3:0] gpio_led;
 
     nic_top #(
-        .SCRAMBLER_BYPASS   (1),  // debug: easier to read TX bits on the wire
-        .DESCRAMBLER_BYPASS (1)   // debug: payload comes out unchanged on RX
+        .SCRAMBLER_BYPASS   (0),  // debug: easier to read TX bits on the wire
+        .DESCRAMBLER_BYPASS (0)   // debug: payload comes out unchanged on RX
     ) u_dut (
         .diff_100mhz_clk_p (diff_100mhz_clk_p),
         .diff_100mhz_clk_n (diff_100mhz_clk_n),
