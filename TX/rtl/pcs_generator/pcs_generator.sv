@@ -273,17 +273,11 @@ always_ff@(posedge clk)begin
 end
 
 
-//axis_slave_if.tready
-data_pipeline #(
-    .DATA_W    (1),
-    .PIPE_DEPTH(PIPE_DEPTH),
-    .RST_EN    (1)
-) data_pipeline_inst0 (
-    .clk   (clk),
-    .rst   (rst),
-    .data_i(tready_d),
-    .data_o(axis_slave_if.tready)
-);
+// axis_slave_if.tready — combinational. Registering tready creates a cycle of
+// latency between "skid full, can't accept" and the upstream seeing it; while
+// that cycle is in flight the upstream pushes another beat that overwrites
+// the still-unconsumed skid value, silently dropping a beat.
+assign axis_slave_if.tready = tready_d;
 
 //out_data_o
 data_pipeline #(
