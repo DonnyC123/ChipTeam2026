@@ -17,56 +17,34 @@ module scrambler #(
 localparam TAP_1 = 38;
 localparam TAP_2 = 57;
 
-logic [BIT_IN_W-1:0] scrambled_d, scrambled_q;
-logic [STATE_W-1:0]  state_d, state_q, state_intermediate;
-logic                valid_o_d, valid_o_q;
-logic                valid_state_d, valid_state_q;
-logic [HEAD_W-1:0]   header_prop_d, header_prop_q;
+// Only the LFSR state is registered (it has to persist across cycles).
+// The scrambled payload, header, and valid all flow through combinationally,
+// so the scrambler adds zero pipeline latency.
+logic [STATE_W-1:0]  state_q, state_d, state_intermediate;
+logic [BIT_IN_W-1:0] scrambled;
 
 always_comb begin
-    scrambled_d          = '0;
-    state_d              = state_q;
-    state_intermediate   = state_q;
-    valid_o_d            = 1'b0;
-    valid_state_d        = valid_state_q;
-    header_prop_d        = header_prop_q;
+    state_d            = state_q;
+    state_intermediate = state_q;
+    scrambled          = '0;
     if (valid_i) begin
-        header_prop_d = _2b_header_i;
         for (int i = 0; i < BIT_IN_W; i++) begin
-            scrambled_d[i]     = _64b_i[i] ^ state_intermediate[TAP_1] ^ state_intermediate[TAP_2];
-            state_intermediate = {state_intermediate[STATE_W-2:0], (_64b_i[i] ^ state_intermediate[TAP_1] ^ state_intermediate[TAP_2])};
+            scrambled[i]       = _64b_i[i] ^ state_intermediate[TAP_1] ^ state_intermediate[TAP_2];
+            state_intermediate = {state_intermediate[STATE_W-2:0],
+                                  (_64b_i[i] ^ state_intermediate[TAP_1] ^ state_intermediate[TAP_2])};
         end
         state_d = state_intermediate;
-        valid_o_d          = 1'b1;
-        valid_state_d      = 1'b1;
     end
 end
 
 always_ff @(posedge clk) begin
-    if (rst == 1'b1) begin
-        scrambled_q        <= '0;
-        state_q            <= '1; // MUST BE NON-ZERO (OR XOR WILL FREEZE)
-        valid_state_q      <= '0;
-        valid_o_q          <= '0;
-        header_prop_q      <= '0;
-    end else begin
-        scrambled_q        <= scrambled_d;
-        state_q            <= state_d;
-        valid_state_q      <= valid_state_d;
-        valid_o_q          <= valid_o_d;
-        header_prop_q      <= header_prop_d;
-    end
+    if (rst) state_q <= '1; // MUST BE NON-ZERO (or XOR feedback freezes)
+    else     state_q <= state_d;
 end
 
-logic [BIT_IN_W-1:0] payload_q;
-always_ff @(posedge clk) begin
-    if (rst) payload_q <= '0;
-    else if (valid_i) payload_q <= _64b_i;
-end
-
-assign valid_o = valid_o_q;
+assign valid_o = valid_i;
 assign _66b_o  = BYPASS
-    ? {payload_q[BIT_IN_W-1:0], header_prop_q[HEAD_W-1:0]}
-    : {scrambled_q[BIT_IN_W-1:0], header_prop_q[HEAD_W-1:0]};
+    ? {_64b_i[BIT_IN_W-1:0],  _2b_header_i[HEAD_W-1:0]}
+    : {scrambled[BIT_IN_W-1:0], _2b_header_i[HEAD_W-1:0]};
 
 endmodule
