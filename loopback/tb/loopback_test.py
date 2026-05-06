@@ -115,12 +115,13 @@ async def test_loopback_locks_after_offset(dut):
     assert bitslips >= 1, "expected at least one bitslip given non-zero offset"
 
 
-async def watch_assembler(dut, cycles: int):
-    """Log any send_o/drop_frame_o pulses + control bytes the assembler sees."""
+async def watch_assembler(dut, cycles: int, dump_every_valid: bool = False):
+    """Log assembler events. If dump_every_valid, dump every valid beat."""
     asm = dut.u_rx.u_ethernet_assembler
     last_in_frame = 0
     sends = 0
     drops = 0
+    valid_beats = 0
     for _ in range(cycles):
         await RisingEdge(dut.pcs_clk)
         try:
@@ -131,18 +132,23 @@ async def watch_assembler(dut, cycles: int):
             ctrl  = int(asm.control_byte.value)
             valid = int(asm.in_valid_i.value)
             locked = int(asm.locked_i.value)
+            data  = int(asm.input_data_i.value)
         except Exception:
             return
         if send:
             sends += 1
-            dut._log.info(f"ASM send_o: hdr={hdr:b} ctrl={ctrl:#04x} in_frame={inf}")
+            dut._log.info(f"ASM send_o: hdr={hdr:b} ctrl={ctrl:#04x} data={data:016x}")
         if drop:
             drops += 1
-            dut._log.info(f"ASM drop_frame_o: hdr={hdr:b} ctrl={ctrl:#04x} in_frame={inf} valid={valid} locked={locked}")
+            dut._log.info(f"ASM drop_frame_o: hdr={hdr:b} ctrl={ctrl:#04x} valid={valid} locked={locked}")
         if inf != last_in_frame:
-            dut._log.info(f"ASM in_frame_q: {last_in_frame} -> {inf} (hdr={hdr:b} ctrl={ctrl:#04x})")
+            dut._log.info(f"ASM in_frame_q: {last_in_frame} -> {inf} (hdr={hdr:b} ctrl={ctrl:#04x} data={data:016x})")
             last_in_frame = inf
-    dut._log.info(f"ASM watch done: sends={sends} drops={drops}")
+        if dump_every_valid and valid and locked:
+            valid_beats += 1
+            if valid_beats <= 60:
+                dut._log.info(f"ASM beat {valid_beats}: hdr={hdr:b} ctrl={ctrl:#04x} data={data:016x} in_frame={inf}")
+    dut._log.info(f"ASM watch done: sends={sends} drops={drops} valid_beats={valid_beats}")
 
 
 @cocotb.test()
@@ -156,7 +162,7 @@ async def test_loopback_round_trip_frame(dut):
     for _ in range(64):
         await RisingEdge(dut.pcs_clk)
 
-    cocotb.start_soon(watch_assembler(dut, cycles=20_000))
+    cocotb.start_soon(watch_assembler(dut, cycles=2_000, dump_every_valid=True))
 
     frame = bytes(range(64))
     cocotb.start_soon(send_dma_frame(dut, frame, qid=0))
