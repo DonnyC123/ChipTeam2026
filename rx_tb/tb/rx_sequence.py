@@ -98,13 +98,17 @@ class RxSequence(GenericSequence):
         for _ in range(count):
             await self._push_word(self.CTRL_HDR, self.scramble_64b(idle_payload))
 
+    # IEEE 802.3 Cl. 49 SOF_L0 carries the trailing 7 bytes of preamble+SFD
+    # in lanes 1-7. The actual MAC frame starts at lane 0 of the next block.
+    _PREAMBLE_TAIL = [0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0xD5]
+
     async def send_ethernet_frame(self, frame_bytes: list[int]):
         await self.notify_subscribers({"frame": list(frame_bytes)})
 
-        sof_raw = self._build_ctrl_payload(self.SOF_L0, frame_bytes[:7])
+        sof_raw = self._build_ctrl_payload(self.SOF_L0, self._PREAMBLE_TAIL)
         await self._push_word(self.CTRL_HDR, self.scramble_64b(sof_raw))
 
-        remaining = frame_bytes[7:]
+        remaining = list(frame_bytes)
         while len(remaining) > 7:
             word = int.from_bytes(remaining[:8], "little")
             await self._push_word(self.DATA_HDR, self.scramble_64b(word))
