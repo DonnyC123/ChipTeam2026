@@ -17,8 +17,12 @@ class ControlBlockSpec:
 
 
 class EthernetAssemblerModel(GenericModel):
-    DATA_SYNC_HEADER = 0b01
-    CONTROL_SYNC_HEADER = 0b10
+    # Sync headers in the same on-the-wire bit ordering the RTL uses
+    # (LSB of the 66-bit slot is transmitted first). Per IEEE Cl. 49:
+    #   control = wire 1,0 → 2'b01
+    #   data    = wire 0,1 → 2'b10
+    DATA_SYNC_HEADER = 0b10
+    CONTROL_SYNC_HEADER = 0b01
     DATA_MASK_64 = (1 << 64) - 1
     IPG_MIN = 12
     IPG_IDLE_BYTES = 8
