@@ -1,6 +1,7 @@
 module descrambler #(
     parameter BIT_W   = 64,
-    parameter STATE_W = 58
+    parameter STATE_W = 58,
+    parameter BYPASS  = 0   // 1 = pass payload through undescrambled (debug)
 ) (
     input  logic             clk,
     input  logic             rst,
@@ -58,8 +59,14 @@ module descrambler #(
     end
   end
 
+  logic [BIT_W-1:0] payload_q;
+  always_ff @(posedge clk) begin
+    if (rst) payload_q <= '0;
+    else if (valid_i) payload_q <= _64b_i;
+  end
+
   assign valid_o = valid_o_q;
-  assign _64b_o  = descrambled_q;
+  assign _64b_o  = BYPASS ? payload_q : descrambled_q;
 
 
 

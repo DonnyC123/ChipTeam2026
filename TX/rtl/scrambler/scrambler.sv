@@ -2,7 +2,8 @@ module scrambler #(
     parameter BIT_IN_W  = 64,
     parameter BIT_OUT_W = 66,
     parameter HEAD_W    = 2,
-    parameter STATE_W   = 58
+    parameter STATE_W   = 58,
+    parameter BYPASS    = 0   // 1 = pass payload through unscrambled (debug)
 )(
     input  logic                     clk,
     input  logic                     rst,
@@ -57,7 +58,15 @@ always_ff @(posedge clk) begin
     end
 end
 
-assign valid_o       = valid_o_q;
-assign _66b_o        = {scrambled_q[BIT_IN_W-1:0], header_prop_q[HEAD_W-1:0]};
+logic [BIT_IN_W-1:0] payload_q;
+always_ff @(posedge clk) begin
+    if (rst) payload_q <= '0;
+    else if (valid_i) payload_q <= _64b_i;
+end
+
+assign valid_o = valid_o_q;
+assign _66b_o  = BYPASS
+    ? {payload_q[BIT_IN_W-1:0], header_prop_q[HEAD_W-1:0]}
+    : {scrambled_q[BIT_IN_W-1:0], header_prop_q[HEAD_W-1:0]};
 
 endmodule

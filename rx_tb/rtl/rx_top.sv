@@ -1,8 +1,9 @@
 module rx_top #(
-    parameter int DIN_W        = 64,
-    parameter int GOOD_COUNT   = 64,
-    parameter int BAD_COUNT    = 8,
-    parameter int BITSLIP_WAIT = 40
+    parameter int DIN_W              = 64,
+    parameter int GOOD_COUNT         = 64,
+    parameter int BAD_COUNT          = 8,
+    parameter int BITSLIP_WAIT       = 40,
+    parameter int DESCRAMBLER_BYPASS = 0  // 1 = bypass descrambler (debug)
 ) (
     input logic             rx_clk,
     input logic             rx_rst,
@@ -55,7 +56,8 @@ module rx_top #(
 
   descrambler #(
       .BIT_W  (DATA_W),
-      .STATE_W(58)
+      .STATE_W(58),
+      .BYPASS (DESCRAMBLER_BYPASS)
   ) u_descrambler (
       .clk    (rx_clk),
       .rst    (rx_rst),

@@ -1,9 +1,10 @@
 module tx_cdc_top #(
-    parameter int FIFO_DEPTH      = 64,
-    parameter int DESC_DEPTH      = 32,
-    parameter int NUM_QUEUES      = 4,
-    parameter int MAX_BURST_BEATS = 256,
-    parameter int QID_W           = (NUM_QUEUES > 1) ? $clog2(NUM_QUEUES) : 1
+    parameter int FIFO_DEPTH       = 64,
+    parameter int DESC_DEPTH       = 32,
+    parameter int NUM_QUEUES       = 4,
+    parameter int MAX_BURST_BEATS  = 256,
+    parameter int QID_W            = (NUM_QUEUES > 1) ? $clog2(NUM_QUEUES) : 1,
+    parameter int SCRAMBLER_BYPASS = 0  // 1 = bypass scrambler (debug)
 ) (
     input logic dma_clk,
     input logic dma_rst,
@@ -91,7 +92,8 @@ module tx_cdc_top #(
       .BIT_IN_W (64),
       .BIT_OUT_W(66),
       .HEAD_W   (2),
-      .STATE_W  (58)
+      .STATE_W  (58),
+      .BYPASS   (SCRAMBLER_BYPASS)
   ) u_scrambler (
       .clk(clk),
       .rst(rst),
