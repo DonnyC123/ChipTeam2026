@@ -73,7 +73,10 @@ always_comb begin
     use_sof0         = 1'b0;
     out_valid_d      = 1'b0;
     // One-entry skid: accept a new AXI beat only if the slot is empty or we are consuming it now.
-    tready_d = (!skid_value_q.valid_data_i || can_read) && !(get_axi && !can_read);
+    // (The previous version also ANDed in `!(get_axi && !can_read)`, but that closed a
+    // combinational loop once tready was made combinational — and the term is redundant:
+    // the first clause already evaluates to 0 when the slot is full and not consuming.)
+    tready_d = (!skid_value_q.valid_data_i) || can_read;
 
     case(current_state) 
         WAIT_START : begin 
