@@ -115,6 +115,36 @@ async def test_loopback_locks_after_offset(dut):
     assert bitslips >= 1, "expected at least one bitslip given non-zero offset"
 
 
+async def watch_assembler(dut, cycles: int):
+    """Log any send_o/drop_frame_o pulses + control bytes the assembler sees."""
+    asm = dut.u_rx.u_ethernet_assembler
+    last_in_frame = 0
+    sends = 0
+    drops = 0
+    for _ in range(cycles):
+        await RisingEdge(dut.pcs_clk)
+        try:
+            send  = int(asm.send_o.value)
+            drop  = int(asm.drop_frame_o.value)
+            inf   = int(asm.in_frame_q.value)
+            hdr   = int(asm.header_bits_i.value)
+            ctrl  = int(asm.control_byte.value)
+            valid = int(asm.in_valid_i.value)
+            locked = int(asm.locked_i.value)
+        except Exception:
+            return
+        if send:
+            sends += 1
+            dut._log.info(f"ASM send_o: hdr={hdr:b} ctrl={ctrl:#04x} in_frame={inf}")
+        if drop:
+            drops += 1
+            dut._log.info(f"ASM drop_frame_o: hdr={hdr:b} ctrl={ctrl:#04x} in_frame={inf} valid={valid} locked={locked}")
+        if inf != last_in_frame:
+            dut._log.info(f"ASM in_frame_q: {last_in_frame} -> {inf} (hdr={hdr:b} ctrl={ctrl:#04x})")
+            last_in_frame = inf
+    dut._log.info(f"ASM watch done: sends={sends} drops={drops}")
+
+
 @cocotb.test()
 async def test_loopback_round_trip_frame(dut):
     """One frame in -> one frame out, byte-for-byte."""
@@ -125,6 +155,8 @@ async def test_loopback_round_trip_frame(dut):
     # Settle a bit after lock so the descrambler/assembler are ready.
     for _ in range(64):
         await RisingEdge(dut.pcs_clk)
+
+    cocotb.start_soon(watch_assembler(dut, cycles=20_000))
 
     frame = bytes(range(64))
     cocotb.start_soon(send_dma_frame(dut, frame, qid=0))
