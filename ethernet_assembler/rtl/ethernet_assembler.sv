@@ -64,12 +64,44 @@ logic                  send_d;
 logic                  drop_mode_d, drop_mode_q;
 logic                  in_frame_d, in_frame_q;
 logic                  sof_l4_first_data_d, sof_l4_first_data_q;
+// Sticky flag: 1 throughout an SOF_L4 frame (set on SOF_L4, cleared on
+// TERM/cancel/drop). Used to keep emitted AXI tkeep contiguous by realigning
+// the half-block-shifted MAC bytes — the upper 4 bytes (lanes 4-7) of each
+// DATA block are buffered and combined with the next block's lower 4 bytes
+// (lanes 0-3) for emission. Without this, the first DATA block of an SOF_L4
+// frame would emit with mask 0xF0 (non-contiguous) which XDMA C2H Stream
+// handles inconsistently.
+logic                  sof_l4_active_d,     sof_l4_active_q;
+logic [31:0]           sof_l4_buf_d,        sof_l4_buf_q;
 
 
 // Our team belives the sync/control bit are in network order
-assign out_data_o_d = input_data_i;
 assign can_read     = in_valid_i && locked_i && !cancel_frame_i;
 assign control_byte = input_data_i[0 +: SIZE_BYTE]; // the data_type_byte is bits [7:0] of data
+
+// Output data path. In SOF_L4 mode, repack to keep AXI tkeep contiguous.
+// - DATA2..DATAn  : emit {incoming lanes 0-3, buffered prev lanes 4-7}.
+// - TERM_L0..L4   : emit {TERM data lanes (1..x), buffered lanes 4-7} so
+//                   trailing bytes are right-aligned to lanes 0..3+x.
+// Outside SOF_L4 mode, pass through unchanged (legacy SOF_L0 path).
+always_comb begin
+    out_data_o_d = input_data_i;
+    if (sof_l4_active_q && in_frame_q
+            && (header_bits_i == DATA_HDR) && !sof_l4_first_data_q) begin
+        // DATA2+ in SOF_L4: realign half-block-shifted MAC bytes.
+        out_data_o_d = {input_data_i[31:0], sof_l4_buf_q};
+    end else if (sof_l4_active_q && in_frame_q
+            && (header_bits_i == CTRL_HDR)) begin
+        unique case (control_byte)
+            TERM_L0: out_data_o_d = {32'h0,                 sof_l4_buf_q};
+            TERM_L1: out_data_o_d = {24'h0, input_data_i[15:8],  sof_l4_buf_q};
+            TERM_L2: out_data_o_d = {16'h0, input_data_i[23:8],  sof_l4_buf_q};
+            TERM_L3: out_data_o_d = {8'h0,  input_data_i[31:8],  sof_l4_buf_q};
+            TERM_L4: out_data_o_d = {input_data_i[39:8],         sof_l4_buf_q};
+            default: out_data_o_d = input_data_i;
+        endcase
+    end
+end
 
 always_comb begin
     // defaults
@@ -82,6 +114,8 @@ always_comb begin
     drop_mode_d         = drop_mode_q;
     in_frame_d          = in_frame_q;
     sof_l4_first_data_d = sof_l4_first_data_q;
+    sof_l4_active_d     = sof_l4_active_q;
+    sof_l4_buf_d        = sof_l4_buf_q;
 
     // If cancel is seen while collecting a frame, abort that frame and enter drop mode
     if (in_frame_q && cancel_frame_i) begin
@@ -91,6 +125,7 @@ always_comb begin
         ipg_counter_d       = '0;
         drop_mode_d         = 1'b1;
         sof_l4_first_data_d = 1'b0;
+        sof_l4_active_d     = 1'b0;
 
     // Drop mode: ignore everything until cancel is low and a new start frame arrives
     end else if (can_read && drop_mode_q) begin
@@ -125,6 +160,7 @@ always_comb begin
                         ipg_check_en_d      = 1'b1;
                         drop_mode_d         = 1'b0;
                         sof_l4_first_data_d = 1'b1;
+                        sof_l4_active_d     = 1'b1;
                     end else begin
                         drop_frame_o_d = 1'b1;
                         in_frame_d     = 1'b0;
@@ -150,6 +186,7 @@ always_comb begin
         ipg_counter_d       = '0;
         drop_mode_d         = 1'b1;
         sof_l4_first_data_d = 1'b0;
+        sof_l4_active_d     = 1'b0;
 
     end else if (can_read && !in_frame_q && (header_bits_i == CTRL_HDR)) begin
         unique case (control_byte)
@@ -175,6 +212,7 @@ always_comb begin
                     ipg_counter_d       = '0;
                     ipg_check_en_d      = 1'b1;
                     sof_l4_first_data_d = 1'b1;
+                    sof_l4_active_d     = 1'b1;
                 end else begin
                     drop_frame_o_d = 1'b1;
                     in_frame_d     = 1'b0;
@@ -196,17 +234,25 @@ always_comb begin
     // Valid input, currently in-frame, and control header.
     end else if (can_read && in_frame_q && (header_bits_i == CTRL_HDR)) begin
         sof_l4_first_data_d = 1'b0;
+        // TERM ends the frame; in SOF_L4 mode the masks shift up by 4 bits
+        // because the 4 buffered MAC bytes (from the prior DATA's lanes 4-7)
+        // are emitted at lanes 0-3 of this beat alongside any TERM data.
         unique case (control_byte)
 
-            // End Frame Headers
-            TERM_L0: begin bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; ipg_counter_d = 7; send_d = 1'b1; end
-            TERM_L1: begin bytes_valid_o_d = 8'b0000_0010; in_frame_d = 1'b0; ipg_counter_d = 6; send_d = 1'b1; end
-            TERM_L2: begin bytes_valid_o_d = 8'b0000_0110; in_frame_d = 1'b0; ipg_counter_d = 5; send_d = 1'b1; end  //b0110_0000 b0000_0110
-            TERM_L3: begin bytes_valid_o_d = 8'b0000_1110; in_frame_d = 1'b0; ipg_counter_d = 4; send_d = 1'b1; end  //b0111_0000   b0000_1110
-            TERM_L4: begin bytes_valid_o_d = 8'b0001_1110; in_frame_d = 1'b0; ipg_counter_d = 3; send_d = 1'b1; end  //b0111_1000   b0001_1110
-            TERM_L5: begin bytes_valid_o_d = 8'b0011_1110; in_frame_d = 1'b0; ipg_counter_d = 2; send_d = 1'b1; end  //b0111_1100   b0011_1110
-            TERM_L6: begin bytes_valid_o_d = 8'b0111_1110; in_frame_d = 1'b0; ipg_counter_d = 1; send_d = 1'b1; end  //b0111_1110   b0111_1110
-            TERM_L7: begin bytes_valid_o_d = 8'b1111_1110; in_frame_d = 1'b0; ipg_counter_d = 0; send_d = 1'b1; end
+            // End Frame Headers — SOF_L0 mode masks land at lanes 1..x;
+            // SOF_L4 mode masks land at lanes 0..(3+x) (buffer + TERM data).
+            TERM_L0: begin bytes_valid_o_d = sof_l4_active_q ? 8'b0000_1111 : 8'b0000_0000; in_frame_d = 1'b0; ipg_counter_d = 7; send_d = 1'b1; sof_l4_active_d = 1'b0; end
+            TERM_L1: begin bytes_valid_o_d = sof_l4_active_q ? 8'b0001_1111 : 8'b0000_0010; in_frame_d = 1'b0; ipg_counter_d = 6; send_d = 1'b1; sof_l4_active_d = 1'b0; end
+            TERM_L2: begin bytes_valid_o_d = sof_l4_active_q ? 8'b0011_1111 : 8'b0000_0110; in_frame_d = 1'b0; ipg_counter_d = 5; send_d = 1'b1; sof_l4_active_d = 1'b0; end
+            TERM_L3: begin bytes_valid_o_d = sof_l4_active_q ? 8'b0111_1111 : 8'b0000_1110; in_frame_d = 1'b0; ipg_counter_d = 4; send_d = 1'b1; sof_l4_active_d = 1'b0; end
+            TERM_L4: begin bytes_valid_o_d = sof_l4_active_q ? 8'b1111_1111 : 8'b0001_1110; in_frame_d = 1'b0; ipg_counter_d = 3; send_d = 1'b1; sof_l4_active_d = 1'b0; end
+            // TERM_L5..L7 in SOF_L4 mode would need >8 trailing bytes split
+            // across two emissions. Fall back to legacy SOF_L0 mask (the
+            // QLogic-driven case we care about uses TERM_L4 for 64-byte
+            // frames, so this is a documented gap; revisit if it shows up).
+            TERM_L5: begin bytes_valid_o_d = 8'b0011_1110; in_frame_d = 1'b0; ipg_counter_d = 2; send_d = 1'b1; sof_l4_active_d = 1'b0; end  //b0111_1100   b0011_1110
+            TERM_L6: begin bytes_valid_o_d = 8'b0111_1110; in_frame_d = 1'b0; ipg_counter_d = 1; send_d = 1'b1; sof_l4_active_d = 1'b0; end  //b0111_1110   b0111_1110
+            TERM_L7: begin bytes_valid_o_d = 8'b1111_1110; in_frame_d = 1'b0; ipg_counter_d = 0; send_d = 1'b1; sof_l4_active_d = 1'b0; end
 
             // Ordered Set + Data Headers
             OS_D6:  bytes_valid_o_d = 8'b1110_1110;  //b0111_0111  b1110_1110
@@ -221,15 +267,33 @@ always_comb begin
                 drop_frame_o_d  = 1'b1;
                 ipg_counter_d   = '0;
                 drop_mode_d     = 1'b1;
+                sof_l4_active_d = 1'b0;
             end
         endcase
 
-    // Valid input, currently in frame and its a data header. The first DATA
-    // block after SOF_L4 carries the trailing 4 preamble bytes (incl SFD) at
-    // lanes 0-3 — drop them. Subsequent DATA blocks carry 8 contiguous MAC
-    // bytes at lanes 0-7.
+    // Valid input, currently in frame and its a data header.
+    //
+    // SOF_L4 mode (sof_l4_active_q == 1):
+    //   DATA1 (sof_l4_first_data_q): lanes 0-3 are preamble (drop), lanes 4-7
+    //     are the first 4 MAC bytes — buffer them, emit nothing this cycle.
+    //     This keeps the AXI tkeep clean (no non-contiguous mask).
+    //   DATA2+: emit a re-packed 8-byte word combining the prior buffer (now
+    //     at output lanes 0-3) with this block's incoming lanes 0-3 (now at
+    //     output lanes 4-7). Buffer this block's lanes 4-7 for next cycle.
+    //     out_data_o_d is muxed in the data-path always_comb above.
+    //
+    // SOF_L0 mode (legacy): pass through with full 0xFF mask.
     end else if (can_read && (header_bits_i == DATA_HDR) && in_frame_q) begin
-        bytes_valid_o_d     = sof_l4_first_data_q ? 8'b1111_0000 : 8'b1111_1111;
+        if (sof_l4_active_q) begin
+            sof_l4_buf_d = input_data_i[63:32]; // capture upper 4 bytes (lanes 4-7)
+            if (sof_l4_first_data_q) begin
+                bytes_valid_o_d = 8'b0000_0000; // swallow DATA1, just buffer
+            end else begin
+                bytes_valid_o_d = 8'b1111_1111; // emit realigned 8 bytes
+            end
+        end else begin
+            bytes_valid_o_d = 8'b1111_1111;
+        end
         sof_l4_first_data_d = 1'b0;
     end
 
@@ -305,9 +369,9 @@ data_pipeline #(
 
 // sof_l4_first_data_d, sof_l4_first_data_q;
 // One-shot flag set on SOF_L4 detection, cleared after the first DATA block
-// emission (or on TERM/drop). Drives the lane-0..3-mask-off behavior for the
-// first DATA block of an SOF_L4 frame so the trailing preamble bytes (incl
-// SFD at lane 3) are not forwarded to the host as MAC data.
+// emission (or on TERM/drop). Identifies the DATA1 block whose lanes 0-3 are
+// trailing preamble bytes (to be dropped) and lanes 4-7 are the first 4 MAC
+// bytes (to be buffered for the next emission).
 data_pipeline #(
     .DATA_W    (1),
     .PIPE_DEPTH(PIPE_DEPTH),
@@ -318,6 +382,35 @@ data_pipeline #(
     .rst   (rst),
     .data_i(sof_l4_first_data_d),
     .data_o(sof_l4_first_data_q)
+);
+
+// sof_l4_active_d/q: sticky flag, 1 throughout an SOF_L4 frame. Drives the
+// byte-realignment data mux and the SOF_L4-aware TERM masks.
+data_pipeline #(
+    .DATA_W    (1),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (1),
+    .RST_VAL   (0)
+) data_pipeline_inst11 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(sof_l4_active_d),
+    .data_o(sof_l4_active_q)
+);
+
+// sof_l4_buf_d/q: 4-byte buffer holding the upper half (lanes 4-7) of the
+// most-recently-received DATA block in SOF_L4 mode. These bytes become
+// lanes 0-3 of the next emission so AXI tkeep stays contiguous.
+data_pipeline #(
+    .DATA_W    (32),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (1),
+    .RST_VAL   (0)
+) data_pipeline_inst12 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(sof_l4_buf_d),
+    .data_o(sof_l4_buf_q)
 );
 
 //out_valid_o_d
