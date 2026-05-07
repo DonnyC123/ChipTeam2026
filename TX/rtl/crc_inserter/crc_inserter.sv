@@ -32,16 +32,18 @@ typedef enum logic [1:0] {
 
 state_e state_q, state_d;
 
+// IEEE 802.3 FCS: reflected CRC32 (LSB-first bit processing), polynomial
+// 0xEDB88320 (= reflected 0x04C11DB7). Init 0xFFFFFFFF, final XOR with
+// 0xFFFFFFFF (applied via crc_final = ~crc_q). Matches Python's
+// binascii.crc32 / standard Ethernet FCS.
 function automatic logic [31:0] crc32_byte(
     input logic [31:0] crc_in,
     input logic [7:0]  byte_in
 );
     logic [31:0] crc;
-    logic        fb;
-    crc = crc_in;
+    crc = crc_in ^ {24'h0, byte_in};
     for (int i = 0; i < 8; i++) begin
-        fb  = crc[31] ^ byte_in[7-i];
-        crc = {crc[30:0], 1'b0} ^ (fb ? CRC32_POLY : 32'h0);
+        crc = crc[0] ? (crc >> 1) ^ 32'hEDB88320 : (crc >> 1);
     end
     return crc;
 endfunction
@@ -133,6 +135,10 @@ always_comb begin
                 valid_d = 1'b1;
 
                 if (last_i) begin
+                    // Final XOR applied per IEEE 802.3, then emitted LSB-first.
+                    logic [31:0] crc_out;
+                    crc_out = ~crc_d;
+
                     if (free_bytes_q >= 3'd4) begin
                         logic [DATA_W-1:0] out_data;
                         logic [MASK_W-1:0] out_mask;
@@ -145,10 +151,10 @@ always_comb begin
                         for (int b = 0; b < MASK_W; b++) begin
                             if (!mask_i[b] && slot < 4) begin
                                 case (slot)
-                                    0: out_data[b*8 +: 8] = crc_d[31:24];
-                                    1: out_data[b*8 +: 8] = crc_d[23:16];
-                                    2: out_data[b*8 +: 8] = crc_d[15:8];
-                                    3: out_data[b*8 +: 8] = crc_d[7:0];
+                                    0: out_data[b*8 +: 8] = crc_out[7:0];
+                                    1: out_data[b*8 +: 8] = crc_out[15:8];
+                                    2: out_data[b*8 +: 8] = crc_out[23:16];
+                                    3: out_data[b*8 +: 8] = crc_out[31:24];
                                 endcase
                                 out_mask[b] = 1'b1;
                                 slot++;
@@ -171,10 +177,10 @@ always_comb begin
                         for (int b = 0; b < MASK_W; b++) begin
                             if (!mask_i[b]) begin
                                 case (slot)
-                                    0: out_data[b*8 +: 8] = crc_d[31:24];
-                                    1: out_data[b*8 +: 8] = crc_d[23:16];
-                                    2: out_data[b*8 +: 8] = crc_d[15:8];
-                                    3: out_data[b*8 +: 8] = crc_d[7:0];
+                                    0: out_data[b*8 +: 8] = crc_out[7:0];
+                                    1: out_data[b*8 +: 8] = crc_out[15:8];
+                                    2: out_data[b*8 +: 8] = crc_out[23:16];
+                                    3: out_data[b*8 +: 8] = crc_out[31:24];
                                     default: ;
                                 endcase
                                 out_mask[b] = 1'b1;
@@ -184,7 +190,7 @@ always_comb begin
 
                         data_d = out_data;
                         mask_d = out_mask;
-                        last_d = 1'b0;  
+                        last_d = 1'b0;
 
                         free_bytes_d = free_bytes_q;
                         state_d      = S_TAIL;
@@ -275,12 +281,14 @@ always_comb begin
             sent      = int'(free_bytes_q); 
             remaining = 4 - sent;
 
+            // FCS bytes on the wire: LSB first (per IEEE 802.3). Use
+            // crc_final (= ~crc_q, the post-XOR value), not crc_q directly.
             for (int b = 0; b < remaining; b++) begin
                 case (sent + b)
-                    0: out_data[b*8 +: 8] = crc_q[31:24];
-                    1: out_data[b*8 +: 8] = crc_q[23:16];
-                    2: out_data[b*8 +: 8] = crc_q[15:8];
-                    3: out_data[b*8 +: 8] = crc_q[7:0];
+                    0: out_data[b*8 +: 8] = crc_final[7:0];
+                    1: out_data[b*8 +: 8] = crc_final[15:8];
+                    2: out_data[b*8 +: 8] = crc_final[23:16];
+                    3: out_data[b*8 +: 8] = crc_final[31:24];
                 endcase
                 out_mask[b] = 1'b1;
             end
