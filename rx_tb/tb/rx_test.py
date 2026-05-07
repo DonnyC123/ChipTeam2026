@@ -140,6 +140,32 @@ async def test_unreset_pipelines_no_residue(dut):
 
 
 @cocotb.test()
+async def test_sof_l4_strips_preamble_residue(dut):
+    """QLogic-style SOF_L4 frames must not leak preamble bytes into the host
+    AXI stream. Regression for the hardware ARP residue bug where the first
+    DATA block after SOF_L4 carried `55 55 55 d5` (last 4 preamble bytes incl
+    SFD) at lanes 0-3 — which the original assembler emitted as MAC data
+    because every DATA block was unconditionally masked 0xFF.
+
+    With the SOF_L4-aware fix in ethernet_assembler.sv (sof_l4_first_data_q
+    flag), the first DATA block after SOF_L4 emits only lanes 4-7 (mask 0xF0),
+    dropping the trailing preamble bytes. Subsequent DATA blocks emit normally
+    at lanes 0-7.
+    """
+    await initialize_tb(dut)
+    tb = RxTestBase(dut, ready_probability=1.0)
+
+    frame = list(range(64))
+
+    await tb.sequence.send_idles(LOCK_IDLES)
+    await tb.sequence.send_ethernet_frame_sof_l4(frame)
+    await tb.sequence.send_idles(20)
+
+    await tb.wait_for_driver_done()
+    await tb.scoreboard.check()
+
+
+@cocotb.test()
 async def test_stress_mixed_traffic(dut, seed: int = 0xDEADBEEF):
     await initialize_tb(dut)
     tb = RxTestBase(dut, ready_probability=0.5)

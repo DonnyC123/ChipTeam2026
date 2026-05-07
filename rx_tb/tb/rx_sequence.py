@@ -118,6 +118,38 @@ class RxSequence(GenericSequence):
         term_raw = self._build_ctrl_payload(self.TERM_CODES[n_valid], remaining)
         await self._push_word(self.CTRL_HDR, self.scramble_64b(term_raw))
 
+    # IEEE 802.3 Cl. 49 SOF_L4: start-of-frame at lane 4 of the SOF block.
+    # SOF_L4 block lanes 1-3 are control (idle) bytes, lanes 4-7 are the first
+    # 4 preamble bytes. The first DATA block after SOF_L4 carries the remaining
+    # 4 preamble bytes (incl SFD 0xD5 at lane 3) at lanes 0-3 and the first 4
+    # MAC frame bytes at lanes 4-7.
+    async def send_ethernet_frame_sof_l4(self, frame_bytes: list[int]):
+        assert len(frame_bytes) >= 4, "SOF_L4 send requires at least 4 MAC bytes"
+        await self.notify_subscribers({"frame": list(frame_bytes)})
+
+        # SOF_L4 block: lanes 1-3 idle, lanes 4-7 = 4 preamble bytes (0x55).
+        sof_lanes = [self.IDLE_BLK_C] * 3 + [0x55] * 4
+        sof_raw = self._build_ctrl_payload(self.SOF_L4, sof_lanes)
+        await self._push_word(self.CTRL_HDR, self.scramble_64b(sof_raw))
+
+        # First DATA block: lanes 0-2 = 0x55, lane 3 = SFD 0xD5, lanes 4-7 =
+        # MAC[0..3].
+        first_data_bytes = [0x55, 0x55, 0x55, 0xD5] + list(frame_bytes[0:4])
+        first_data_word  = int.from_bytes(bytes(first_data_bytes), "little")
+        await self._push_word(self.DATA_HDR, self.scramble_64b(first_data_word))
+
+        # Subsequent DATA blocks: 8 MAC bytes per block at lanes 0-7.
+        remaining = list(frame_bytes[4:])
+        while len(remaining) > 7:
+            word = int.from_bytes(bytes(remaining[:8]), "little")
+            await self._push_word(self.DATA_HDR, self.scramble_64b(word))
+            remaining = remaining[8:]
+
+        # TERM block carries any trailing bytes at lanes 1..n_valid.
+        n_valid  = len(remaining)
+        term_raw = self._build_ctrl_payload(self.TERM_CODES[n_valid], remaining)
+        await self._push_word(self.CTRL_HDR, self.scramble_64b(term_raw))
+
     async def send_back_to_back_frames(
         self,
         frames: list[list[int]],

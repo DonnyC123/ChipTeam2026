@@ -63,6 +63,7 @@ logic                  can_read;
 logic                  send_d;
 logic                  drop_mode_d, drop_mode_q;
 logic                  in_frame_d, in_frame_q;
+logic                  sof_l4_first_data_d, sof_l4_first_data_q;
 
 
 // Our team belives the sync/control bit are in network order
@@ -72,22 +73,24 @@ assign control_byte = input_data_i[0 +: SIZE_BYTE]; // the data_type_byte is bit
 
 always_comb begin
     // defaults
-    send_d          = '0;
-    out_valid_o_d   = '0;
-    bytes_valid_o_d = '0;
-    drop_frame_o_d  = '0;
-    ipg_counter_d   = ipg_counter_q;
-    ipg_check_en_d  = ipg_check_en_q;
-    drop_mode_d     = drop_mode_q;
-    in_frame_d      = in_frame_q;
+    send_d              = '0;
+    out_valid_o_d       = '0;
+    bytes_valid_o_d     = '0;
+    drop_frame_o_d      = '0;
+    ipg_counter_d       = ipg_counter_q;
+    ipg_check_en_d      = ipg_check_en_q;
+    drop_mode_d         = drop_mode_q;
+    in_frame_d          = in_frame_q;
+    sof_l4_first_data_d = sof_l4_first_data_q;
 
     // If cancel is seen while collecting a frame, abort that frame and enter drop mode
     if (in_frame_q && cancel_frame_i) begin
-        drop_frame_o_d  = 1'b1;
-        in_frame_d      = 1'b0;
-        bytes_valid_o_d = '0;
-        ipg_counter_d   = '0;
-        drop_mode_d     = 1'b1;
+        drop_frame_o_d      = 1'b1;
+        in_frame_d          = 1'b0;
+        bytes_valid_o_d     = '0;
+        ipg_counter_d       = '0;
+        drop_mode_d         = 1'b1;
+        sof_l4_first_data_d = 1'b0;
 
     // Drop mode: ignore everything until cancel is low and a new start frame arrives
     end else if (can_read && drop_mode_q) begin
@@ -116,11 +119,12 @@ always_comb begin
                 end
                 SOF_L4: begin
                     if (!ipg_check_en_q || (ipg_counter_q >= IPG_SOF_L4_BYTES)) begin
-                        bytes_valid_o_d = 8'b0000_0000;
-                        in_frame_d      = 1'b1;
-                        ipg_counter_d   = '0;
-                        ipg_check_en_d  = 1'b1;
-                        drop_mode_d     = 1'b0;
+                        bytes_valid_o_d     = 8'b0000_0000;
+                        in_frame_d          = 1'b1;
+                        ipg_counter_d       = '0;
+                        ipg_check_en_d      = 1'b1;
+                        drop_mode_d         = 1'b0;
+                        sof_l4_first_data_d = 1'b1;
                     end else begin
                         drop_frame_o_d = 1'b1;
                         in_frame_d     = 1'b0;
@@ -140,11 +144,12 @@ always_comb begin
 
     // Invalid sync header or not locked while in frame.
     end else if (in_valid_i && in_frame_q && (!locked_i || (CTRL_HDR != header_bits_i && DATA_HDR != header_bits_i))) begin
-        drop_frame_o_d  = 1'b1;
-        in_frame_d      = 1'b0;
-        bytes_valid_o_d = '0;
-        ipg_counter_d   = '0;
-        drop_mode_d     = 1'b1;
+        drop_frame_o_d      = 1'b1;
+        in_frame_d          = 1'b0;
+        bytes_valid_o_d     = '0;
+        ipg_counter_d       = '0;
+        drop_mode_d         = 1'b1;
+        sof_l4_first_data_d = 1'b0;
 
     end else if (can_read && !in_frame_q && (header_bits_i == CTRL_HDR)) begin
         unique case (control_byte)
@@ -165,10 +170,11 @@ always_comb begin
             end
             SOF_L4: begin
                 if (!ipg_check_en_q || (ipg_counter_q >= IPG_SOF_L4_BYTES)) begin
-                    bytes_valid_o_d = 8'b0000_0000;
-                    in_frame_d      = 1'b1;
-                    ipg_counter_d   = '0;
-                    ipg_check_en_d  = 1'b1;
+                    bytes_valid_o_d     = 8'b0000_0000;
+                    in_frame_d          = 1'b1;
+                    ipg_counter_d       = '0;
+                    ipg_check_en_d      = 1'b1;
+                    sof_l4_first_data_d = 1'b1;
                 end else begin
                     drop_frame_o_d = 1'b1;
                     in_frame_d     = 1'b0;
@@ -189,11 +195,12 @@ always_comb begin
 
     // Valid input, currently in-frame, and control header.
     end else if (can_read && in_frame_q && (header_bits_i == CTRL_HDR)) begin
+        sof_l4_first_data_d = 1'b0;
         unique case (control_byte)
-        
+
             // End Frame Headers
             TERM_L0: begin bytes_valid_o_d = 8'b0000_0000; in_frame_d = 1'b0; ipg_counter_d = 7; send_d = 1'b1; end
-            TERM_L1: begin bytes_valid_o_d = 8'b0000_0010; in_frame_d = 1'b0; ipg_counter_d = 6; send_d = 1'b1; end 
+            TERM_L1: begin bytes_valid_o_d = 8'b0000_0010; in_frame_d = 1'b0; ipg_counter_d = 6; send_d = 1'b1; end
             TERM_L2: begin bytes_valid_o_d = 8'b0000_0110; in_frame_d = 1'b0; ipg_counter_d = 5; send_d = 1'b1; end  //b0110_0000 b0000_0110
             TERM_L3: begin bytes_valid_o_d = 8'b0000_1110; in_frame_d = 1'b0; ipg_counter_d = 4; send_d = 1'b1; end  //b0111_0000   b0000_1110
             TERM_L4: begin bytes_valid_o_d = 8'b0001_1110; in_frame_d = 1'b0; ipg_counter_d = 3; send_d = 1'b1; end  //b0111_1000   b0001_1110
@@ -217,9 +224,13 @@ always_comb begin
             end
         endcase
 
-    // Valid input, currently in frame and its a data header.
+    // Valid input, currently in frame and its a data header. The first DATA
+    // block after SOF_L4 carries the trailing 4 preamble bytes (incl SFD) at
+    // lanes 0-3 — drop them. Subsequent DATA blocks carry 8 contiguous MAC
+    // bytes at lanes 0-7.
     end else if (can_read && (header_bits_i == DATA_HDR) && in_frame_q) begin
-        bytes_valid_o_d = 8'b1111_1111;
+        bytes_valid_o_d     = sof_l4_first_data_q ? 8'b1111_0000 : 8'b1111_1111;
+        sof_l4_first_data_d = 1'b0;
     end
 
     out_valid_o_d = |bytes_valid_o_d;
@@ -290,6 +301,23 @@ data_pipeline #(
     .rst   (rst),
     .data_i(in_frame_d),
     .data_o(in_frame_q)
+);
+
+// sof_l4_first_data_d, sof_l4_first_data_q;
+// One-shot flag set on SOF_L4 detection, cleared after the first DATA block
+// emission (or on TERM/drop). Drives the lane-0..3-mask-off behavior for the
+// first DATA block of an SOF_L4 frame so the trailing preamble bytes (incl
+// SFD at lane 3) are not forwarded to the host as MAC data.
+data_pipeline #(
+    .DATA_W    (1),
+    .PIPE_DEPTH(PIPE_DEPTH),
+    .RST_EN    (1),
+    .RST_VAL   (0)
+) data_pipeline_inst10 (
+    .clk   (clk),
+    .rst   (rst),
+    .data_i(sof_l4_first_data_d),
+    .data_o(sof_l4_first_data_q)
 );
 
 //out_valid_o_d
