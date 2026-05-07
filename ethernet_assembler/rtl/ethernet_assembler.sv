@@ -309,8 +309,7 @@ data_pipeline #(
 data_pipeline #(
     .DATA_W    (DATA_OUT_W),
     .PIPE_DEPTH(PIPE_DEPTH),
-    .RST_EN    (0)
-    // theres another parameter for reset value
+    .RST_EN    (1)
 ) data_pipeline_inst6 (
     .clk   (clk),
     .rst   (rst),
@@ -322,7 +321,7 @@ data_pipeline #(
 data_pipeline #(
     .DATA_W    (BYTES_OUT),
     .PIPE_DEPTH(PIPE_DEPTH),
-    .RST_EN    (0)
+    .RST_EN    (1)
 ) data_pipeline_inst7 (
     .clk   (clk),
     .rst   (rst),
