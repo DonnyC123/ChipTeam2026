@@ -14,6 +14,12 @@ localparam logic [7:0] TERM_L5 = 8'hD2; // D0..D4 T5 C6..C7
 localparam logic [7:0] TERM_L6 = 8'hE1; // D0..D5 T6 C7
 localparam logic [7:0] TERM_L7 = 8'hFF; // D0..D6 T7
 
+// preamble chunks
+localparam logic [BYTE_W*5-1:0] PARTIAL_PREAMBLE = 40'hD5_55_55_55_55; //hD5_55_55_55_55_55_55_55
+localparam logic [BYTE_W*3-1:0] L4_PREAMBLE      = 24'h55_55_55;
+localparam logic [BYTE_W*7-1:0] L0_PREAMBLE      = 56'h55_55_55_55_55_55_55;
+
+
 // These are used for matinence/control between the phy and the pcs, don't even need to use
 localparam logic [7:0] OS_D6  = 8'h66; // O0 D1..D3 O4 D5..D7 (2 Ordered Set, 6 data lanes)
 localparam logic [7:0] OS_D5  = 8'h55; // O0 D1..D3 O4 O5 D6..D7 (3 Ordered Set, 5 data lanes)
