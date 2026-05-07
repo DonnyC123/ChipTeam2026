@@ -4,7 +4,12 @@
 // Description: Top-level for AS02MC04 25G Ethernet NIC with PCIe DMA
 //////////////////////////////////////////////////////////////////////////////////
 
-module nic_top (
+module nic_top #(
+    // Debug: bypass scrambler (TX) and descrambler (RX) - payload passes through
+    // unchanged so the wire is human-readable. Headers still propagate normally.
+    parameter int SCRAMBLER_BYPASS   = 0,
+    parameter int DESCRAMBLER_BYPASS = 0
+) (
     // System clock (100 MHz differential, E18/D18)
     input  wire diff_100mhz_clk_p,
     input  wire diff_100mhz_clk_n,
@@ -94,6 +99,19 @@ module nic_top (
     wire                 h2c_tready;
 
 
+`ifdef SIM_NO_PCIE
+    // Sim shortcut: bypass PCIe/XDMA. Provide tied-off versions of axi_aclk and
+    // axi_aresetn so the rest of the design (rx_fifo_ctrl, tx_subsystem) still works.
+    assign axi_aclk          = freerun_clk;
+    assign axi_aresetn       = ~freerun_rst;
+    assign pci_express_x8_txn = '0;
+    assign pci_express_x8_txp = '0;
+    assign h2c_tdata         = '0;
+    assign h2c_tkeep         = '0;
+    assign h2c_tvalid        = 1'b0;
+    assign h2c_tlast         = 1'b0;
+    assign rx_axi_stream.ready = 1'b1;  // keep RX path draining
+`else
 design_1_wrapper design_1_wrapper_inst (
     // PCIe physical interface
     .pci_express_x8_rxn   (pci_express_x8_rxn),
@@ -116,6 +134,7 @@ design_1_wrapper design_1_wrapper_inst (
     .S_AXIS_C2H_0_0_tlast  (rx_axi_stream.last),
     .S_AXIS_C2H_0_0_tready (rx_axi_stream.ready)
 );
+`endif
 
     // ?????????????????????????????????????????????
     // GT wizard
@@ -207,10 +226,11 @@ design_1_wrapper design_1_wrapper_inst (
 
 
     rx_top #(
-        .DIN_W       (64),
-        .GOOD_COUNT  (64),
-        .BAD_COUNT   (8),
-        .BITSLIP_WAIT(40)
+        .DIN_W              (64),
+        .GOOD_COUNT         (64),
+        .BAD_COUNT          (8),
+        .BITSLIP_WAIT       (256),
+        .DESCRAMBLER_BYPASS (DESCRAMBLER_BYPASS)
     ) rx_top_inst (
         .rx_clk      (rx_usrclk),
         .rx_rst      (rx_pcs_rst),
@@ -231,10 +251,11 @@ design_1_wrapper design_1_wrapper_inst (
     wire        tx_raw_ready;
 
     tx_cdc_top #(
-        .FIFO_DEPTH      (64),
-        .DESC_DEPTH      (32),
-        .NUM_QUEUES      (4),
-        .MAX_BURST_BEATS (256)
+        .FIFO_DEPTH       (64),
+        .DESC_DEPTH       (32),
+        .NUM_QUEUES       (4),
+        .MAX_BURST_BEATS  (256),
+        .SCRAMBLER_BYPASS (SCRAMBLER_BYPASS)
     ) tx_cdc_top_inst (
         .dma_clk             (axi_aclk),
         .dma_rst             (axi_rst),
@@ -263,6 +284,113 @@ design_1_wrapper design_1_wrapper_inst (
             rx_frame_count <= rx_frame_count + 1;
     end
 
+    // ─────────────────────────────────────────────────
+    // Lock-loss diagnostics (rx_usrclk domain)
+    // bad_count_q: alignment_finder's running invalid-sync-header counter
+    //   in LOCKED state. Resets to 0 on every valid header; reaching
+    //   BAD_COUNT-1 triggers unlock. Watching this climb shows BER bursts.
+    // unlock_event_cnt: monotonic count of LOCKED→SEARCH transitions.
+    // Both crossed into freerun_clk by the VIO without synchronizers —
+    // multi-bit reads can briefly be torn; values are eventually consistent.
+    // ─────────────────────────────────────────────────
+    wire [7:0] bad_count_dbg = {{(8-$bits(rx_top_inst.u_alignment_finder.bad_count_q)){1'b0}},
+                                rx_top_inst.u_alignment_finder.bad_count_q};
+
+    reg [15:0] unlock_event_cnt = 16'h0;
+    reg        rx_locked_d      = 1'b0;
+    always @(posedge rx_usrclk) begin
+        if (rx_pcs_rst) begin
+            unlock_event_cnt <= 16'h0;
+            rx_locked_d      <= 1'b0;
+        end else begin
+            rx_locked_d <= rx_locked;
+            if (rx_locked_d && !rx_locked) unlock_event_cnt <= unlock_event_cnt + 1'b1;
+        end
+    end
+
+    // ─────────────────────────────────────────────────
+    // ILAs for ARP-residue debug
+    //
+    // Two ILAs since the suspect data crosses from rx_usrclk → axi_aclk.
+    //
+    // Generate in Vivado IP Catalog → "ILA (Integrated Logic Analyzer)":
+    //
+    //   ila_rx (clock = rx_usrclk, sample depth 1024)
+    //     probe0  (1):   in_valid_i
+    //     probe1  (2):   header_bits_i
+    //     probe2  (8):   control_byte
+    //     probe3  (64):  input_data_i
+    //     probe4  (1):   out_valid_o
+    //     probe5  (8):   bytes_valid_o
+    //     probe6  (64):  out_data_o
+    //     probe7  (1):   in_frame_q
+    //     probe8  (1):   drop_frame_o
+    //     probe9  (1):   send_o
+    //     probe10 (1):   rx_locked
+    //   Suggested trigger: control_byte == 8'h78 && header_bits_i == 2'b01
+    //                      && in_valid_i  (SOF_L0 arrival)
+    //
+    //   ila_axi (clock = axi_aclk, sample depth 1024)
+    //     probe0  (256): rx_axi_stream.data
+    //     probe1  (32):  rx_axi_stream.mask  (= tkeep)
+    //     probe2  (1):   rx_axi_stream.valid
+    //     probe3  (1):   rx_axi_stream.last
+    //     probe4  (1):   rx_axi_stream.ready
+    //   Suggested trigger: valid && ready && (data[31:0] != 32'hFFFF_FFFF)
+    //                      — first AXI beat whose low 4 bytes aren't broadcast
+    //                      MAC, i.e. the suspect residue.
+    // ─────────────────────────────────────────────────
+    ila_rx u_ila_rx (
+        .clk     (rx_usrclk),
+        .probe0  (rx_top_inst.u_ethernet_assembler.in_valid_i),
+        .probe1  (rx_top_inst.u_ethernet_assembler.header_bits_i),
+        .probe2  (rx_top_inst.u_ethernet_assembler.control_byte),
+        .probe3  (rx_top_inst.u_ethernet_assembler.input_data_i),
+        .probe4  (rx_top_inst.u_ethernet_assembler.out_valid_o),
+        .probe5  (rx_top_inst.u_ethernet_assembler.bytes_valid_o),
+        .probe6  (rx_top_inst.u_ethernet_assembler.out_data_o),
+        .probe7  (rx_top_inst.u_ethernet_assembler.in_frame_q),
+        .probe8  (rx_top_inst.u_ethernet_assembler.drop_frame_o),
+        .probe9  (rx_top_inst.u_ethernet_assembler.send_o),
+        .probe10 (rx_locked),
+        .probe11 (rx_top_inst.bubbler_data_66),
+        .probe12 (rx_top_inst.bubbler_valid_66)
+    );
+
+    ila_axi u_ila_axi (
+        .clk    (axi_aclk),
+        .probe0 (rx_axi_stream.data),
+        .probe1 (rx_axi_stream.mask),
+        .probe2 (rx_axi_stream.valid),
+        .probe3 (rx_axi_stream.last),
+        .probe4 (rx_axi_stream.ready)
+    );
+
+    // ila_tx: TX path debug — confirms the FPGA is actually emitting frames
+    // (vs. just idle blocks) onto gt_tx_data. Trigger on
+    //   probe2 == 2'b01  (CTRL_HDR sync header from pcs_generator)
+    //   AND probe1[7:0] == 8'h78  (SOF_L0 block_type byte)
+    // to fire when a frame's SOF reaches the GT input. If the trigger never
+    // fires while the host is sending, the FPGA TX RTL is starved
+    // (h2c_tvalid never asserts, or backpressure stuck).
+    //
+    //   ila_tx (clock = tx_usrclk, depth 1024, 6 probes)
+    //     probe0 (64): gt_tx_data
+    //     probe1 (64): pcs_generator.out_data_o
+    //     probe2 (2):  pcs_generator.out_control_o
+    //     probe3 (1):  pcs_generator.out_valid_o
+    //     probe4 (1):  h2c_tvalid
+    //     probe5 (1):  h2c_tready
+    ila_tx u_ila_tx (
+        .clk    (tx_usrclk),
+        .probe0 (gt_tx_data),
+        .probe1 (tx_cdc_top_inst.u_pcs_generator.out_data_o),
+        .probe2 (tx_cdc_top_inst.u_pcs_generator.out_control_o),
+        .probe3 (tx_cdc_top_inst.u_pcs_generator.out_valid_o),
+        .probe4 (h2c_tvalid),
+        .probe5 (h2c_tready)
+    );
+
     // ?????????????????????????????????????????????
     // Status LEDs
     // ?????????????????????????????????????????????
@@ -285,6 +413,8 @@ design_1_wrapper design_1_wrapper_inst (
         .probe_in5  (sfp_1_tx_fault),
         .probe_in6  (sfp_1_mod_def_0),   // 0 = module present, 1 = absent
         .probe_in7  (rx_cdr_stable),
+        .probe_in8  (bad_count_dbg),     // 8-bit: alignment_finder bad-header counter
+        .probe_in9  (unlock_event_cnt),  // 16-bit: monotonic LOCKED→SEARCH count
         .probe_out0 (loopback_mode)      // 3-bit: 000=normal, 001=PCS lb, 010=PMA lb
     );
 

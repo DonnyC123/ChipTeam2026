@@ -34,6 +34,7 @@ sources = [
     *_pcs_sources(),
     TX_DIR / "rtl" / "scrambler" / "scrambler.sv",
     TX_DIR / "rtl" / "debubbler" / "debubbler.sv",
+    TX_DIR / "rtl" / "crc_inserter" / "crc_inserter.sv",
     TX_DIR / "tb" / "tx_cdc_top.sv",
 
     # RX side

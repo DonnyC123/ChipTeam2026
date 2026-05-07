@@ -70,12 +70,33 @@ module tx_cdc_top #(
   );
 
 
-  assign subsystem_tready = subsystem_to_pcs_if.tready;
+  // CRC32 (IEEE 802.3 FCS) inserter between tx_subsystem and pcs_generator.
+  // Without this, every transmitted frame is missing its 4-byte FCS and the
+  // peer NIC's MAC silently drops it (link-up but 0 RX bytes at the peer,
+  // since PCS is sync'd via IDLE blocks while every actual frame fails the
+  // MAC-layer FCS check).
+  crc_inserter #(
+      .DATA_W(64),
+      .MASK_W(8)
+  ) u_crc_inserter (
+      .clk    (clk),
+      .rst    (rst),
+      .data_i (subsystem_tdata),
+      .mask_i (subsystem_tkeep),
+      .valid_i(subsystem_tvalid),
+      .last_i (subsystem_tlast),
+      .ready_i(subsystem_to_pcs_if.tready),
+      .ready_o(subsystem_tready),
+      .data_o (crc_tdata),
+      .mask_o (crc_tkeep),
+      .valid_o(crc_tvalid),
+      .last_o (crc_tlast)
+  );
 
-  assign subsystem_to_pcs_if.tdata  = subsystem_tdata;
-  assign subsystem_to_pcs_if.tkeep  = subsystem_tkeep;
-  assign subsystem_to_pcs_if.tvalid = subsystem_tvalid;
-  assign subsystem_to_pcs_if.tlast  = subsystem_tlast;
+  assign subsystem_to_pcs_if.tdata  = crc_tdata;
+  assign subsystem_to_pcs_if.tkeep  = crc_tkeep;
+  assign subsystem_to_pcs_if.tvalid = crc_tvalid;
+  assign subsystem_to_pcs_if.tlast  = crc_tlast;
   assign subsystem_to_pcs_if.tdest  = '0;
 
   pcs_generator u_pcs_generator (
