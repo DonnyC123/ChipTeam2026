@@ -140,6 +140,32 @@ async def test_unreset_pipelines_no_residue(dut):
 
 
 @cocotb.test()
+async def test_sof_l4_back_to_back(dut):
+    """Drives 3 consecutive SOF_L4 frames with normal IDLE gaps. If the
+    SOF_L4-residue fix carries no state across frames (correct), all 3 are
+    delivered byte-perfect. If there's a state-leak bug causing alternating
+    failures (as observed on hardware: every other ARP shows the original
+    `55 55 55 d5` prefix), the 2nd or 3rd frame's scoreboard check will fail.
+    """
+    await initialize_tb(dut)
+    tb = RxTestBase(dut, ready_probability=1.0)
+
+    frames = [
+        list(range(64)),
+        [0xDE, 0xAD, 0xBE, 0xEF] * 16,
+        list(range(60, 124)),
+    ]
+
+    await tb.sequence.send_idles(LOCK_IDLES)
+    for frame in frames:
+        await tb.sequence.send_ethernet_frame_sof_l4(frame)
+        await tb.sequence.send_idles(12)
+
+    await tb.wait_for_driver_done()
+    await tb.scoreboard.check()
+
+
+@cocotb.test()
 async def test_sof_l4_strips_preamble_residue(dut):
     """QLogic-style SOF_L4 frames must not leak preamble bytes into the host
     AXI stream. Regression for the hardware ARP residue bug where the first
