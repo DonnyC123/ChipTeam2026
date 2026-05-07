@@ -153,7 +153,11 @@ async def watch_assembler(dut, cycles: int, dump_every_valid: bool = False):
 
 @cocotb.test()
 async def test_loopback_round_trip_frame(dut):
-    """One frame in -> one frame out, byte-for-byte."""
+    """One frame in -> one frame out, with IEEE 802.3 FCS appended by the
+    TX-side crc_inserter. The RX path doesn't validate or strip FCS, so the
+    received frame is the input frame followed by 4 trailing CRC32 bytes."""
+    import binascii, struct
+
     _start_clocks(dut)
     await reset_all(dut)
     await wait_for_lock(dut)
@@ -169,4 +173,9 @@ async def test_loopback_round_trip_frame(dut):
 
     rx = await collect_rx_frame(dut)
     assert rx is not None, "no frame received"
-    assert rx == frame, f"mismatch:\n sent={frame.hex()}\n got ={rx.hex()}"
+
+    fcs = binascii.crc32(frame) & 0xFFFFFFFF
+    expected = frame + struct.pack("<I", fcs)
+    assert rx == expected, (
+        f"mismatch:\n sent={frame.hex()}\n expected (sent+FCS)={expected.hex()}\n got      ={rx.hex()}"
+    )
