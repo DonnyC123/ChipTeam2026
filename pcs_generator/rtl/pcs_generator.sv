@@ -12,6 +12,13 @@
 //   The C lanes after T do count toward the interpacket gap
 //   25G ethernt packets have a minimum of 64 bytes
 
+// TODO: enforce the minimum packet length (64 bytes)
+// TODO:add preamble
+// TODO: so SOF -> 55 55 55 55 55 55 55 D5 -> data
+// TODO: send out the SOF_L0 && 7 preambles then go to new state
+//      - new state sends out last preamble && 7 data, hold one
+// TODO:
+
 import pcs_pkg::*;
 
 module pcs_generator #() 
@@ -75,22 +82,23 @@ always_comb begin
     // One-entry skid: accept a new AXI beat only if the slot is empty or we are consuming it now.
     tready_d = (!skid_value_q.valid_data_i || can_read) && !(get_axi && !can_read);
 
-    case(current_state) 
+    case(current_state)
         WAIT_START : begin 
-            if(can_read)begin
+            if(out_ready_i && get_axi)begin
                 next_state    = DATA;
                 out_control_d = CTRL_HDR;
 
                 // always grab 5 to hold, dosen't matter if we don't use them all
-                leftover_bytes_d = {skid_value_q.data[DATA_W-1 -: (5*BYTE_W)]};
+                leftover_bytes_d = PARTIAL_PREAMBLE;
 
                 if(held_byte_cnt_q == 3'd5) begin //
                 // bsically we want held_byte_cnt_q = some value (5 or 1), which we can set except for intial boot (intial boot is the issue)
                     // Output a start chunk (SOF_L4 =  3 Data + 4 IDLE + 1 type)
-                    out_data_d      = {skid_value_q.data[(3*BYTE_W)-1:0], {4{8'd0}}, SOF_L4}; //send out 3 data bytes
+                    //out_data_d      = {skid_value_q.data[(3*BYTE_W)-1:0], {4{8'd0}}, SOF_L4}; //send out 3 data bytes
+                    out_data_d      = {L4_PREAMBLE, {4{8'd0}}, SOF_L4}; // send of 3 preamble bytes
                     held_byte_cnt_d = 3'd5;
                 end else begin // Output a start chunk (SOF_L0=  7 data + 1 type), 
-                    out_data_d      = {skid_value_q.data[(7*BYTE_W)-1:0], SOF_L0}; //send out 7 data bytes
+                    out_data_d      = {L0_PREAMBLE, SOF_L0}; //send out 7 preamble bytes
                     held_byte_cnt_d = 3'd1;
                 end
                 out_valid_d = 1'b1;
@@ -217,7 +225,7 @@ always_comb begin
         end
 
         IDLE_OUT : begin
-            tready_d      = '0;
+            tready_d = '0;
             if(out_ready_i) begin
                 // Output a single IDLE chunk
                 next_state    = WAIT_START;
@@ -245,7 +253,6 @@ always_comb begin
 end 
 
 // Clocked Block
-// TODO: convert these to use the pipeline module
 always_ff@(posedge clk)begin
     if(rst)begin
         current_state    <= WAIT_START;
@@ -253,8 +260,6 @@ always_ff@(posedge clk)begin
         held_byte_cnt_q  <= '0;
         leftover_bytes_q <= '0;
         num_incoming_q   <= '0;
-        //axis_slave_if.tready <= '0;
-        //out_valid_o          <= '0;
     end else begin
         current_state <= next_state;
         if(get_axi == 1'b1) begin
@@ -265,10 +270,6 @@ always_ff@(posedge clk)begin
         held_byte_cnt_q  <= held_byte_cnt_d;
         leftover_bytes_q <= leftover_bytes_d;
         num_incoming_q   <= num_incoming_d;
-        //axis_slave_if.tready <= tready_d;
-        //out_control_o        <= out_control_d;
-        //out_data_o           <= out_data_d;
-        //out_valid_o          <= out_valid_d;
     end
 end
 
