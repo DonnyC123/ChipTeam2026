@@ -11,12 +11,11 @@ module ethernet_parser #(
     input logic [DATA_IN_W-1:0] data_i,
     input logic [BYTES_OUT-1:0] bytes_valid_i,
 
-    // output logic ipv4_o,
-    // output logic ipv6_o,
-    // output logic other_o,
+    output logic sof_type_o,
     output logic payload_time_o, //high when payload
     output logic valid_o,
-    output       outputs_t outputs_o //theres got to be a way to make one enum outport, idk if its it
+
+    output outputs_t outputs_o //theres got to be a way to make one enum outport, idk if its it
 );
 
 typedef enum logic [3:0] {IDLE, PAUSE, PARSE_L4, PARSE_L0} state_t;
@@ -25,6 +24,7 @@ outputs_t outputs_d;
 state_t current_state, next_state;
 
 logic valid_d;
+logic sof_type_d;
 logic payload_time_d;
 
 always_comb begin
@@ -32,6 +32,7 @@ always_comb begin
     outputs_d      = outputs_q; 
     payload_time_d = '0;
     valid_d        = '0;
+    sof_type_d     = '0;
     next_state     = current_state;
 
     case(current_state)
@@ -51,7 +52,8 @@ always_comb begin
             if(data_valid_i) begin
                 next_state     = IDLE;
                 payload_time_d = 1'b1;
-                valid_d        = 1'b1;
+
+                valid_d = 1'b1;
                 if (data_i[23-:SIZE_BYTE*2] == IPV4) begin
                     outputs_d = IPV4;
                 end else if (data_i[23-:SIZE_BYTE*2] == IPV6) begin
@@ -116,6 +118,17 @@ data_pipeline #(
     .rst(rst),
     .data_i(outputs_d),
     .data_o(outputs_o)
+);
+
+data_pipeline #(
+    .DATA_W(1),
+    .PIPE_DEPTH(1),
+    .RST_EN(0)
+) pipeline_3 (
+    .clk(clk),
+    .rst(rst),
+    .data_i(sof_type_d),
+    .data_o(sof_type_o)
 );
     
 endmodule : ethernet_parser
