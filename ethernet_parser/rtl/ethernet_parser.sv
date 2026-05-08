@@ -50,7 +50,6 @@ always_comb begin
                     
                     if(!sof_or_eof_q) begin
                         payload_time_d = 1'b1;
-                        valid_d        = 1'b1;
                         next_state     = PARSE_L0;
                     end
 
@@ -65,13 +64,13 @@ always_comb begin
             if(data_valid_i) begin
                 next_state     = PARSE_L4;
                 payload_time_d = 1'b1;
-                valid_d        = 1'b1; 
             end
         end
 
         PARSE_L0 : begin 
             if(data_valid_i) begin
                 next_state = IDLE;
+                valid_d    = 1'b1; 
                 if (data_i[55-:SIZE_BYTE*2] == IPV4_CODE) begin
                     outputs_d = IPV4;
                 end else if (data_i[55-:SIZE_BYTE*2] == IPV6_CODE) begin
@@ -82,9 +81,8 @@ always_comb begin
 
         PARSE_L4 : begin 
             if(data_valid_i) begin
-                next_state     = IDLE;
-                payload_time_d = 1'b1;
-                valid_d        = 1'b1;
+                next_state = IDLE;
+                valid_d    = 1'b1;
                 if (data_i[23-:SIZE_BYTE*2] == IPV4_CODE) begin
                     outputs_d = IPV4;
                 end else if (data_i[23-:SIZE_BYTE*2] == IPV6_CODE) begin
