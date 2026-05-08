@@ -153,33 +153,43 @@ class EthernetParserSequence(GenericSequence):
         start_count: int,
         start_lane: int,
         start_mask: int,
+        expected_outputs_overrides: dict[int, int] | None = None,
     ):
         frame = self._require_frame()
-        expected_output = self._expected_output_from_frame()
+        expected_outputs_overrides = expected_outputs_overrides or {}
+        item_idx = 0
 
         await self.notify_subscribers({"frame": list(frame)})
         await self._drive_word(
             self._pack_bytes(frame[:start_count], start_lane),
             start_mask,
-            expected_output,
+            expected_outputs_overrides.get(
+                item_idx, EthernetParserSequenceItem.OUTPUT_OTHER
+            ),
             valid=True,
         )
+        item_idx += 1
 
         remaining = frame[start_count:]
         while len(remaining) >= self.DATA_BYTES:
             await self._drive_word(
                 self._pack_bytes(remaining[: self.DATA_BYTES], 0),
                 self.FULL_MASK,
-                expected_output,
+                expected_outputs_overrides.get(
+                    item_idx, EthernetParserSequenceItem.OUTPUT_OTHER
+                ),
                 valid=True,
             )
             remaining = remaining[self.DATA_BYTES :]
+            item_idx += 1
 
         if remaining:
             await self._drive_word(
                 self._pack_bytes(remaining, 1),
                 self._tail_mask(len(remaining)),
-                expected_output,
+                expected_outputs_overrides.get(
+                    item_idx, EthernetParserSequenceItem.OUTPUT_OTHER
+                ),
                 valid=True,
             )
 
@@ -204,11 +214,23 @@ class EthernetParserSequence(GenericSequence):
     async def send_IPV4_ethernet(self, frame_bytes: list[int]):
         self.set_manual_frame(frame_bytes)
         self.set_ethertype("IPV4")
-        if tuple(self.frame[self.ETHERTYPE_OFFSET : self.ETHERTYPE_OFFSET + 2]) != self.ETHERTYPE_IPV4:
+        if (
+            tuple(
+                self.frame[self.ETHERTYPE_OFFSET : self.ETHERTYPE_OFFSET + 2]
+            )
+            != self.ETHERTYPE_IPV4
+        ):
             raise ValueError("IPV4 Ethertype bytes must be [0x00, 0x08]")
         if self._expected_output_from_frame() != EthernetParserSequenceItem.OUTPUT_IPV4:
             raise ValueError("expected_outputs_o must resolve to OUTPUT_IPV4")
-        await self.sof0_driver()
+        await self._drive_frame(
+            start_count=self.SOF0_BYTES,
+            start_lane=self.SOF0_START_LANE,
+            start_mask=self.SOF0_MASK,
+            expected_outputs_overrides={
+                2: EthernetParserSequenceItem.OUTPUT_IPV4
+            },
+        )
 
     async def send_back_to_back_frames(
         self,

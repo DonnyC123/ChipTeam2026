@@ -44,7 +44,7 @@ always_comb begin
                     sof_or_eof_d = !sof_or_eof_q;
                     next_state   = PAUSE;
                 end else if(bytes_valid_i == 8'hF7 && !sof_or_eof_q) begin
-                    next_state   = PARSE_L4;
+                    next_state   = PARSE_L0;
                     sof_or_eof_d = !sof_or_eof_q;
                 end
             end
