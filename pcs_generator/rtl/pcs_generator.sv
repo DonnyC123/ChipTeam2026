@@ -13,11 +13,11 @@
 //   25G ethernt packets have a minimum of 64 bytes
 
 // TODO: enforce the minimum packet length (64 bytes)
-// TODO:add preamble
-// TODO: so SOF -> 55 55 55 55 55 55 55 D5 -> data
-// TODO: send out the SOF_L0 && 7 preambles then go to new state
-//      - new state sends out last preamble && 7 data, hold one
-// TODO:
+// -- need to append 0's untill we get to 64 bytes
+// -- if see last and not at 64 bytes, then go to new state
+// -- new state: send out last data & 0's && new chunks
+// -- trying to make it 64 bytes exactly so set leftover_bytes_q = '0 and skid_data_q = '0
+// -- set num_incoming_q and go to EOF state
 
 import pcs_pkg::*;
 
