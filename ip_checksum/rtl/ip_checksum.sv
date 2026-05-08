@@ -105,7 +105,7 @@ always_comb begin
 end
 
 always_ff @(posedge clk) begin
-    if (!rst) begin
+    if (rst) begin
         state_q     <= IDLE;
         ihl_bytes_q <= 6'd20;
         byte_cnt_q  <= '0;
