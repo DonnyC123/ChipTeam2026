@@ -31,7 +31,7 @@ logic sof_type_d;
 logic payload_time_d;
 
 assign outputs_pipe_i = outputs_d;
-assign outputs_o = outputs_t'(outputs_pipe_o);
+assign outputs_o      = outputs_t'(outputs_pipe_o);
 
 always_comb begin
     //defaults
@@ -45,11 +45,12 @@ always_comb begin
     case(current_state)
         IDLE : begin 
             if(data_valid_i) begin
-                if(bytes_valid_i == 8'hFE && !sof_or_eof_q) begin //b1111_1110
+                if(bytes_valid_i == 8'hFE) begin //b1111_1110
+                    next_state   = !sof_or_eof_q ? PARSE_L0 : IDLE;
                     sof_or_eof_d = !sof_or_eof_q;
-                    next_state   = PARSE_L0;
+                    
                 end else if(bytes_valid_i == 8'hE0 && !sof_or_eof_q) begin //b1110_0000
-                    next_state   = PAUSE;
+                    next_state   = !sof_or_eof_q ? PAUSE : IDLE;
                     sof_or_eof_d = !sof_or_eof_q;
                 end
             end
@@ -65,7 +66,6 @@ always_comb begin
             if(data_valid_i) begin
                 next_state     = IDLE;
                 payload_time_d = 1'b1;
-                sof_or_eof_d   = 1'b0;
 
                 valid_d = 1'b1;
                 if (data_i[55-:SIZE_BYTE*2] == IPV4_CODE) begin
@@ -80,7 +80,6 @@ always_comb begin
             if(data_valid_i) begin
                 next_state     = IDLE;
                 payload_time_d = 1'b1;
-                sof_or_eof_d   = 1'b0;
                 valid_d        = 1'b1;
                 if (data_i[23-:SIZE_BYTE*2] == IPV4_CODE) begin
                     outputs_d = IPV4;
