@@ -4,22 +4,11 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-RX_TB_ROOT = REPO_ROOT / "rx_tb"
-RX_FIFO_ROOT = REPO_ROOT / "rx_fifo"
 
 sources = [
-    REPO_ROOT / "rtl_utils" / "if" / "axi_stream_if.sv",
     REPO_ROOT / "rtl_utils" / "data_pipeline.sv",
-    RX_FIFO_ROOT / "rtl" / "rx_fifo_pkg.sv",
-    RX_FIFO_ROOT / "rtl" / "rx_async_fifo.sv",
-    RX_FIFO_ROOT / "rtl" / "rx_fifo_ctrl.sv",
-    REPO_ROOT / "alignment_finder" / "rtl" / "alignment_finder.sv",
-    REPO_ROOT / "ethernet_assembler" / "rtl" / "nic_global_package.sv",
-    REPO_ROOT / "ethernet_assembler" / "rtl" / "ethernet_assembler.sv",
-    REPO_ROOT / "bubbler" / "rtl" / "bubbler.sv",
-    REPO_ROOT / "descrambler" / "rtl" / "descrambler.sv",
-    RX_TB_ROOT / "rtl" / "rx_top.sv",
-    RX_TB_ROOT / "rtl" / "rx_top_wrapper.sv",
+    REPO_ROOT / "ethernet_parser" / "rtl" / "parser_pkg.sv",
+    REPO_ROOT / "ethernet_parser" / "rtl" / "ethernet_parser.sv",
 ]
 
 
@@ -37,7 +26,7 @@ def _select_simulator() -> str:
     )
 
 
-def test_rx_path():
+def test_ethernet_parser():
     from cocotb_tools.runner import get_runner
 
     current_pythonpath = os.environ.get("PYTHONPATH", "")
@@ -52,16 +41,16 @@ def test_rx_path():
 
     sim.build(
         sources=[str(s) for s in sources],
-        hdl_toplevel="rx_top_wrapper",
-        build_dir=str(REPO_ROOT / "sim_build" / "rx_tb"),
+        hdl_toplevel="ethernet_parser",
+        build_dir=str(REPO_ROOT / "sim_build" / "ethernet_parser_tb"),
         timescale=("1ns", "1ps"),
         always=True,
         clean=True,
     )
 
     sim.test(
-        hdl_toplevel="rx_top_wrapper",
-        test_module="rx_tb.tb.rx_test",
+        hdl_toplevel="ethernet_parser",
+        test_module="ethernet_parser.tb.ethernet_parser_test",
         waves=True,
         test_args=sim_test_args,
         timescale=("1ns", "1ps"),
@@ -73,4 +62,4 @@ def test_rx_path():
 
 
 if __name__ == "__main__":
-    test_rx_path()
+    test_ethernet_parser()

@@ -127,6 +127,7 @@ class EthernetParserSequence(GenericSequence):
             expected_outputs_o=expected_output,
         )
         item.valid = valid
+        await self.notify_subscribers(item.to_data)
         await self.add_transaction(item)
 
     def _pack_bytes(self, bytes_chunk: list[int], start_lane: int) -> int:
@@ -159,7 +160,6 @@ class EthernetParserSequence(GenericSequence):
         expected_outputs_overrides = expected_outputs_overrides or {}
         item_idx = 0
 
-        await self.notify_subscribers({"frame": list(frame)})
         await self._drive_word(
             self._pack_bytes(frame[:start_count], start_lane),
             start_mask,
@@ -210,6 +210,27 @@ class EthernetParserSequence(GenericSequence):
     async def send_ethernet_frame(self, frame_bytes: list[int]):
         self.set_manual_frame(frame_bytes)
         await self.sof0_driver()
+
+    async def send_IPV6_ethernet(self, frame_bytes: list[int]):
+        self.set_manual_frame(frame_bytes)
+        self.set_ethertype("IPV6")
+        if (
+            tuple(
+                self.frame[self.ETHERTYPE_OFFSET : self.ETHERTYPE_OFFSET + 2]
+            )
+            != self.ETHERTYPE_IPV6
+        ):
+            raise ValueError("IPV6 Ethertype bytes must be [0xDD, 0x86]")
+        if self._expected_output_from_frame() != EthernetParserSequenceItem.OUTPUT_IPV6:
+            raise ValueError("expected_outputs_o must resolve to OUTPUT_IPV6")
+        await self._drive_frame(
+            start_count=self.SOF0_BYTES,
+            start_lane=self.SOF0_START_LANE,
+            start_mask=self.SOF0_MASK,
+            expected_outputs_overrides={
+                2: EthernetParserSequenceItem.OUTPUT_IPV6
+            },
+        )
 
     async def send_IPV4_ethernet(self, frame_bytes: list[int]):
         self.set_manual_frame(frame_bytes)
