@@ -39,6 +39,12 @@ module tx_cdc_top #(
   logic        subsystem_tlast;
   logic        subsystem_tready;
 
+  logic [63:0] padded_tdata;
+  logic [7:0]  padded_tkeep;
+  logic        padded_tvalid;
+  logic        padded_tlast;
+  logic        padded_tready;
+
   logic [63:0] crc_tdata;
   logic [7:0]  crc_tkeep;
   logic        crc_tvalid;
@@ -70,7 +76,31 @@ module tx_cdc_top #(
   );
 
 
-  // CRC32 (IEEE 802.3 FCS) inserter between tx_subsystem and pcs_generator.
+  // Pad short frames (< 60 bytes of MAC payload) up to the IEEE 802.3
+  // minimum before CRC. Without this, the peer sees a runt frame and the
+  // PCS layer terminates with TERM_L<n> mid-block instead of a clean
+  // TERM_L0 — observed as a stray 0xE1 byte leaking into the receiver's
+  // MAC stream during loopback.
+  pad_inserter #(
+      .DATA_W         (64),
+      .MASK_W         (8),
+      .MIN_FRAME_BYTES(60)
+  ) u_pad_inserter (
+      .clk    (clk),
+      .rst    (rst),
+      .data_i (subsystem_tdata),
+      .mask_i (subsystem_tkeep),
+      .valid_i(subsystem_tvalid),
+      .last_i (subsystem_tlast),
+      .ready_o(subsystem_tready),
+      .ready_i(padded_tready),
+      .data_o (padded_tdata),
+      .mask_o (padded_tkeep),
+      .valid_o(padded_tvalid),
+      .last_o (padded_tlast)
+  );
+
+  // CRC32 (IEEE 802.3 FCS) inserter between pad_inserter and pcs_generator.
   // Without this, every transmitted frame is missing its 4-byte FCS and the
   // peer NIC's MAC silently drops it (link-up but 0 RX bytes at the peer,
   // since PCS is sync'd via IDLE blocks while every actual frame fails the
@@ -81,12 +111,12 @@ module tx_cdc_top #(
   ) u_crc_inserter (
       .clk    (clk),
       .rst    (rst),
-      .data_i (subsystem_tdata),
-      .mask_i (subsystem_tkeep),
-      .valid_i(subsystem_tvalid),
-      .last_i (subsystem_tlast),
+      .data_i (padded_tdata),
+      .mask_i (padded_tkeep),
+      .valid_i(padded_tvalid),
+      .last_i (padded_tlast),
       .ready_i(subsystem_to_pcs_if.tready),
-      .ready_o(subsystem_tready),
+      .ready_o(padded_tready),
       .data_o (crc_tdata),
       .mask_o (crc_tkeep),
       .valid_o(crc_tvalid),

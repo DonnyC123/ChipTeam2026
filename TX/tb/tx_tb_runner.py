@@ -27,6 +27,7 @@ rtl_sources = [
     TX_DIR / "rtl" / "tx_fifo" / "tx_subsystem_pkg.sv",
     TX_DIR / "rtl" / "tx_fifo" / "tx_async_fifo.sv",
     TX_DIR / "rtl" / "tx_fifo" / "tx_subsystem.sv",
+    TX_DIR / "rtl" / "pad_inserter" / "pad_inserter.sv",
     TX_DIR / "rtl" / "crc_inserter" / "crc_inserter.sv",
     *_pcs_sources(),
     TX_DIR / "rtl" / "scrambler" / "scrambler.sv",
