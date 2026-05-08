@@ -24,21 +24,29 @@ outputs_t outputs_d;
 state_t current_state, next_state;
 
 logic valid_d;
+logic sof_or_eof_d, sof_or_eof_q; //0 = this is a start, 1 = this is an eof
 logic sof_type_d;
 logic payload_time_d;
 
 always_comb begin
     //defaults
-    outputs_d      = outputs_q; 
     payload_time_d = '0;
     valid_d        = '0;
     sof_type_d     = '0;
+    outputs_d      = outputs_q; 
+    sof_or_eof_d   = sof_or_eof_q;
     next_state     = current_state;
 
     case(current_state)
         IDLE : begin 
             if(data_valid_i) begin
-                next_state = (bytes_valid_i == 8'h07) ? PARSE_L4 : PAUSE; //0000_0111
+                if(bytes_valid_i == 8'hFE && !sof_or_eof_q) begin //b1111_1110
+                    sof_or_eof_d = !sof_or_eof_q;
+                    next_state   = PAUSE;
+                end else if(bytes_valid_i == 8'hF7 && !sof_or_eof_q) begin
+                    next_state   = PARSE_L4;
+                    sof_or_eof_d = !sof_or_eof_q;
+                end
             end
         end
 
@@ -80,8 +88,10 @@ end
 always_ff begin 
     if(rst) begin
         current_state = IDLE;
+        sof_or_eof_q  = '0;
     end else begin
         current_state = next_state;
+        sof_or_eof_q  = sof_or_eof_d;
     end
 end
 
