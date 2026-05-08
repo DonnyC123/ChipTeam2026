@@ -1,17 +1,30 @@
+// CRC inserter — pipelined parallel CRC32.
+//
+// The per-cycle update crc_d = M · {data, crc_q} is linear over GF(2):
+//   crc_d = M_data · data  ⊕  M_crc · crc_q
+// The data half has no dependence on crc_q, so we precompute it in a
+// stage-1 register. Stage 2 closes the feedback with just
+//   (M_crc · crc_q) ⊕ data_contrib_s1_q
+// — no path from data_i inside the recurrence, so the long net delay from
+// tx_subsystem is no longer on the crc_q recurrence.
+//
+// Adds 1 cycle of latency. Backpressure is honored: stage 1 holds when
+// stage 2 cannot consume (during S_TAIL), and stage 2 holds when downstream
+// is not ready.
 module crc_inserter #(
     parameter DATA_W = 64,
     parameter MASK_W = DATA_W / 8
 ) (
-    input logic clk,
-    input logic rst,
+    input  logic              clk,
+    input  logic              rst,
 
-    input logic [DATA_W-1:0] data_i,
-    input logic [MASK_W-1:0] mask_i,
-    input logic              valid_i,
-    input logic              last_i,
-    input logic              ready_i,
+    input  logic [DATA_W-1:0] data_i,
+    input  logic [MASK_W-1:0] mask_i,
+    input  logic              valid_i,
+    input  logic              last_i,
+    input  logic              ready_i,
 
-    output logic ready_o,
+    output logic              ready_o,
 
     output logic [DATA_W-1:0] data_o,
     output logic [MASK_W-1:0] mask_o,
@@ -21,7 +34,7 @@ module crc_inserter #(
 
   localparam logic [31:0] CRC32_POLY = 32'h04C11DB7;
   localparam logic [31:0] CRC_INIT   = 32'hFFFFFFFF;
-  localparam int unsigned IN_W       = 32 + DATA_W;  // 96 for DATA_W=64
+  localparam int unsigned IN_W       = 32 + DATA_W;
 
   typedef enum logic [1:0] {
     S_IDLE,
@@ -37,11 +50,8 @@ module crc_inserter #(
     return r;
   endfunction
 
-  // Parallel CRC32 matrix generator — runs at elaboration time. Builds a
-  // 32 × (32+N*8) GF(2) matrix M such that crc_new = M · {data[N*8-1:0], crc_in}
-  // by symbolically running the bit-serial CRC32 update for N bytes starting
-  // from the identity. Runtime cost collapses to a fixed XOR tree per output
-  // bit (~5–6 LUT levels) instead of the original 64-deep serial chain.
+  // Elaboration-time symbolic CRC32 step for N bytes. Builds a 32 × IN_W
+  // GF(2) matrix M such that crc_new = M · {data[N*8-1:0], crc_in}.
   function automatic logic [31:0][IN_W-1:0] gen_crc32_matrix(input int unsigned n_bytes);
     logic [31:0][IN_W-1:0] state;
     logic [31:0][IN_W-1:0] next_state;
@@ -51,11 +61,9 @@ module crc_inserter #(
       state[i]    = '0;
       state[i][i] = 1'b1;
     end
-
     for (int j = 0; j < int'(n_bytes) * 8; j++) begin
       fb         = state[31];
       fb[32 + j] = fb[32 + j] ^ 1'b1;
-
       for (int k = 0; k < 32; k++) begin
         next_state[k] = (k == 0) ? '0 : state[k-1];
         if (CRC32_POLY[k]) next_state[k] = next_state[k] ^ fb;
@@ -74,68 +82,104 @@ module crc_inserter #(
   localparam logic [31:0][IN_W-1:0] CRC_M7 = gen_crc32_matrix(7);
   localparam logic [31:0][IN_W-1:0] CRC_M8 = gen_crc32_matrix(8);
 
-  // Full-word fast path: mid-frame beats always have mask = all-ones, so the
-  // steady-state CRC update bypasses the popcount + 8-way matrix mux entirely
-  // and uses just the M8 XOR tree. Saves ~3 LUT levels on the critical path.
-  function automatic logic [31:0] crc32_full(
-      input logic [31:0] crc_in, input logic [DATA_W-1:0] data);
-    logic [IN_W-1:0] inp;
+  // M · {data, crc_in} — full step.
+  function automatic logic [31:0] mat_full(
+      input logic [31:0][IN_W-1:0] M, input logic [DATA_W-1:0] data, input logic [31:0] crc_in);
     logic [31:0]     r;
+    logic [IN_W-1:0] inp;
     inp = {data, crc_in};
-    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M8[i] & inp);
+    for (int i = 0; i < 32; i++) r[i] = ^(M[i] & inp);
     return r;
   endfunction
 
-  // Partial-word path: only used on the last beat when mask_i != all-ones.
-  // ASSUMPTION: mask_i is contiguous from bit 0 (8'h01, 8'h03, ..., 8'hFF).
-  function automatic logic [31:0] crc32_word(
-      input logic [31:0] crc_in, input logic [DATA_W-1:0] data, input logic [MASK_W-1:0] mask);
-    logic [IN_W-1:0] inp;
-    logic [3:0]      n;
+  // M · {data, 0} — data-only contribution. Stage-1 precompute.
+  function automatic logic [31:0] mat_data(
+      input logic [31:0][IN_W-1:0] M, input logic [DATA_W-1:0] data);
     logic [31:0]     r;
-
-    inp = {data, crc_in};
-
-    n = '0;
-    for (int i = 0; i < MASK_W; i++) n = n + {3'b0, mask[i]};
-
-    r = crc_in;
-    unique case (n)
-      4'd0:    r = crc_in;
-      4'd1:    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M1[i] & inp);
-      4'd2:    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M2[i] & inp);
-      4'd3:    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M3[i] & inp);
-      4'd4:    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M4[i] & inp);
-      4'd5:    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M5[i] & inp);
-      4'd6:    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M6[i] & inp);
-      4'd7:    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M7[i] & inp);
-      4'd8:    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M8[i] & inp);
-      default: r = crc_in;
-    endcase
+    logic [IN_W-1:0] inp;
+    inp = {data, 32'b0};
+    for (int i = 0; i < 32; i++) r[i] = ^(M[i] & inp);
     return r;
   endfunction
 
-  // Pick full vs partial path. Mid-frame this is always the full path; only
-  // the (rare) tail beat with non-full mask hits the popcount/mux.
-  function automatic logic [31:0] crc32_step(
-      input logic [31:0] crc_in, input logic [DATA_W-1:0] data, input logic [MASK_W-1:0] mask);
-    if (&mask) return crc32_full(crc_in, data);
-    else       return crc32_word(crc_in, data, mask);
+  // M · {0, crc_in} — crc-only feedback. Stage-2 short loop on crc_q.
+  function automatic logic [31:0] mat_crc(
+      input logic [31:0][IN_W-1:0] M, input logic [31:0] crc_in);
+    logic [31:0]     r;
+    logic [IN_W-1:0] inp;
+    inp = {{DATA_W{1'b0}}, crc_in};
+    for (int i = 0; i < 32; i++) r[i] = ^(M[i] & inp);
+    return r;
   endfunction
 
-  logic [      31:0] crc_q;
-  logic [      31:0] crc_d;
-  logic [DATA_W-1:0] held_data_q;
-  logic [DATA_W-1:0] held_data_d;
-  logic [MASK_W-1:0] held_mask_q;
-  logic [MASK_W-1:0] held_mask_d;
-  logic [       2:0] free_bytes_q;
-  logic [       2:0] free_bytes_d;
+  // -------------------------------------------------------------------------
+  // Stage 1 combinational
+  // -------------------------------------------------------------------------
+  logic [3:0]  n_in;
+  logic [31:0] data_contrib_d;
+  logic [31:0] first_crc_d;     // first-beat full CRC: M · {data_i, CRC_INIT}
 
+  always_comb begin
+    n_in = '0;
+    for (int i = 0; i < MASK_W; i++) n_in = n_in + {3'b0, mask_i[i]};
+
+    data_contrib_d = '0;
+    first_crc_d    = CRC_INIT;
+
+    if (&mask_i) begin
+      // Steady-state fast path — no popcount mux on this branch.
+      data_contrib_d = mat_data(CRC_M8, data_i);
+      first_crc_d    = mat_full(CRC_M8, data_i, CRC_INIT);
+    end else begin
+      unique case (n_in)
+        4'd0: ;
+        4'd1: begin data_contrib_d = mat_data(CRC_M1, data_i); first_crc_d = mat_full(CRC_M1, data_i, CRC_INIT); end
+        4'd2: begin data_contrib_d = mat_data(CRC_M2, data_i); first_crc_d = mat_full(CRC_M2, data_i, CRC_INIT); end
+        4'd3: begin data_contrib_d = mat_data(CRC_M3, data_i); first_crc_d = mat_full(CRC_M3, data_i, CRC_INIT); end
+        4'd4: begin data_contrib_d = mat_data(CRC_M4, data_i); first_crc_d = mat_full(CRC_M4, data_i, CRC_INIT); end
+        4'd5: begin data_contrib_d = mat_data(CRC_M5, data_i); first_crc_d = mat_full(CRC_M5, data_i, CRC_INIT); end
+        4'd6: begin data_contrib_d = mat_data(CRC_M6, data_i); first_crc_d = mat_full(CRC_M6, data_i, CRC_INIT); end
+        4'd7: begin data_contrib_d = mat_data(CRC_M7, data_i); first_crc_d = mat_full(CRC_M7, data_i, CRC_INIT); end
+        4'd8: begin data_contrib_d = mat_data(CRC_M8, data_i); first_crc_d = mat_full(CRC_M8, data_i, CRC_INIT); end
+        default: ;
+      endcase
+    end
+  end
+
+  // Stage 1 registers
+  logic [DATA_W-1:0] data_s1_q;
+  logic [MASK_W-1:0] mask_s1_q;
+  logic              valid_s1_q;
+  logic              last_s1_q;
+  logic [31:0]       data_contrib_s1_q;
+  logic [31:0]       first_crc_s1_q;
+  logic [3:0]        n_s1_q;
+
+  // -------------------------------------------------------------------------
+  // Stage 2 — FSM operates on stage-1 registered signals.
+  // -------------------------------------------------------------------------
+  logic [      31:0] crc_q, crc_d;
+  logic [       2:0] free_bytes_q, free_bytes_d;
   logic [DATA_W-1:0] data_d;
   logic [MASK_W-1:0] mask_d;
-  logic              valid_d;
-  logic              last_d;
+  logic              valid_d, last_d;
+
+  // Short feedback half: M_crc_n · crc_q. Mid-frame n_s1_q == 8.
+  logic [31:0] crc_feedback;
+  always_comb begin
+    unique case (n_s1_q)
+      4'd0:    crc_feedback = crc_q;
+      4'd1:    crc_feedback = mat_crc(CRC_M1, crc_q);
+      4'd2:    crc_feedback = mat_crc(CRC_M2, crc_q);
+      4'd3:    crc_feedback = mat_crc(CRC_M3, crc_q);
+      4'd4:    crc_feedback = mat_crc(CRC_M4, crc_q);
+      4'd5:    crc_feedback = mat_crc(CRC_M5, crc_q);
+      4'd6:    crc_feedback = mat_crc(CRC_M6, crc_q);
+      4'd7:    crc_feedback = mat_crc(CRC_M7, crc_q);
+      4'd8:    crc_feedback = mat_crc(CRC_M8, crc_q);
+      default: crc_feedback = crc_q;
+    endcase
+  end
 
   function automatic logic [2:0] free_slots(input logic [MASK_W-1:0] mask);
     logic [2:0] cnt;
@@ -145,57 +189,49 @@ module crc_inserter #(
   endfunction
 
   logic [31:0] crc_final;
-  logic [31:0] crc_next;
-  logic        output_ready;
+  logic        downstream_ready;
+  logic        s1_advance;
+  logic        s2_advance;
 
-  assign crc_final    = ~reflect32(crc_q);
-  assign output_ready = ready_i || !valid_o;
+  assign crc_final        = ~reflect32(crc_q);
+  assign downstream_ready = ready_i || !valid_o;
+
+  // Stage 2 advances whenever the downstream output reg can accept.
+  // Stage 1 also advances except in S_TAIL, where stage 2 is busy emitting
+  // the tail and cannot consume the held stage-1 beat.
+  assign s2_advance = downstream_ready;
+  assign s1_advance = downstream_ready && (state_q != S_TAIL);
+  assign ready_o    = s1_advance;
 
   always_comb begin
     state_d      = state_q;
     crc_d        = crc_q;
-    held_data_d  = held_data_q;
-    held_mask_d  = held_mask_q;
     free_bytes_d = free_bytes_q;
 
-    ready_o      = 1'b0;
-    data_d       = data_i;
-    mask_d       = mask_i;
-    valid_d      = 1'b0;
-    last_d       = 1'b0;
-
-    crc_next     = crc32_step(crc_q, data_i, mask_i);
+    data_d  = data_s1_q;
+    mask_d  = mask_s1_q;
+    valid_d = 1'b0;
+    last_d  = 1'b0;
 
     unique case (state_q)
 
       S_IDLE: begin
-        ready_o = output_ready;
-        crc_d   = CRC_INIT;
-
-        if (valid_i && output_ready) begin
-          crc_d        = crc32_step(CRC_INIT, data_i, mask_i);
-          free_bytes_d = free_slots(mask_i);
-          held_data_d  = data_i;
-          held_mask_d  = mask_i;
-
+        crc_d = CRC_INIT;
+        if (valid_s1_q) begin
+          crc_d        = first_crc_s1_q;
+          free_bytes_d = free_slots(mask_s1_q);
           valid_d      = 1'b1;
-
           state_d      = S_STREAM;
         end
       end
 
       S_STREAM: begin
-        ready_o = output_ready;
-
-        if (valid_i && output_ready) begin
-          crc_d        = crc_next;
-          held_data_d  = data_i;
-          held_mask_d  = mask_i;
-          free_bytes_d = free_slots(mask_i);
-
+        if (valid_s1_q) begin
+          crc_d        = crc_feedback ^ data_contrib_s1_q;
+          free_bytes_d = free_slots(mask_s1_q);
           valid_d      = 1'b1;
 
-          if (last_i) begin
+          if (last_s1_q) begin
             logic [31:0] crc_out;
             crc_out = ~reflect32(crc_d);
 
@@ -203,13 +239,11 @@ module crc_inserter #(
               logic [DATA_W-1:0] out_data;
               logic [MASK_W-1:0] out_mask;
               int                slot;
-
-              out_data = data_i;
-              out_mask = mask_i;
+              out_data = data_s1_q;
+              out_mask = mask_s1_q;
               slot     = 0;
-
               for (int b = 0; b < MASK_W; b++) begin
-                if (!mask_i[b] && slot < 4) begin
+                if (!mask_s1_q[b] && slot < 4) begin
                   case (slot)
                     0: out_data[b*8+:8] = crc_out[7:0];
                     1: out_data[b*8+:8] = crc_out[15:8];
@@ -220,7 +254,6 @@ module crc_inserter #(
                   slot++;
                 end
               end
-
               data_d  = out_data;
               mask_d  = out_mask;
               last_d  = 1'b1;
@@ -229,13 +262,11 @@ module crc_inserter #(
               logic [DATA_W-1:0] out_data;
               logic [MASK_W-1:0] out_mask;
               int                slot;
-
-              out_data = data_i;
-              out_mask = mask_i;
+              out_data = data_s1_q;
+              out_mask = mask_s1_q;
               slot     = 0;
-
               for (int b = 0; b < MASK_W; b++) begin
-                if (!mask_i[b]) begin
+                if (!mask_s1_q[b]) begin
                   case (slot)
                     0: out_data[b*8+:8] = crc_out[7:0];
                     1: out_data[b*8+:8] = crc_out[15:8];
@@ -247,11 +278,9 @@ module crc_inserter #(
                   slot++;
                 end
               end
-
               data_d       = out_data;
               mask_d       = out_mask;
               last_d       = 1'b0;
-
               free_bytes_d = free_bytes_q;
               state_d      = S_TAIL;
             end
@@ -265,10 +294,8 @@ module crc_inserter #(
         int                remaining;
         int                sent;
 
-        ready_o   = 1'b0;
         valid_d   = 1'b1;
         last_d    = 1'b1;
-
         out_data  = '0;
         out_mask  = '0;
         sent      = int'(free_bytes_q);
@@ -288,7 +315,6 @@ module crc_inserter #(
 
         data_d  = out_data;
         mask_d  = out_mask;
-
         state_d = S_IDLE;
       end
     endcase
@@ -296,25 +322,39 @@ module crc_inserter #(
 
   always_ff @(posedge clk or posedge rst) begin
     if (rst) begin
-      state_q      <= S_IDLE;
-      crc_q        <= CRC_INIT;
-      held_data_q  <= '0;
-      held_mask_q  <= '0;
-      free_bytes_q <= '0;
-      data_o       <= '0;
-      mask_o       <= '0;
-      valid_o      <= 1'b0;
-      last_o       <= 1'b0;
-    end else if (output_ready) begin
-      data_o       <= data_d;
-      mask_o       <= mask_d;
-      valid_o      <= valid_d;
-      last_o       <= last_d;
-      state_q      <= state_d;
-      crc_q        <= crc_d;
-      held_data_q  <= held_data_d;
-      held_mask_q  <= held_mask_d;
-      free_bytes_q <= free_bytes_d;
+      state_q           <= S_IDLE;
+      crc_q             <= CRC_INIT;
+      free_bytes_q      <= '0;
+      data_s1_q         <= '0;
+      mask_s1_q         <= '0;
+      valid_s1_q        <= 1'b0;
+      last_s1_q         <= 1'b0;
+      data_contrib_s1_q <= '0;
+      first_crc_s1_q    <= CRC_INIT;
+      n_s1_q            <= '0;
+      data_o            <= '0;
+      mask_o            <= '0;
+      valid_o           <= 1'b0;
+      last_o            <= 1'b0;
+    end else begin
+      if (s2_advance) begin
+        data_o       <= data_d;
+        mask_o       <= mask_d;
+        valid_o      <= valid_d;
+        last_o       <= last_d;
+        state_q      <= state_d;
+        crc_q        <= crc_d;
+        free_bytes_q <= free_bytes_d;
+      end
+      if (s1_advance) begin
+        data_s1_q         <= data_i;
+        mask_s1_q         <= mask_i;
+        valid_s1_q        <= valid_i;
+        last_s1_q         <= last_i;
+        data_contrib_s1_q <= data_contrib_d;
+        first_crc_s1_q    <= first_crc_d;
+        n_s1_q            <= n_in;
+      end
     end
   end
 
