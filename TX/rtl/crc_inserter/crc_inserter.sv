@@ -283,14 +283,18 @@ always_comb begin
 
             // FCS bytes on the wire: LSB first (per IEEE 802.3). Use
             // crc_final (= ~crc_q, the post-XOR value), not crc_q directly.
-            for (int b = 0; b < remaining; b++) begin
-                case (sent + b)
-                    0: out_data[b*8 +: 8] = crc_final[7:0];
-                    1: out_data[b*8 +: 8] = crc_final[15:8];
-                    2: out_data[b*8 +: 8] = crc_final[23:16];
-                    3: out_data[b*8 +: 8] = crc_final[31:24];
-                endcase
-                out_mask[b] = 1'b1;
+            // Loop bounded to MASK_W (constant) so synth can prove the
+            // part-select index is in range; runtime gate on `remaining`.
+            for (int b = 0; b < MASK_W; b++) begin
+                if (b < remaining) begin
+                    case (sent + b)
+                        0: out_data[b*8 +: 8] = crc_final[7:0];
+                        1: out_data[b*8 +: 8] = crc_final[15:8];
+                        2: out_data[b*8 +: 8] = crc_final[23:16];
+                        3: out_data[b*8 +: 8] = crc_final[31:24];
+                    endcase
+                    out_mask[b] = 1'b1;
+                end
             end
 
             data_d = out_data;
