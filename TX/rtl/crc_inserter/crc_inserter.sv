@@ -113,40 +113,54 @@ module crc_inserter #(
   endfunction
 
   // -------------------------------------------------------------------------
-  // Stage 1 combinational
+  // Stage 0: pure input register. No logic on this stage — it exists solely
+  // to absorb the long net delay from tx_subsystem (through pad_inserter)
+  // into a local flop, so the matrix XOR trees in stage 1 see only short
+  // intra-module routes.
   // -------------------------------------------------------------------------
-  logic [3:0]  n_in;
+  logic [DATA_W-1:0] data_s0_q;
+  logic [MASK_W-1:0] mask_s0_q;
+  logic              valid_s0_q;
+  logic              last_s0_q;
+
+  // -------------------------------------------------------------------------
+  // Stage 1 combinational: precompute data contribution and first-beat CRC
+  // from stage-0 registered inputs. ~5–6 LUT levels of XOR, all sourced from
+  // local s0 flops.
+  // -------------------------------------------------------------------------
+  logic [3:0]  n_s0;
   logic [31:0] data_contrib_d;
-  logic [31:0] first_crc_d;     // first-beat full CRC: M · {data_i, CRC_INIT}
+  logic [31:0] first_crc_d;     // first-beat full CRC: M · {data_s0_q, CRC_INIT}
 
   always_comb begin
-    n_in = '0;
-    for (int i = 0; i < MASK_W; i++) n_in = n_in + {3'b0, mask_i[i]};
+    n_s0 = '0;
+    for (int i = 0; i < MASK_W; i++) n_s0 = n_s0 + {3'b0, mask_s0_q[i]};
 
     data_contrib_d = '0;
     first_crc_d    = CRC_INIT;
 
-    if (&mask_i) begin
+    if (&mask_s0_q) begin
       // Steady-state fast path — no popcount mux on this branch.
-      data_contrib_d = mat_data(CRC_M8, data_i);
-      first_crc_d    = mat_full(CRC_M8, data_i, CRC_INIT);
+      data_contrib_d = mat_data(CRC_M8, data_s0_q);
+      first_crc_d    = mat_full(CRC_M8, data_s0_q, CRC_INIT);
     end else begin
-      unique case (n_in)
+      unique case (n_s0)
         4'd0: ;
-        4'd1: begin data_contrib_d = mat_data(CRC_M1, data_i); first_crc_d = mat_full(CRC_M1, data_i, CRC_INIT); end
-        4'd2: begin data_contrib_d = mat_data(CRC_M2, data_i); first_crc_d = mat_full(CRC_M2, data_i, CRC_INIT); end
-        4'd3: begin data_contrib_d = mat_data(CRC_M3, data_i); first_crc_d = mat_full(CRC_M3, data_i, CRC_INIT); end
-        4'd4: begin data_contrib_d = mat_data(CRC_M4, data_i); first_crc_d = mat_full(CRC_M4, data_i, CRC_INIT); end
-        4'd5: begin data_contrib_d = mat_data(CRC_M5, data_i); first_crc_d = mat_full(CRC_M5, data_i, CRC_INIT); end
-        4'd6: begin data_contrib_d = mat_data(CRC_M6, data_i); first_crc_d = mat_full(CRC_M6, data_i, CRC_INIT); end
-        4'd7: begin data_contrib_d = mat_data(CRC_M7, data_i); first_crc_d = mat_full(CRC_M7, data_i, CRC_INIT); end
-        4'd8: begin data_contrib_d = mat_data(CRC_M8, data_i); first_crc_d = mat_full(CRC_M8, data_i, CRC_INIT); end
+        4'd1: begin data_contrib_d = mat_data(CRC_M1, data_s0_q); first_crc_d = mat_full(CRC_M1, data_s0_q, CRC_INIT); end
+        4'd2: begin data_contrib_d = mat_data(CRC_M2, data_s0_q); first_crc_d = mat_full(CRC_M2, data_s0_q, CRC_INIT); end
+        4'd3: begin data_contrib_d = mat_data(CRC_M3, data_s0_q); first_crc_d = mat_full(CRC_M3, data_s0_q, CRC_INIT); end
+        4'd4: begin data_contrib_d = mat_data(CRC_M4, data_s0_q); first_crc_d = mat_full(CRC_M4, data_s0_q, CRC_INIT); end
+        4'd5: begin data_contrib_d = mat_data(CRC_M5, data_s0_q); first_crc_d = mat_full(CRC_M5, data_s0_q, CRC_INIT); end
+        4'd6: begin data_contrib_d = mat_data(CRC_M6, data_s0_q); first_crc_d = mat_full(CRC_M6, data_s0_q, CRC_INIT); end
+        4'd7: begin data_contrib_d = mat_data(CRC_M7, data_s0_q); first_crc_d = mat_full(CRC_M7, data_s0_q, CRC_INIT); end
+        4'd8: begin data_contrib_d = mat_data(CRC_M8, data_s0_q); first_crc_d = mat_full(CRC_M8, data_s0_q, CRC_INIT); end
         default: ;
       endcase
     end
   end
 
-  // Stage 1 registers
+  // Stage 1 registers — raw inputs forwarded from s0 plus precomputed
+  // contributions. Aligned in the same cycle so the FSM sees consistent data.
   logic [DATA_W-1:0] data_s1_q;
   logic [MASK_W-1:0] mask_s1_q;
   logic              valid_s1_q;
@@ -190,6 +204,7 @@ module crc_inserter #(
 
   logic [31:0] crc_final;
   logic        downstream_ready;
+  logic        s0_advance;
   logic        s1_advance;
   logic        s2_advance;
 
@@ -197,11 +212,13 @@ module crc_inserter #(
   assign downstream_ready = ready_i || !valid_o;
 
   // Stage 2 advances whenever the downstream output reg can accept.
-  // Stage 1 also advances except in S_TAIL, where stage 2 is busy emitting
-  // the tail and cannot consume the held stage-1 beat.
+  // Stages 0 and 1 also advance except in S_TAIL, where stage 2 is busy
+  // emitting the tail and cannot consume the held stage-1 beat. Holding
+  // both s0 and s1 during S_TAIL preserves any in-flight beat from upstream.
   assign s2_advance = downstream_ready;
   assign s1_advance = downstream_ready && (state_q != S_TAIL);
-  assign ready_o    = s1_advance;
+  assign s0_advance = s1_advance;
+  assign ready_o    = s0_advance;
 
   always_comb begin
     state_d      = state_q;
@@ -308,6 +325,10 @@ module crc_inserter #(
       state_q           <= S_IDLE;
       crc_q             <= CRC_INIT;
       free_bytes_q      <= '0;
+      data_s0_q         <= '0;
+      mask_s0_q         <= '0;
+      valid_s0_q        <= 1'b0;
+      last_s0_q         <= 1'b0;
       data_s1_q         <= '0;
       mask_s1_q         <= '0;
       valid_s1_q        <= 1'b0;
@@ -330,13 +351,19 @@ module crc_inserter #(
         free_bytes_q <= free_bytes_d;
       end
       if (s1_advance) begin
-        data_s1_q         <= data_i;
-        mask_s1_q         <= mask_i;
-        valid_s1_q        <= valid_i;
-        last_s1_q         <= last_i;
+        data_s1_q         <= data_s0_q;
+        mask_s1_q         <= mask_s0_q;
+        valid_s1_q        <= valid_s0_q;
+        last_s1_q         <= last_s0_q;
         data_contrib_s1_q <= data_contrib_d;
         first_crc_s1_q    <= first_crc_d;
-        n_s1_q            <= n_in;
+        n_s1_q            <= n_s0;
+      end
+      if (s0_advance) begin
+        data_s0_q  <= data_i;
+        mask_s0_q  <= mask_i;
+        valid_s0_q <= valid_i;
+        last_s0_q  <= last_i;
       end
     end
   end
