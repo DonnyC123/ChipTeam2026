@@ -1,140 +1,249 @@
-from itertools import count
-from tb_utils.generic_sequence import GenericSequence
-from rx_tb.tb.rx_sequence_item import RxSequenceItem
 import random
 
-class BitStream:
-    def __init__(self):
-        self._bits: int = 0  
-        self._len:  int = 0 
-
-    def push_66b(self, header: int, payload: int):
-        word = (header << 64) | (payload & 0xFFFFFFFFFFFFFFFF)
-        self._bits |= (word << self._len)
-        self._len  += 66
-
-    def pop_64b_chunks(self) -> list[int]:
-        chunks = []
-        while self._len >= 64:
-            chunks.append(self._bits & 0xFFFFFFFFFFFFFFFF)
-            self._bits >>= 64
-            self._len  -= 64
-        return chunks
-
-    def flush_partial(self) -> tuple[int, int] | None:
-        if self._len == 0:
-            return None
-        return (self._bits & 0xFFFFFFFFFFFFFFFF, self._len)
+from ethernet_parser.tb.ethernet_parser_sequence_item import (
+    EthernetParserSequenceItem,
+)
+from tb_utils.generic_sequence import GenericSequence
 
 
 class EthernetParserSequence(GenericSequence):
+    MIN_FRAME_BYTES = 64
+    DATA_BYTES = EthernetParserSequenceItem.BYTES_OUT
+    DATA_MASK = (1 << EthernetParserSequenceItem.DATA_IN_W) - 1
+    FULL_MASK = (1 << DATA_BYTES) - 1
 
-    SCRAMBLER_STATE_W = 58
-    SCRAMBLER_TAP_1   = 19
-    SCRAMBLER_TAP_2   = 0
+    ETHERTYPE_OFFSET = 12
+    ETHERTYPE_IPV4 = (0x00, 0x08)
+    ETHERTYPE_IPV6 = (0xDD, 0x86)
+    ETHERTYPE_OTHER = (0x34, 0x12)
 
-    # nic_global_pkg constants
-    IDLE_BLK = 0x1E
-    IDLE_BLK_C = 0x00
-    SOF_L0   = 0x78
-    SOF_L4   = 0x33
-    TERM_CODES = [
-        0x87,  # TERM_L0: 0 valid data bytes
-        0x99,  # TERM_L1: 1 valid data bytes
-        0xAA,  # TERM_L2: 2 valid data bytes
-        0xB4,  # TERM_L3: 3 valid data bytes
-        0xCC,  # TERM_L4: 4 valid data bytes
-        0xD2,  # TERM_L5: 5 valid data bytes
-        0xE1,  # TERM_L6: 6 valid data bytes
-        0xFF,  # TERM_L7: 7 valid data bytes
-    ]
+    SOF0_BYTES = 7
+    SOF0_START_LANE = 1
+    SOF0_MASK = 0b1111_1110
 
-    CTRL_HDR = 0b10
-    DATA_HDR = 0b01
+    SOF4_BYTES = 3
+    SOF4_START_LANE = 5
+    SOF4_MASK = 0b1110_0000
 
     def __init__(self, driver):
         super().__init__(driver)
-        self.scrambler_state = (1 << self.SCRAMBLER_STATE_W) - 1
-        self._stream = BitStream()
+        self.frame: list[int] = []
 
-    async def _push_word(self, header: int, payload_64: int):
-        self._stream.push_66b(header, payload_64)
-        for chunk in self._stream.pop_64b_chunks():
-            await self._drive_64b(chunk, valid=True)
+    @staticmethod
+    def _resolve_rng(
+        rng: random.Random | None = None,
+        seed: int | None = None,
+    ) -> random.Random:
+        if rng is not None:
+            return rng
+        return random.Random(seed)
 
-    async def _drive_64b(self, data: int, valid: bool = True):
-        item = RxSequenceItem.from_int(data, valid=valid)
+    def _validate_frame(self, frame_bytes: list[int]) -> list[int]:
+        frame = list(frame_bytes)
+        if len(frame) < self.MIN_FRAME_BYTES:
+            raise ValueError(
+                f"frame length must be at least {self.MIN_FRAME_BYTES} bytes"
+            )
+
+        for idx, byte in enumerate(frame):
+            try:
+                byte_value = int(byte)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"frame byte at index {idx} is not an integer") from exc
+
+            if not 0 <= byte_value <= 0xFF:
+                raise ValueError(
+                    f"frame byte at index {idx} must be in range 0..255"
+                )
+
+            frame[idx] = byte_value
+
+        return frame
+
+    def _require_frame(self) -> list[int]:
+        if not self.frame:
+            raise ValueError(
+                "frame is not set; call set_random_frame or set_manual_frame"
+            )
+        return self.frame
+
+    def set_random_frame(
+        self,
+        length: int,
+        rng: random.Random | None = None,
+        seed: int | None = None,
+    ) -> list[int]:
+        if length < self.MIN_FRAME_BYTES:
+            raise ValueError(
+                f"frame length must be at least {self.MIN_FRAME_BYTES} bytes"
+            )
+
+        local_rng = self._resolve_rng(rng=rng, seed=seed)
+        self.frame = [local_rng.randrange(256) for _ in range(length)]
+        return list(self.frame)
+
+    def set_manual_frame(self, frame_bytes: list[int]) -> list[int]:
+        self.frame = self._validate_frame(frame_bytes)
+        return list(self.frame)
+
+    def set_ethertype(self, kind: str):
+        frame = self._require_frame()
+        if not isinstance(kind, str):
+            raise ValueError("Ethertype kind must be a string")
+
+        normalized = kind.upper()
+        if normalized == "IPV4":
+            ethertype = self.ETHERTYPE_IPV4
+        elif normalized == "IPV6":
+            ethertype = self.ETHERTYPE_IPV6
+        elif normalized == "OTHER":
+            ethertype = self.ETHERTYPE_OTHER
+        else:
+            raise ValueError("Ethertype kind must be IPV4, IPV6, or OTHER")
+
+        frame[self.ETHERTYPE_OFFSET : self.ETHERTYPE_OFFSET + 2] = list(ethertype)
+        if tuple(frame[self.ETHERTYPE_OFFSET : self.ETHERTYPE_OFFSET + 2]) != ethertype:
+            raise ValueError("failed to set Ethertype bytes in frame")
+
+    def _expected_output_from_frame(self) -> int:
+        frame = self._require_frame()
+        ethertype = tuple(frame[self.ETHERTYPE_OFFSET : self.ETHERTYPE_OFFSET + 2])
+        if ethertype == self.ETHERTYPE_IPV4:
+            return EthernetParserSequenceItem.OUTPUT_IPV4
+        if ethertype == self.ETHERTYPE_IPV6:
+            return EthernetParserSequenceItem.OUTPUT_IPV6
+        return EthernetParserSequenceItem.OUTPUT_OTHER
+
+    async def _drive_word(
+        self,
+        data: int,
+        bytes_valid: int,
+        expected_output: int,
+        valid: bool = True,
+    ):
+        item = EthernetParserSequenceItem(
+            bytes_valid_i=bytes_valid & self.FULL_MASK,
+            data_i=data & self.DATA_MASK,
+            expected_outputs_o=expected_output,
+        )
+        item.valid = valid
         await self.add_transaction(item)
 
-    async def _flush_stream(self):
-        partial = self._stream.flush_partial()
-        if partial is not None:
-            value, _ = partial
-            await self._drive_64b(value, valid=True)
+    def _pack_bytes(self, bytes_chunk: list[int], start_lane: int) -> int:
+        if start_lane < 0 or start_lane >= self.DATA_BYTES:
+            raise ValueError("start_lane must be in range 0..7")
+        if start_lane + len(bytes_chunk) > self.DATA_BYTES:
+            raise ValueError("bytes_chunk does not fit in a 64-bit word")
 
-    def _build_ctrl_payload(self, ctrl_byte: int, data_bytes: list[int]) -> int:
-        assert len(data_bytes) <= 7
-        padded = data_bytes + [0] * (7 - len(data_bytes))
-        word = ctrl_byte
-        for i, b in enumerate(padded):
-            word |= (b & 0xFF) << ((i+1) * 8)
+        word = 0
+        for offset, byte in enumerate(bytes_chunk):
+            word |= (byte & 0xFF) << ((start_lane + offset) * 8)
         return word
 
-    async def send_bubble(self):
-        await self._flush_stream()
-        await self._drive_64b(0, valid=False)
+    def _tail_mask(self, valid_bytes: int) -> int:
+        if not 0 <= valid_bytes < self.DATA_BYTES:
+            raise ValueError("valid_bytes must be in range 0..7")
+        if valid_bytes == 0:
+            return 0
+        return ((1 << valid_bytes) - 1) << 1
 
-    def bit_reverse(self, word):
-        payload2 = 0
-        for i in range(64):
-            bit = (word >> i) & 1
-            payload2 |= bit << (63 - i)
-        return payload2
+    async def _drive_frame(
+        self,
+        *,
+        start_count: int,
+        start_lane: int,
+        start_mask: int,
+    ):
+        frame = self._require_frame()
+        expected_output = self._expected_output_from_frame()
+
+        await self.notify_subscribers({"frame": list(frame)})
+        await self._drive_word(
+            self._pack_bytes(frame[:start_count], start_lane),
+            start_mask,
+            expected_output,
+            valid=True,
+        )
+
+        remaining = frame[start_count:]
+        while len(remaining) >= self.DATA_BYTES:
+            await self._drive_word(
+                self._pack_bytes(remaining[: self.DATA_BYTES], 0),
+                self.FULL_MASK,
+                expected_output,
+                valid=True,
+            )
+            remaining = remaining[self.DATA_BYTES :]
+
+        if remaining:
+            await self._drive_word(
+                self._pack_bytes(remaining, 1),
+                self._tail_mask(len(remaining)),
+                expected_output,
+                valid=True,
+            )
+
+    async def send_bubble(self):
+        await self._drive_word(
+            0,
+            0,
+            EthernetParserSequenceItem.OUTPUT_OTHER,
+            valid=False,
+        )
 
     async def send_idles(self, count: int):
-        idle_payload = self._build_ctrl_payload(
-            self.IDLE_BLK, [self.IDLE_BLK_C] * 7
-        )
+        if count < 0:
+            raise ValueError("count must be non-negative")
         for _ in range(count):
-            await self._push_word(self.CTRL_HDR, self.scramble_64b(idle_payload))
+            await self.send_bubble()
 
     async def send_ethernet_frame(self, frame_bytes: list[int]):
-        await self.notify_subscribers({"frame": list(frame_bytes)})
+        self.set_manual_frame(frame_bytes)
+        await self.sof0_driver()
 
-        sof_raw = self._build_ctrl_payload(self.SOF_L0, frame_bytes[:7])
-        await self._push_word(self.CTRL_HDR, self.scramble_64b(sof_raw))
-
-        remaining = frame_bytes[7:]
-        while len(remaining) > 7:
-            word = int.from_bytes(remaining[:8], "little")
-            await self._push_word(self.DATA_HDR, self.scramble_64b(word))
-            remaining = remaining[8:]
-
-        n_valid  = len(remaining)
-        term_raw = self._build_ctrl_payload(self.TERM_CODES[n_valid], remaining)
-        await self._push_word(self.CTRL_HDR, self.scramble_64b(term_raw))
+    async def send_IPV4_ethernet(self, frame_bytes: list[int]):
+        self.set_manual_frame(frame_bytes)
+        self.set_ethertype("IPV4")
+        if tuple(self.frame[self.ETHERTYPE_OFFSET : self.ETHERTYPE_OFFSET + 2]) != self.ETHERTYPE_IPV4:
+            raise ValueError("IPV4 Ethertype bytes must be [0x00, 0x08]")
+        if self._expected_output_from_frame() != EthernetParserSequenceItem.OUTPUT_IPV4:
+            raise ValueError("expected_outputs_o must resolve to OUTPUT_IPV4")
+        await self.sof0_driver()
 
     async def send_back_to_back_frames(
         self,
         frames: list[list[int]],
-        gap_idles: int = 4
+        gap_idles: int = 4,
     ):
+        if gap_idles < 0:
+            raise ValueError("gap_idles must be non-negative")
+
         for frame in frames:
             await self.send_ethernet_frame(frame)
             await self.send_idles(gap_idles)
 
-    def scramble_64b(self, input_word: int) -> int:
-        scrambled = 0
-        state = self.scrambler_state
-        for i in range(64):
-            in_bit   = (input_word >> i) & 1
-            feedback = ((state >> self.SCRAMBLER_TAP_1) ^ (state >> self.SCRAMBLER_TAP_2)) & 1
-            out_bit  = in_bit ^ feedback
-            scrambled |= (out_bit << i)
-            state    = ((state << 1) | out_bit) & ((1 << self.SCRAMBLER_STATE_W) - 1)
-        self.scrambler_state = state
-        return scrambled
-    
+    async def sof0_driver(self):
+        await self._drive_frame(
+            start_count=self.SOF0_BYTES,
+            start_lane=self.SOF0_START_LANE,
+            start_mask=self.SOF0_MASK,
+        )
+
+    async def sof4_driver(self):
+        await self._drive_frame(
+            start_count=self.SOF4_BYTES,
+            start_lane=self.SOF4_START_LANE,
+            start_mask=self.SOF4_MASK,
+        )
+
     async def send_invalid_blocks(self, count: int = 10):
+        if count < 0:
+            raise ValueError("count must be non-negative")
+
         for _ in range(count):
-            await self._push_word(0b00, random.getrandbits(64))
+            await self._drive_word(
+                random.getrandbits(EthernetParserSequenceItem.DATA_IN_W),
+                0,
+                EthernetParserSequenceItem.OUTPUT_OTHER,
+                valid=False,
+            )
