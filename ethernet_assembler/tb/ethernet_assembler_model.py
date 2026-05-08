@@ -120,6 +120,22 @@ class EthernetAssemblerModel(GenericModel):
         ),
     }
 
+    # SOF_L4-mode TERM masks (4-lane shift relative to SOF_L0). For TERM_L0..L4
+    # the trailing buffer (4 prior MAC bytes) plus 0..4 TERM data bytes are
+    # emitted in lanes 0..(3+x), giving contiguous masks 0x0F..0xFF.
+    # TERM_L5..L7 in SOF_L4 mode aren't natively supported (would need >8
+    # bytes in one beat) — RTL falls back to the legacy mask, model matches.
+    SOF_L4_TERM_MASK = {
+        0x87: 0b0000_1111,
+        0x99: 0b0001_1111,
+        0xAA: 0b0011_1111,
+        0xB4: 0b0111_1111,
+        0xCC: 0b1111_1111,
+    }
+
+    # Number of MAC data bytes carried in the TERM block at lanes 1..n.
+    SOF_L4_TERM_LANES = {0x87: 0, 0x99: 1, 0xAA: 2, 0xB4: 3, 0xCC: 4}
+
     def __init__(self, cycle_accurate: bool = False):
         super().__init__()
         self.cycle_accurate = cycle_accurate
@@ -127,12 +143,19 @@ class EthernetAssemblerModel(GenericModel):
         self.drop_mode = False
         self.ipg_bytes = 0
         self.ipg_check_en = False
+        # Mirrors RTL state added for QLogic-style SOF_L4 frames.
+        self.sof_l4_active = False
+        self.sof_l4_first_data = False
+        self.sof_l4_buf = 0  # 32-bit; holds prior DATA's lanes 4-7
 
     def _reset(self):
         self.in_frame = False
         self.drop_mode = False
         self.ipg_bytes = 0
         self.ipg_check_en = False
+        self.sof_l4_active = False
+        self.sof_l4_first_data = False
+        self.sof_l4_buf = 0
 
     @staticmethod
     def _to_int(value: Any, default: int = 0) -> int:
@@ -183,10 +206,16 @@ class EthernetAssemblerModel(GenericModel):
         was_drop_mode = self.drop_mode
         was_ipg_bytes = self.ipg_bytes
         was_ipg_check_en = self.ipg_check_en
+        was_sof_l4_active = self.sof_l4_active
+        was_sof_l4_first_data = self.sof_l4_first_data
+        was_sof_l4_buf = self.sof_l4_buf
         next_in_frame = was_in_frame
         next_drop_mode = was_drop_mode
         next_ipg_bytes = was_ipg_bytes
         next_ipg_check_en = was_ipg_check_en
+        next_sof_l4_active = was_sof_l4_active
+        next_sof_l4_first_data = was_sof_l4_first_data
+        next_sof_l4_buf = was_sof_l4_buf
 
         can_read = in_valid and locked and (not cancel_frame)
 
@@ -196,6 +225,8 @@ class EthernetAssemblerModel(GenericModel):
             next_in_frame = False
             next_drop_mode = True
             next_ipg_bytes = 0
+            next_sof_l4_active = False
+            next_sof_l4_first_data = False
 
         # Drop mode suppresses output until an uncanceled SOF is received.
         elif was_drop_mode:
@@ -211,6 +242,9 @@ class EthernetAssemblerModel(GenericModel):
                         next_drop_mode = False
                         next_ipg_bytes = 0
                         next_ipg_check_en = True
+                        if control_byte == 0x33:  # SOF_L4
+                            next_sof_l4_active = True
+                            next_sof_l4_first_data = True
                     else:
                         expected["drop_frame"] = True
                         next_in_frame = False
@@ -226,6 +260,8 @@ class EthernetAssemblerModel(GenericModel):
             next_in_frame = False
             next_drop_mode = True
             next_ipg_bytes = 0
+            next_sof_l4_active = False
+            next_sof_l4_first_data = False
 
         # Idle-state control handling.
         elif can_read and (not was_in_frame) and sync_header == self.CONTROL_SYNC_HEADER:
@@ -238,6 +274,9 @@ class EthernetAssemblerModel(GenericModel):
                     next_in_frame = True
                     next_ipg_bytes = 0
                     next_ipg_check_en = True
+                    if control_byte == 0x33:  # SOF_L4
+                        next_sof_l4_active = True
+                        next_sof_l4_first_data = True
                 else:
                     expected["drop_frame"] = True
                     next_in_frame = False
@@ -254,11 +293,26 @@ class EthernetAssemblerModel(GenericModel):
                 next_in_frame = False
                 next_drop_mode = True
                 next_ipg_bytes = 0
+                next_sof_l4_active = False
+                next_sof_l4_first_data = False
             elif block_spec.kind == "term":
-                expected["data_valid"] = list(block_spec.valid_mask)
+                if was_sof_l4_active and control_byte in self.SOF_L4_TERM_MASK:
+                    # SOF_L4 TERM: emit {term_data_lanes_1..n, sof_l4_buf}
+                    # at lanes 0..(3+n). Mask shifted up by 4 lanes.
+                    sof_l4_mask = self.SOF_L4_TERM_MASK[control_byte]
+                    n = self.SOF_L4_TERM_LANES[control_byte]
+                    expected["data_valid"] = list(_mask_from_bytes_valid(sof_l4_mask))
+                    term_data = (input_data >> 8) & ((1 << (n * 8)) - 1) if n > 0 else 0
+                    expected["out_data"] = ((term_data & 0xFFFFFFFF) << 32) | (was_sof_l4_buf & 0xFFFFFFFF)
+                else:
+                    # Legacy SOF_L0 path (or TERM_L5/L6/L7 in SOF_L4 mode —
+                    # RTL falls back to legacy mask there).
+                    expected["data_valid"] = list(block_spec.valid_mask)
                 if block_spec.exits_frame:
                     next_in_frame = False
                     next_ipg_bytes = self.TERM_IPG_LUT[control_byte]
+                    next_sof_l4_active = False
+                    next_sof_l4_first_data = False
             elif block_spec.kind == "ordered_set":
                 expected["data_valid"] = list(block_spec.valid_mask)
             else:
@@ -267,16 +321,35 @@ class EthernetAssemblerModel(GenericModel):
                 next_in_frame = False
                 next_drop_mode = True
                 next_ipg_bytes = 0
+                next_sof_l4_active = False
+                next_sof_l4_first_data = False
 
         # In-frame data block.
         elif can_read and sync_header == self.DATA_SYNC_HEADER and was_in_frame:
-            expected["data_valid"] = [True] * 8
+            if was_sof_l4_active and was_sof_l4_first_data:
+                # DATA1 after SOF_L4: lanes 0-3 are trailing preamble (drop),
+                # lanes 4-7 are MAC[0..3] — buffer them, emit nothing.
+                expected["data_valid"] = [False] * 8
+                next_sof_l4_buf = (input_data >> 32) & 0xFFFFFFFF
+                next_sof_l4_first_data = False
+            elif was_sof_l4_active:
+                # DATA2+ in SOF_L4: emit {input[31:0], sof_l4_buf} (lanes 0-3
+                # = prior buffer, lanes 4-7 = current input lanes 0-3).
+                # Buffer current input lanes 4-7 for next emission.
+                expected["data_valid"] = [True] * 8
+                expected["out_data"] = ((input_data & 0xFFFFFFFF) << 32) | (was_sof_l4_buf & 0xFFFFFFFF)
+                next_sof_l4_buf = (input_data >> 32) & 0xFFFFFFFF
+            else:
+                expected["data_valid"] = [True] * 8
 
         expected["out_valid"] = any(expected["data_valid"])
         self.in_frame = next_in_frame
         self.drop_mode = next_drop_mode
         self.ipg_bytes = next_ipg_bytes
         self.ipg_check_en = next_ipg_check_en
+        self.sof_l4_active = next_sof_l4_active
+        self.sof_l4_first_data = next_sof_l4_first_data
+        self.sof_l4_buf = next_sof_l4_buf
         return expected
 
     def _apply_metadata_overrides(
@@ -295,6 +368,8 @@ class EthernetAssemblerModel(GenericModel):
             self.drop_mode = True
             self.ipg_bytes = 0
             self.ipg_check_en = True
+            self.sof_l4_active = False
+            self.sof_l4_first_data = False
             return
 
         if no_valid_data:
