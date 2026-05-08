@@ -232,67 +232,41 @@ module crc_inserter #(
           valid_d      = 1'b1;
 
           if (last_s1_q) begin
-            logic [31:0] crc_out;
-            logic [2:0]  free_now;
+            logic [31:0]       crc_out;
+            logic [2:0]        free_now;
+            logic [DATA_W-1:0] out_data;
+            logic [MASK_W-1:0] out_mask;
+            int                slot;
+
             crc_out  = ~reflect32(crc_d);
             free_now = free_slots(mask_s1_q);
+            out_data = data_s1_q;
+            out_mask = mask_s1_q;
+            slot     = 0;
 
-            // Compare against the CURRENT beat's free byte count, not the
-            // previous beat's. Using free_bytes_q (the prior beat's count)
-            // sent every short last-beat into S_TAIL even when all 4 CRC
-            // bytes already fit in-place — and S_TAIL would then re-emit
-            // a duplicate copy of the CRC.
-            if (free_now >= 3'd4) begin
-              logic [DATA_W-1:0] out_data;
-              logic [MASK_W-1:0] out_mask;
-              int                slot;
-              out_data = data_s1_q;
-              out_mask = mask_s1_q;
-              slot     = 0;
-              for (int b = 0; b < MASK_W; b++) begin
-                if (!mask_s1_q[b] && slot < 4) begin
-                  case (slot)
-                    0: out_data[b*8+:8] = crc_out[7:0];
-                    1: out_data[b*8+:8] = crc_out[15:8];
-                    2: out_data[b*8+:8] = crc_out[23:16];
-                    3: out_data[b*8+:8] = crc_out[31:24];
-                  endcase
-                  out_mask[b] = 1'b1;
-                  slot++;
-                end
+            // Insert min(free_now, 4) CRC bytes into the current beat's free
+            // slots, lowest-numbered slot first. Whatever's left (4 - slot)
+            // ships in S_TAIL.
+            for (int b = 0; b < MASK_W; b++) begin
+              if (!mask_s1_q[b] && slot < 4) begin
+                case (slot)
+                  0: out_data[b*8+:8] = crc_out[7:0];
+                  1: out_data[b*8+:8] = crc_out[15:8];
+                  2: out_data[b*8+:8] = crc_out[23:16];
+                  3: out_data[b*8+:8] = crc_out[31:24];
+                endcase
+                out_mask[b] = 1'b1;
+                slot++;
               end
-              data_d  = out_data;
-              mask_d  = out_mask;
-              last_d  = 1'b1;
-              state_d = S_IDLE;
-            end else begin
-              logic [DATA_W-1:0] out_data;
-              logic [MASK_W-1:0] out_mask;
-              int                slot;
-              out_data = data_s1_q;
-              out_mask = mask_s1_q;
-              slot     = 0;
-              for (int b = 0; b < MASK_W; b++) begin
-                if (!mask_s1_q[b]) begin
-                  case (slot)
-                    0: out_data[b*8+:8] = crc_out[7:0];
-                    1: out_data[b*8+:8] = crc_out[15:8];
-                    2: out_data[b*8+:8] = crc_out[23:16];
-                    3: out_data[b*8+:8] = crc_out[31:24];
-                    default: ;
-                  endcase
-                  out_mask[b] = 1'b1;
-                  slot++;
-                end
-              end
-              data_d       = out_data;
-              mask_d       = out_mask;
-              last_d       = 1'b0;
-              // Record how many CRC bytes were inserted in-place so S_TAIL
-              // emits only the remaining (4 - free_now) bytes — not all 4.
-              free_bytes_d = free_now;
-              state_d      = S_TAIL;
             end
+
+            data_d       = out_data;
+            mask_d       = out_mask;
+            // free_bytes_d = number of CRC bytes already shipped in-place.
+            // S_TAIL reads it as `sent` and emits only (4 - sent) more.
+            free_bytes_d = free_now;
+            last_d       = (free_now >= 3'd4);
+            state_d      = (free_now >= 3'd4) ? S_IDLE : S_TAIL;
           end
         end
       end
@@ -377,6 +351,48 @@ module crc_inserter #(
         else if (in_zero_run)
           $error("crc_inserter: non-contiguous mask_i=%b — parallel CRC matrix assumes mask is first-N-bytes-valid",
                  mask_i);
+      end
+    end
+  end
+
+  // Per-frame CRC byte accounting. Counts CRC bytes shipped from the last
+  // beat (inline insertion) plus any bytes emitted in S_TAIL, and asserts
+  // the total equals 4 at frame end. Catches the original "S_TAIL re-emits
+  // a duplicate CRC" bug and any future regression of the EOF logic.
+  int unsigned crc_bytes_emitted_q;
+
+  function automatic int unsigned crc_bytes_in_beat(
+      input logic [MASK_W-1:0] mask_before, input logic [MASK_W-1:0] mask_after);
+    int unsigned cnt;
+    cnt = 0;
+    for (int b = 0; b < MASK_W; b++)
+      if (!mask_before[b] && mask_after[b]) cnt++;
+    return cnt;
+  endfunction
+
+  always_ff @(posedge clk or posedge rst) begin
+    if (rst) begin
+      crc_bytes_emitted_q <= 0;
+    end else if (s2_advance && valid_d) begin
+      if (state_q == S_STREAM && last_s1_q) begin
+        // In-place insert into the last data beat.
+        crc_bytes_emitted_q <= crc_bytes_in_beat(mask_s1_q, mask_d);
+        if (last_d) begin
+          // Single-beat EOF: total must be exactly 4.
+          assert (crc_bytes_in_beat(mask_s1_q, mask_d) == 4)
+            else $error("crc_inserter: in-place EOF emitted %0d CRC bytes (expected 4)",
+                        crc_bytes_in_beat(mask_s1_q, mask_d));
+          crc_bytes_emitted_q <= 0;
+        end
+      end else if (state_q == S_TAIL) begin
+        // S_TAIL beat: tail bytes plus prior in-place insert must sum to 4.
+        automatic int unsigned tail_bytes;
+        tail_bytes = 0;
+        for (int b = 0; b < MASK_W; b++) if (mask_d[b]) tail_bytes++;
+        assert (crc_bytes_emitted_q + tail_bytes == 4)
+          else $error("crc_inserter: frame emitted %0d CRC bytes total (expected 4): %0d in-place + %0d in S_TAIL",
+                      crc_bytes_emitted_q + tail_bytes, crc_bytes_emitted_q, tail_bytes);
+        crc_bytes_emitted_q <= 0;
       end
     end
   end
