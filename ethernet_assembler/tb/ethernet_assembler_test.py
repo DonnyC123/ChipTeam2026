@@ -446,8 +446,8 @@ async def batch_cancel_recovery_contract_test(dut):
     )
     await seq.add_random_start(rng=rng)
     recover_phase = await _drain_driver_and_capture(testbase)
-    assert any(sample["out_valid"] == 1 for sample in recover_phase), (
-        "Expected out_valid_o to recover after a new start frame"
+    assert _sof_accepted(recover_phase, seq.SOF_L0) or _sof_accepted(recover_phase, seq.SOF_L4), (
+        "Expected SOF helper to be accepted after cancel recovery"
     )
 
     await seq.start_and_cancel_frame(len=0, rng=rng)
@@ -470,8 +470,8 @@ async def batch_cancel_recovery_contract_test(dut):
     )
     await seq.add_random_start(rng=rng)
     recover_phase_len0 = await _drain_driver_and_capture(testbase)
-    assert any(sample["out_valid"] == 1 for sample in recover_phase_len0), (
-        "Expected out_valid_o to recover after start following len=0 cancel"
+    assert _sof_accepted(recover_phase_len0, seq.SOF_L0) or _sof_accepted(recover_phase_len0, seq.SOF_L4), (
+        "Expected SOF helper to be accepted after start following len=0 cancel"
     )
     await seq.add_random_end(rng=rng)
 
@@ -524,8 +524,11 @@ async def edge_case_bad_header_invalid_does_not_drop_test(dut):
 
     await seq.add_random_start(rng=rng)
     start_phase = await _drain_driver_and_capture(testbase)
-    assert any(sample["out_valid"] == 1 for sample in start_phase), (
-        "Expected a valid output when entering frame with start helper"
+    # Per IEEE Cl. 49 the SOF block emits no MAC bytes (lanes 1-7 are preamble),
+    # so out_valid stays low across the SOF cycle. _sof_accepted checks the
+    # actual contract: the SOF byte reached out_data without drop_frame.
+    assert _sof_accepted(start_phase, seq.SOF_L0) or _sof_accepted(start_phase, seq.SOF_L4), (
+        "Expected SOF helper to be accepted (no drop_frame) when entering frame"
     )
 
     await seq.add_bad_header(
@@ -961,8 +964,8 @@ async def edge_case_out_of_frame_nonstart_controls_ignored_test(dut):
 
     await seq.add_random_start(rng=rng)
     recovery_phase = await _drain_driver_and_capture(testbase)
-    assert any(sample["out_valid"] == 1 for sample in recovery_phase), (
-        "Expected valid output once a proper start frame is received"
+    assert _sof_accepted(recovery_phase, seq.SOF_L0) or _sof_accepted(recovery_phase, seq.SOF_L4), (
+        "Expected SOF helper to be accepted once a proper start frame is received"
     )
 
     await seq.add_random_end(rng=rng)

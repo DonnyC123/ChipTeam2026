@@ -233,9 +233,16 @@ module crc_inserter #(
 
           if (last_s1_q) begin
             logic [31:0] crc_out;
-            crc_out = ~reflect32(crc_d);
+            logic [2:0]  free_now;
+            crc_out  = ~reflect32(crc_d);
+            free_now = free_slots(mask_s1_q);
 
-            if (free_bytes_q >= 3'd4) begin
+            // Compare against the CURRENT beat's free byte count, not the
+            // previous beat's. Using free_bytes_q (the prior beat's count)
+            // sent every short last-beat into S_TAIL even when all 4 CRC
+            // bytes already fit in-place — and S_TAIL would then re-emit
+            // a duplicate copy of the CRC.
+            if (free_now >= 3'd4) begin
               logic [DATA_W-1:0] out_data;
               logic [MASK_W-1:0] out_mask;
               int                slot;
@@ -281,7 +288,9 @@ module crc_inserter #(
               data_d       = out_data;
               mask_d       = out_mask;
               last_d       = 1'b0;
-              free_bytes_d = free_bytes_q;
+              // Record how many CRC bytes were inserted in-place so S_TAIL
+              // emits only the remaining (4 - free_now) bytes — not all 4.
+              free_bytes_d = free_now;
               state_d      = S_TAIL;
             end
           end
