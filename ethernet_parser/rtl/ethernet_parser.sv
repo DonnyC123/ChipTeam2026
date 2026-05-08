@@ -21,6 +21,8 @@ module ethernet_parser #(
 typedef enum logic [3:0] {IDLE, PAUSE, PARSE_L4, PARSE_L0} state_t;
 
 outputs_t outputs_d;
+logic [$bits(outputs_t)-1:0] outputs_pipe_i;
+logic [$bits(outputs_t)-1:0] outputs_pipe_o;
 state_t current_state, next_state;
 
 logic valid_d;
@@ -28,12 +30,15 @@ logic sof_or_eof_d, sof_or_eof_q; //0 = this is a start, 1 = this is an eof
 logic sof_type_d;
 logic payload_time_d;
 
+assign outputs_pipe_i = outputs_d;
+assign outputs_o = outputs_t'(outputs_pipe_o);
+
 always_comb begin
     //defaults
     payload_time_d = '0;
     valid_d        = '0;
     sof_type_d     = '0;
-    outputs_d      = outputs_q; 
+    outputs_d      = OTHER; 
     sof_or_eof_d   = sof_or_eof_q;
     next_state     = current_state;
 
@@ -43,7 +48,7 @@ always_comb begin
                 if(bytes_valid_i == 8'hFE && !sof_or_eof_q) begin //b1111_1110
                     sof_or_eof_d = !sof_or_eof_q;
                     next_state   = PARSE_L0;
-                end else if(bytes_valid_i == 8'h70 && !sof_or_eof_q) begin //b1110_0000
+                end else if(bytes_valid_i == 8'hE0 && !sof_or_eof_q) begin //b1110_0000
                     next_state   = PAUSE;
                     sof_or_eof_d = !sof_or_eof_q;
                 end
@@ -52,7 +57,7 @@ always_comb begin
 
         PAUSE : begin
             if(data_valid_i) begin
-                next_state = PARSE_L0; 
+                next_state = PARSE_L4; 
             end
         end
 
@@ -60,11 +65,12 @@ always_comb begin
             if(data_valid_i) begin
                 next_state     = IDLE;
                 payload_time_d = 1'b1;
+                sof_or_eof_d   = 1'b0;
 
                 valid_d = 1'b1;
-                if (data_i[23-:SIZE_BYTE*2] == IPV4) begin
+                if (data_i[55-:SIZE_BYTE*2] == IPV4_CODE) begin
                     outputs_d = IPV4;
-                end else if (data_i[23-:SIZE_BYTE*2] == IPV6) begin
+                end else if (data_i[55-:SIZE_BYTE*2] == IPV6_CODE) begin
                     outputs_d = IPV6;
                 end
             end 
@@ -74,10 +80,11 @@ always_comb begin
             if(data_valid_i) begin
                 next_state     = IDLE;
                 payload_time_d = 1'b1;
+                sof_or_eof_d   = 1'b0;
                 valid_d        = 1'b1;
-                if (data_i[56-:SIZE_BYTE*2] == IPV4) begin
+                if (data_i[23-:SIZE_BYTE*2] == IPV4_CODE) begin
                     outputs_d = IPV4;
-                end else if (data_i[56-:SIZE_BYTE*2] == IPV6) begin
+                end else if (data_i[23-:SIZE_BYTE*2] == IPV6_CODE) begin
                     outputs_d = IPV6;
                 end
             end  
@@ -85,7 +92,7 @@ always_comb begin
     endcase
 end
 
-always_ff begin 
+always_ff@(posedge clk)begin 
     if(rst) begin
         current_state = IDLE;
         sof_or_eof_q  = '0;
@@ -120,21 +127,21 @@ data_pipeline #(
 );
 
 data_pipeline #(
-    .DATA_W(1),
+    .DATA_W($bits(outputs_t)),
     .PIPE_DEPTH(1),
     .RST_EN(0)
 ) pipeline_3 (
     .clk(clk),
     .rst(rst),
-    .data_i(outputs_d),
-    .data_o(outputs_o)
+    .data_i(outputs_pipe_i),
+    .data_o(outputs_pipe_o)
 );
 
 data_pipeline #(
     .DATA_W(1),
     .PIPE_DEPTH(1),
     .RST_EN(0)
-) pipeline_3 (
+) pipeline_4 (
     .clk(clk),
     .rst(rst),
     .data_i(sof_type_d),

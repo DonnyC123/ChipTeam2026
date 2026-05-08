@@ -36,14 +36,14 @@ class EthernetParserModel(GenericModel):
 
         if self.state == self.IDLE:
             if data_valid and bytes_valid == self.SOF0_MASK:
-                self.state = self.PAUSE
+                self.state = self.PARSE_L0
             elif data_valid and bytes_valid == self.SOF4_MASK:
-                self.state = self.PARSE_L4
+                self.state = self.PAUSE
             return
 
         if self.state == self.PAUSE:
             if data_valid:
-                self.state = self.PARSE_L0
+                self.state = self.PARSE_L4
             return
 
         if self.state in (self.PARSE_L0, self.PARSE_L4):

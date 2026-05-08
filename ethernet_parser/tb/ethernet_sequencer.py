@@ -228,7 +228,7 @@ class EthernetParserSequence(GenericSequence):
             start_lane=self.SOF0_START_LANE,
             start_mask=self.SOF0_MASK,
             expected_outputs_overrides={
-                2: EthernetParserSequenceItem.OUTPUT_IPV6
+                1: EthernetParserSequenceItem.OUTPUT_IPV6
             },
         )
 
@@ -249,7 +249,7 @@ class EthernetParserSequence(GenericSequence):
             start_lane=self.SOF0_START_LANE,
             start_mask=self.SOF0_MASK,
             expected_outputs_overrides={
-                2: EthernetParserSequenceItem.OUTPUT_IPV4
+                1: EthernetParserSequenceItem.OUTPUT_IPV4
             },
         )
 
