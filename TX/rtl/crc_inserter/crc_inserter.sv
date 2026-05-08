@@ -21,23 +21,15 @@ module crc_inserter #(
 
   localparam logic [31:0] CRC32_POLY = 32'h04C11DB7;
   localparam logic [31:0] CRC_INIT   = 32'hFFFFFFFF;
-  localparam logic [31:0] CRC_XOR    = 32'hFFFFFFFF;
+  localparam int unsigned IN_W       = 32 + DATA_W;  // 96 for DATA_W=64
 
   typedef enum logic [1:0] {
     S_IDLE,
     S_STREAM,
-    S_APPEND,
     S_TAIL
   } state_e;
 
   state_e state_q, state_d;
-
-  // Bit-reflection helpers — pure wire permutations, zero LUTs.
-  function automatic logic [7:0] reflect8(input logic [7:0] b);
-    logic [7:0] r;
-    for (int j = 0; j < 8; j++) r[j] = b[7 - j];
-    return r;
-  endfunction
 
   function automatic logic [31:0] reflect32(input logic [31:0] w);
     logic [31:0] r;
@@ -45,30 +37,90 @@ module crc_inserter #(
     return r;
   endfunction
 
-  // IEEE 802.3 FCS: original MSB-first shift-left loop with CRC32_POLY
-  // (0x04C11DB7), but with each input byte bit-reflected (LSB-first per IEEE
-  // Cl. 3.2.9), and the final 32-bit CRC bit-reflected and XOR'd with
-  // 0xFFFFFFFF (via crc_final = ~reflect32(crc_q)). Matches Python's
-  // binascii.crc32 / standard Ethernet FCS.
-  function automatic logic [31:0] crc32_byte(input logic [31:0] crc_in, input logic [7:0] byte_in);
-    logic [31:0] crc;
-    logic        fb;
-    logic [7:0]  byte_r;
-    byte_r = reflect8(byte_in);
-    crc    = crc_in;
-    for (int i = 0; i < 8; i++) begin
-      fb  = crc[31] ^ byte_r[7 - i];
-      crc = {crc[30:0], 1'b0} ^ (fb ? CRC32_POLY : 32'h0);
+  // Parallel CRC32 matrix generator — runs at elaboration time. Builds a
+  // 32 × (32+N*8) GF(2) matrix M such that crc_new = M · {data[N*8-1:0], crc_in}
+  // by symbolically running the bit-serial CRC32 update for N bytes starting
+  // from the identity. Runtime cost collapses to a fixed XOR tree per output
+  // bit (~5–6 LUT levels) instead of the original 64-deep serial chain.
+  function automatic logic [31:0][IN_W-1:0] gen_crc32_matrix(input int unsigned n_bytes);
+    logic [31:0][IN_W-1:0] state;
+    logic [31:0][IN_W-1:0] next_state;
+    logic [IN_W-1:0]       fb;
+
+    for (int i = 0; i < 32; i++) begin
+      state[i]    = '0;
+      state[i][i] = 1'b1;
     end
-    return crc;
+
+    for (int j = 0; j < int'(n_bytes) * 8; j++) begin
+      fb         = state[31];
+      fb[32 + j] = fb[32 + j] ^ 1'b1;
+
+      for (int k = 0; k < 32; k++) begin
+        next_state[k] = (k == 0) ? '0 : state[k-1];
+        if (CRC32_POLY[k]) next_state[k] = next_state[k] ^ fb;
+      end
+      state = next_state;
+    end
+    return state;
   endfunction
 
+  localparam logic [31:0][IN_W-1:0] CRC_M1 = gen_crc32_matrix(1);
+  localparam logic [31:0][IN_W-1:0] CRC_M2 = gen_crc32_matrix(2);
+  localparam logic [31:0][IN_W-1:0] CRC_M3 = gen_crc32_matrix(3);
+  localparam logic [31:0][IN_W-1:0] CRC_M4 = gen_crc32_matrix(4);
+  localparam logic [31:0][IN_W-1:0] CRC_M5 = gen_crc32_matrix(5);
+  localparam logic [31:0][IN_W-1:0] CRC_M6 = gen_crc32_matrix(6);
+  localparam logic [31:0][IN_W-1:0] CRC_M7 = gen_crc32_matrix(7);
+  localparam logic [31:0][IN_W-1:0] CRC_M8 = gen_crc32_matrix(8);
+
+  // Full-word fast path: mid-frame beats always have mask = all-ones, so the
+  // steady-state CRC update bypasses the popcount + 8-way matrix mux entirely
+  // and uses just the M8 XOR tree. Saves ~3 LUT levels on the critical path.
+  function automatic logic [31:0] crc32_full(
+      input logic [31:0] crc_in, input logic [DATA_W-1:0] data);
+    logic [IN_W-1:0] inp;
+    logic [31:0]     r;
+    inp = {data, crc_in};
+    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M8[i] & inp);
+    return r;
+  endfunction
+
+  // Partial-word path: only used on the last beat when mask_i != all-ones.
+  // ASSUMPTION: mask_i is contiguous from bit 0 (8'h01, 8'h03, ..., 8'hFF).
   function automatic logic [31:0] crc32_word(
       input logic [31:0] crc_in, input logic [DATA_W-1:0] data, input logic [MASK_W-1:0] mask);
-    logic [31:0] crc;
-    crc = crc_in;
-    for (int b = 0; b < MASK_W; b++) if (mask[b]) crc = crc32_byte(crc, data[b*8+:8]);
-    return crc;
+    logic [IN_W-1:0] inp;
+    logic [3:0]      n;
+    logic [31:0]     r;
+
+    inp = {data, crc_in};
+
+    n = '0;
+    for (int i = 0; i < MASK_W; i++) n = n + {3'b0, mask[i]};
+
+    r = crc_in;
+    unique case (n)
+      4'd0:    r = crc_in;
+      4'd1:    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M1[i] & inp);
+      4'd2:    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M2[i] & inp);
+      4'd3:    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M3[i] & inp);
+      4'd4:    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M4[i] & inp);
+      4'd5:    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M5[i] & inp);
+      4'd6:    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M6[i] & inp);
+      4'd7:    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M7[i] & inp);
+      4'd8:    for (int i = 0; i < 32; i++) r[i] = ^(CRC_M8[i] & inp);
+      default: r = crc_in;
+    endcase
+    return r;
+  endfunction
+
+  // Pick full vs partial path. Mid-frame this is always the full path; only
+  // the (rare) tail beat with non-full mask hits the popcount/mux.
+  function automatic logic [31:0] crc32_step(
+      input logic [31:0] crc_in, input logic [DATA_W-1:0] data, input logic [MASK_W-1:0] mask);
+    if (&mask) return crc32_full(crc_in, data);
+    else       return crc32_word(crc_in, data, mask);
   endfunction
 
   logic [      31:0] crc_q;
@@ -96,7 +148,6 @@ module crc_inserter #(
   logic [31:0] crc_next;
   logic        output_ready;
 
-  // IEEE 802.3 final XOR + output bit-reflection.
   assign crc_final    = ~reflect32(crc_q);
   assign output_ready = ready_i || !valid_o;
 
@@ -113,7 +164,7 @@ module crc_inserter #(
     valid_d      = 1'b0;
     last_d       = 1'b0;
 
-    crc_next     = crc32_word(crc_q, data_i, mask_i);
+    crc_next     = crc32_step(crc_q, data_i, mask_i);
 
     unique case (state_q)
 
@@ -122,7 +173,7 @@ module crc_inserter #(
         crc_d   = CRC_INIT;
 
         if (valid_i && output_ready) begin
-          crc_d        = crc32_word(CRC_INIT, data_i, mask_i);
+          crc_d        = crc32_step(CRC_INIT, data_i, mask_i);
           free_bytes_d = free_slots(mask_i);
           held_data_d  = data_i;
           held_mask_d  = mask_i;
@@ -145,7 +196,6 @@ module crc_inserter #(
           valid_d      = 1'b1;
 
           if (last_i) begin
-            // Final XOR + bit-reflection per IEEE 802.3, emitted LSB-first.
             logic [31:0] crc_out;
             crc_out = ~reflect32(crc_d);
 
@@ -209,73 +259,6 @@ module crc_inserter #(
         end
       end
 
-      // S_APPEND: begin
-      //     ready_o = 1'b0;
-      //     valid_o = 1'b1;
-
-      //     if (free_bytes_q >= 3'd4) begin
-      //         begin
-      //             logic [DATA_W-1:0] out_data;
-      //             logic [MASK_W-1:0] out_mask;
-      //             int                slot;
-
-      //             out_data = held_data_q;
-      //             out_mask = held_mask_q;
-      //             slot     = 0;
-
-      //             for (int b = 0; b < MASK_W; b++) begin
-      //                 if (!held_mask_q[b] && slot < 4) begin
-      //                     case (slot)
-      //                         0: out_data[b*8 +: 8] = crc_final[31:24];
-      //                         1: out_data[b*8 +: 8] = crc_final[23:16];
-      //                         2: out_data[b*8 +: 8] = crc_final[15:8];
-      //                         3: out_data[b*8 +: 8] = crc_final[7:0];
-      //                         default: ;
-      //                     endcase
-      //                     out_mask[b] = 1'b1;
-      //                     slot++;
-      //                 end
-      //             end
-
-      //             data_o = out_data;
-      //             mask_o = out_mask;
-      //             last_o = 1'b1;
-      //         end
-      //         state_d = S_IDLE;
-
-      //     end else begin
-      //         begin
-      //             logic [DATA_W-1:0] out_data;
-      //             logic [MASK_W-1:0] out_mask;
-      //             int                slot;
-      //             out_data = held_data_q;
-      //             out_mask = held_mask_q;
-      //             slot     = 0;
-
-      //             for (int b = 0; b < MASK_W; b++) begin
-      //                 if (!held_mask_q[b]) begin
-      //                     case (slot)
-      //                         0: out_data[b*8 +: 8] = crc_final[31:24];
-      //                         1: out_data[b*8 +: 8] = crc_final[23:16];
-      //                         2: out_data[b*8 +: 8] = crc_final[15:8];
-      //                         3: out_data[b*8 +: 8] = crc_final[7:0];
-      //                         default: ;
-      //                     endcase
-      //                     out_mask[b] = 1'b1;
-      //                     slot++;
-      //                 end
-      //             end
-
-      //             data_o = out_data;
-      //             mask_o = out_mask;
-      //             last_o = 1'b0;  
-      //         end
-
-      //         free_bytes_d = free_bytes_q;
-      //         state_d      = S_TAIL;
-      //     end
-      // end
-
       S_TAIL: begin
         logic [DATA_W-1:0] out_data;
         logic [MASK_W-1:0] out_mask;
@@ -291,10 +274,6 @@ module crc_inserter #(
         sent      = int'(free_bytes_q);
         remaining = 4 - sent;
 
-        // FCS bytes on the wire: LSB first (per IEEE 802.3). Use
-        // crc_final (= ~crc_q, the post-XOR value), not crc_q directly.
-        // Loop bounded to MASK_W (constant) so synth can prove the
-        // part-select index is in range; runtime gate on `remaining`.
         for (int b = 0; b < MASK_W; b++) begin
           if (b < remaining) begin
             case (sent + b)
@@ -338,5 +317,20 @@ module crc_inserter #(
       free_bytes_q <= free_bytes_d;
     end
   end
+
+`ifndef SYNTHESIS
+  always_ff @(posedge clk) begin
+    if (!rst && valid_i && ready_o) begin
+      automatic logic in_zero_run;
+      in_zero_run = 1'b0;
+      for (int b = 0; b < MASK_W; b++) begin
+        if (!mask_i[b]) in_zero_run = 1'b1;
+        else if (in_zero_run)
+          $error("crc_inserter: non-contiguous mask_i=%b — parallel CRC matrix assumes mask is first-N-bytes-valid",
+                 mask_i);
+      end
+    end
+  end
+`endif
 
 endmodule
