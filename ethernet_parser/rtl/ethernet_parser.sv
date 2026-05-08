@@ -46,9 +46,14 @@ always_comb begin
         IDLE : begin 
             if(data_valid_i) begin
                 if(bytes_valid_i == 8'hFE) begin //b1111_1110
-                    next_state   = !sof_or_eof_q ? PARSE_L0 : IDLE;
                     sof_or_eof_d = !sof_or_eof_q;
                     
+                    if(!sof_or_eof_q) begin
+                        payload_time_d = 1'b1;
+                        valid_d        = 1'b1;
+                        next_state     = PARSE_L0;
+                    end
+
                 end else if(bytes_valid_i == 8'hE0 && !sof_or_eof_q) begin //b1110_0000
                     next_state   = !sof_or_eof_q ? PAUSE : IDLE;
                     sof_or_eof_d = !sof_or_eof_q;
@@ -58,16 +63,15 @@ always_comb begin
 
         PAUSE : begin
             if(data_valid_i) begin
-                next_state = PARSE_L4; 
+                next_state     = PARSE_L4;
+                payload_time_d = 1'b1;
+                valid_d        = 1'b1; 
             end
         end
 
         PARSE_L0 : begin 
             if(data_valid_i) begin
-                next_state     = IDLE;
-                payload_time_d = 1'b1;
-
-                valid_d = 1'b1;
+                next_state = IDLE;
                 if (data_i[55-:SIZE_BYTE*2] == IPV4_CODE) begin
                     outputs_d = IPV4;
                 end else if (data_i[55-:SIZE_BYTE*2] == IPV6_CODE) begin
