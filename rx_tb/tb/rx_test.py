@@ -1,98 +1,108 @@
-import random
+# rx_test.py
 import cocotb
+from cocotb.clock    import Clock
+from cocotb.triggers import RisingEdge, ClockCycles
 
-from rx_fifo.tb.rx_fifo_common import initialize_tb
+from tb_utils.generic_drivers       import GenericDriver
+from tb_utils.abstract_transactions import AbstractTransaction
+from tb_utils.generic_monitor       import GenericValidMonitor
 
-from rx_tb.tb.rx_test_base import RxTestBase
+from rx_tb.tb.rx_transaction    import RxTransaction
+from rx_tb.tb.rx_sequence_item  import RxSequenceItem
+from rx_tb.tb.rx_sequence       import RxSequence
+from rx_tb.tb.rx_scoreboard     import RxScoreboard
+
+CLK_PERIOD_NS = 10
+RESET_CYCLES  = 5
+LOCK_IDLES    = 64
+FLUSH_CYCLES  = 900
+
+class PayloadMonitor(GenericValidMonitor):
+    async def _monitor(self):
+        while True:
+            await RisingEdge(self.dut.clk)
+
+            txn = RxTransaction()
+            txn.checksum_drop_o = self.dut.checksum_drop_o.value
+            txn.parser_valid_o  = self.dut.parser_valid_o.value
+
+            if txn.valid:
+                self.actual_queue.put_nowait(txn)
+
+async def init_dut(dut):
+    cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, unit="ns").start())
+
+    dut.raw_valid_i.value = 0
+    dut.raw_data_i.value  = 0
+    dut.rst.value         = 1
+    await ClockCycles(dut.clk, RESET_CYCLES)
+    dut.rst.value = 0
+    await RisingEdge(dut.clk)
+
+    driver     = GenericDriver(dut, RxSequenceItem)
+    monitor    = PayloadMonitor(dut, RxTransaction)
+    scoreboard = RxScoreboard()
+    seq        = RxSequence(driver)
+
+    return seq, monitor, scoreboard
 
 
-LOCK_IDLES = 64
+async def drain_and_check(dut, monitor, scoreboard, cycles: int = FLUSH_CYCLES):
+    await ClockCycles(dut.clk, cycles)
+    await RisingEdge(dut.clk)
 
+    while not monitor.actual_queue.empty():
+        txn = monitor.actual_queue.get_nowait()
+        scoreboard.ingest(txn)
+
+    scoreboard.check_all_received()
+    scoreboard.flush()
+    # dut._log.info(scoreboard.summary())
 
 @cocotb.test()
-async def test_lock_and_single_frame(dut):
-    await initialize_tb(dut)
-    tb = RxTestBase(dut, ready_probability=1.0)
+async def test_good_ipv4_ping_no_drop(dut):
+    seq, monitor, scoreboard = await init_dut(dut)
 
-    frame = [0xAA, 0xBB, 0xCC, 0xDD] * 16
+    # Expect checksum checker NOT to drop
+    scoreboard.add_expected(False)
 
-    await tb.sequence.send_idles(LOCK_IDLES)
-    await tb.sequence.send_ethernet_frame(frame)
-    await tb.sequence.send_idles(20)
+    frame = [
+        # -----------------------------------------------------------------
+        # Ethernet Header
+        # dst MAC
+        0xDA, 0x02, 0x03, 0x04, 0x05, 0x06,
 
-    await tb.wait_for_driver_done()
-    await tb.scoreboard.check()
+        # src MAC
+        0x5A, 0x11, 0x12, 0x13, 0x14, 0x15,
 
+        # EtherType = IPv4
+        0x08, 0x00,
 
-@cocotb.test()
-async def test_back_to_back_frames(dut):
-    await initialize_tb(dut)
-    tb = RxTestBase(dut, ready_probability=1.0)
+        # -----------------------------------------------------------------
+        # IPv4 Header + ICMP payload
+        0x45, 0x00, 0x00, 0x54,
+        0x41, 0x2D, 0x40, 0x00,
+        0x40, 0x01, 0xAF, 0x11,
+        0xC0, 0xA8, 0x01, 0x05,
+        0x08, 0x08, 0x08, 0x08,
 
-    frames = [
-        list(range(64)),
-        [0xDE, 0xAD, 0xBE, 0xEF] * 18,
-        [0xFF] * 128,
+        # ICMP
+        0x08, 0x00, 0x4D, 0x56,
+        0x00, 0x01, 0x00, 0x01,
+
+        # payload
+        0x61, 0x62, 0x63, 0x64,
+        0x65, 0x66, 0x67, 0x68,
+        0x69, 0x6A, 0x6B, 0x6C,
+        0x6D, 0x6E, 0x6F, 0x70,
+        0x71, 0x72, 0x73, 0x74,
+        0x75, 0x76, 0x77, 0x61,
+        0x62, 0x63, 0x64, 0x65,
+        0x66, 0x67, 0x68, 0x69,
     ]
 
-    await tb.sequence.send_idles(LOCK_IDLES)
-    await tb.sequence.send_back_to_back_frames(frames, gap_idles=12)
-    await tb.sequence.send_idles(20)
+    await seq.send_idles(LOCK_IDLES)
+    await seq.send_ethernet_frame(frame)
+    await seq.send_idles(20)
 
-    await tb.wait_for_driver_done()
-    await tb.scoreboard.check()
-
-
-@cocotb.test()
-async def test_backpressure_drops(dut):
-    await initialize_tb(dut)
-    tb = RxTestBase(dut, ready_probability=0.3)
-
-    frames = [list(range(8 + i)) for i in range(20)]
-
-    await tb.sequence.send_idles(LOCK_IDLES)
-    await tb.sequence.send_back_to_back_frames(frames, gap_idles=4)
-    await tb.sequence.send_idles(20)
-
-    await tb.wait_for_driver_done(settle_ns=2000)
-    await tb.scoreboard.check()
-
-
-@cocotb.test()
-async def test_long_mixed_traffic(dut, seed: int = 0xC0FFEE):
-    await initialize_tb(dut)
-    tb = RxTestBase(dut, ready_probability=0.7)
-    rng = random.Random(seed)
-
-    NUM_FRAMES = 60
-
-    await tb.sequence.send_idles(LOCK_IDLES)
-    for _ in range(NUM_FRAMES):
-        size = rng.randint(16, 128)
-        frame = [rng.randint(0, 255) for _ in range(size)]
-        await tb.sequence.send_ethernet_frame(frame)
-        await tb.sequence.send_idles(rng.randint(2, 16))
-
-    await tb.sequence.send_idles(20)
-    await tb.wait_for_driver_done(settle_ns=5000)
-    await tb.scoreboard.check()
-
-
-@cocotb.test()
-async def test_stress_mixed_traffic(dut, seed: int = 0xDEADBEEF):
-    await initialize_tb(dut)
-    tb = RxTestBase(dut, ready_probability=0.5)
-    rng = random.Random(seed)
-
-    NUM_FRAMES = 1000
-
-    await tb.sequence.send_idles(LOCK_IDLES)
-    for _ in range(NUM_FRAMES):
-        size = rng.randint(8, 256)
-        frame = [rng.randint(0, 255) for _ in range(size)]
-        await tb.sequence.send_ethernet_frame(frame)
-        await tb.sequence.send_idles(rng.randint(2, 24))
-
-    await tb.sequence.send_idles(40)
-    await tb.wait_for_driver_done(settle_ns=10000)
-    await tb.scoreboard.check()
+    await drain_and_check(dut, monitor, scoreboard)
