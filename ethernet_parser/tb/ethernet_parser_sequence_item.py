@@ -16,8 +16,16 @@ class EthernetParserSequenceItem(AbstractTransaction):
     OUTPUT_IPV6 = 1
     OUTPUT_OTHER = 2
 
-    bytes_valid_i: LogicArray = field(default_factory=lambda: LogicArray("X" * BYTES_OUT))
-    data_i: LogicArray = field(default_factory=lambda: LogicArray("X" * DATA_IN_W))
+    bytes_valid_i: LogicArray = field(
+        default_factory=lambda: LogicArray(
+            "X" * EthernetParserSequenceItem.BYTES_OUT
+        )
+    )
+    data_i: LogicArray = field(
+        default_factory=lambda: LogicArray(
+            "X" * EthernetParserSequenceItem.DATA_IN_W
+        )
+    )
     data_valid_i: Logic = field(default_factory=lambda: Logic("0"))
     expected_outputs_o: LogicArray = field(
         default_factory=lambda: LogicArray(
@@ -73,7 +81,7 @@ class EthernetParserSequenceItem(AbstractTransaction):
             "bytes_valid": self._to_int(self.bytes_valid_i, 0),
             "data": self._to_int(self.data_i, 0),
             "data_valid": bool(self._to_int(self.data_valid_i, 0)),
-            "expected_outputs": self._to_int(
+            "expected_outputs_o": self._to_int(
                 self.expected_outputs_o, self.OUTPUT_OTHER
             ),
         }
