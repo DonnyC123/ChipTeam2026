@@ -1,0 +1,11 @@
+../rtl/tx_fifo/tx_subsystem_pkg.sv
+../rtl/tx_fifo/tx_async_fifo.sv
+../rtl/tx_fifo/tx_subsystem.sv
+../rtl/crc_inserter/crc_inserter.sv
+../rtl/pcs_generator/tx_axis_if.sv
+../rtl/pcs_generator/pcs_pkg.sv
+../rtl/pcs_generator/data_pipeline.sv
+../rtl/pcs_generator/pcs_generator.sv
+../rtl/scrambler/scrambler.sv
+../rtl/debubbler/debubbler.sv
+../tb/tx_top.sv
