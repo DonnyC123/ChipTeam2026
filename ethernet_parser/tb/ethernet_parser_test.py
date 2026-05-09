@@ -23,9 +23,9 @@ def _make_frame_with_length(length: int, fill_byte: int = 0x00) -> list[int]:
 
 def _set_ethertype(frame: list[int], kind: str):
     if kind == "IPV4":
-        frame[12:14] = [0x00, 0x08]
+        frame[12:14] = [0x08, 0x00]
     elif kind == "IPV6":
-        frame[12:14] = [0xDD, 0x86]
+        frame[12:14] = [0x86, 0xDD]
     elif kind == "OTHER":
         frame[12:14] = [0x34, 0x12]
     else:

@@ -14,8 +14,8 @@ class EthernetParserSequence(GenericSequence):
     FULL_MASK = (1 << DATA_BYTES) - 1
 
     ETHERTYPE_OFFSET = 12
-    ETHERTYPE_IPV4   = (0x00, 0x08)
-    ETHERTYPE_IPV6   = (0xDD, 0x86)
+    ETHERTYPE_IPV4   = (0x08, 0x00)
+    ETHERTYPE_IPV6   = (0x86, 0xDD)
     ETHERTYPE_OTHER  = (0x34, 0x12)
 
     SOF0_BYTES      = 7
@@ -259,7 +259,7 @@ class EthernetParserSequence(GenericSequence):
             )
             != self.ETHERTYPE_IPV6
         ):
-            raise ValueError("IPV6 Ethertype bytes must be [0xDD, 0x86]")
+            raise ValueError("IPV6 Ethertype bytes must be [0x86, 0xDD]")
         if self._expected_output_from_frame() != EthernetParserSequenceItem.OUTPUT_IPV6:
             raise ValueError("expected_outputs_o must resolve to OUTPUT_IPV6")
         await self._drive_frame(
@@ -288,7 +288,7 @@ class EthernetParserSequence(GenericSequence):
             )
             != self.ETHERTYPE_IPV4
         ):
-            raise ValueError("IPV4 Ethertype bytes must be [0x00, 0x08]")
+            raise ValueError("IPV4 Ethertype bytes must be [0x08, 0x00]")
         if self._expected_output_from_frame() != EthernetParserSequenceItem.OUTPUT_IPV4:
             raise ValueError("expected_outputs_o must resolve to OUTPUT_IPV4")
         await self._drive_frame(
