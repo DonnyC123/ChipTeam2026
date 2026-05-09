@@ -5,13 +5,13 @@ from ethernet_parser.tb.ethernet_parser_transaction import (
     EthernetParserTransaction,
 )
 from ethernet_parser.tb.ethernet_parser_model import EthernetParserModel
+from ethernet_parser.tb.ethernet_parser_monitor import EthernetParserMonitor
 from ethernet_parser.tb.ethernet_parser_sequence_item import (
     EthernetParserSequenceItem,
 )
 from ethernet_parser.tb.ethernet_sequencer import EthernetParserSequence
 from tb_utils.generic_checker import GenericChecker
 from tb_utils.generic_test_base import GenericTestBase
-from tb_utils.generic_monitor import GenericValidMonitor
 from tb_utils.generic_scoreboard import GenericScoreboard
 
 
@@ -22,7 +22,7 @@ class EthernetParserTestBase(GenericTestBase):
         driver=EthernetParserDriver,
         sequence_item=EthernetParserSequenceItem,
         sequence=EthernetParserSequence,
-        monitor=GenericValidMonitor,
+        monitor=EthernetParserMonitor,
         output_transaction=EthernetParserTransaction,
         scoreboard=GenericScoreboard,
         model=EthernetParserModel,

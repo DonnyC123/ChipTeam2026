@@ -11,6 +11,7 @@ class EthernetParserTransaction(AbstractTransaction):
     OUTPUTS_W = 3
 
     valid_o: Logic = field(default_factory=lambda: Logic("0"))
+    payload_time_o: Logic = field(default_factory=lambda: Logic("0"))
     outputs_o: LogicArray = field(
         default_factory=lambda: LogicArray("X" * EthernetParserTransaction.OUTPUTS_W)
     )
@@ -26,6 +27,7 @@ class EthernetParserTransaction(AbstractTransaction):
     def invalid_seq_item(cls) -> Self:
         return cls(
             valid_o=Logic(0),
+            payload_time_o=Logic(0),
             outputs_o=LogicArray("0" * cls.OUTPUTS_W),
         )
 
@@ -40,5 +42,6 @@ class EthernetParserTransaction(AbstractTransaction):
     @property
     def to_data(self) -> Dict[str, Any]:
         return {
+            "payload_time_o": self._to_int(self.payload_time_o, 0),
             "outputs_o": self._to_int(self.outputs_o, 0),
         }

@@ -1,4 +1,5 @@
 import random
+from typing import Literal
 
 from ethernet_parser.tb.ethernet_parser_sequence_item import (
     EthernetParserSequenceItem,
@@ -13,17 +14,31 @@ class EthernetParserSequence(GenericSequence):
     FULL_MASK = (1 << DATA_BYTES) - 1
 
     ETHERTYPE_OFFSET = 12
-    ETHERTYPE_IPV4 = (0x00, 0x08)
-    ETHERTYPE_IPV6 = (0xDD, 0x86)
-    ETHERTYPE_OTHER = (0x34, 0x12)
+    ETHERTYPE_IPV4   = (0x00, 0x08)
+    ETHERTYPE_IPV6   = (0xDD, 0x86)
+    ETHERTYPE_OTHER  = (0x34, 0x12)
 
-    SOF0_BYTES = 7
+    SOF0_BYTES      = 7
     SOF0_START_LANE = 1
-    SOF0_MASK = 0b1111_1110
+    SOF0_MASK       = 0b1111_1110
 
-    SOF4_BYTES = 3
+    SOF4_BYTES      = 3
     SOF4_START_LANE = 5
-    SOF4_MASK = 0b1110_0000
+    SOF4_MASK       = 0b1110_0000
+    START_MODE_CONFIGS = {
+        "sof0": {
+            "start_count": SOF0_BYTES,
+            "start_lane": SOF0_START_LANE,
+            "start_mask": SOF0_MASK,
+            "parse_result_item_idx": 1,
+        },
+        "sof4": {
+            "start_count": SOF4_BYTES,
+            "start_lane": SOF4_START_LANE,
+            "start_mask": SOF4_MASK,
+            "parse_result_item_idx": 2,
+        },
+    }
 
     def __init__(self, driver):
         super().__init__(driver)
@@ -114,16 +129,26 @@ class EthernetParserSequence(GenericSequence):
             return EthernetParserSequenceItem.OUTPUT_IPV6
         return EthernetParserSequenceItem.OUTPUT_OTHER
 
+    def _resolve_start_mode(
+        self, start_mode: Literal["sof0", "sof4"]
+    ) -> dict[str, int]:
+        normalized_mode = start_mode.lower()
+        if normalized_mode not in self.START_MODE_CONFIGS:
+            raise ValueError("start_mode must be 'sof0' or 'sof4'")
+        return self.START_MODE_CONFIGS[normalized_mode]
+
     async def _drive_word(
         self,
         data: int,
         bytes_valid: int,
         expected_output: int,
+        expected_payload_time: bool = False,
         valid: bool = True,
     ):
         item = EthernetParserSequenceItem(
             bytes_valid_i=bytes_valid & self.FULL_MASK,
             data_i=data & self.DATA_MASK,
+            expected_payload_time_o=expected_payload_time,
             expected_outputs_o=expected_output,
         )
         item.valid = valid
@@ -155,9 +180,11 @@ class EthernetParserSequence(GenericSequence):
         start_lane: int,
         start_mask: int,
         expected_outputs_overrides: dict[int, int] | None = None,
+        expected_payload_time_overrides: dict[int, bool] | None = None,
     ):
         frame = self._require_frame()
         expected_outputs_overrides = expected_outputs_overrides or {}
+        expected_payload_time_overrides = expected_payload_time_overrides or {}
         item_idx = 0
 
         await self._drive_word(
@@ -166,6 +193,7 @@ class EthernetParserSequence(GenericSequence):
             expected_outputs_overrides.get(
                 item_idx, EthernetParserSequenceItem.OUTPUT_OTHER
             ),
+            expected_payload_time=expected_payload_time_overrides.get(item_idx, False),
             valid=True,
         )
         item_idx += 1
@@ -178,6 +206,9 @@ class EthernetParserSequence(GenericSequence):
                 expected_outputs_overrides.get(
                     item_idx, EthernetParserSequenceItem.OUTPUT_OTHER
                 ),
+                expected_payload_time=expected_payload_time_overrides.get(
+                    item_idx, False
+                ),
                 valid=True,
             )
             remaining = remaining[self.DATA_BYTES :]
@@ -189,6 +220,9 @@ class EthernetParserSequence(GenericSequence):
                 self._tail_mask(len(remaining)),
                 expected_outputs_overrides.get(
                     item_idx, EthernetParserSequenceItem.OUTPUT_OTHER
+                ),
+                expected_payload_time=expected_payload_time_overrides.get(
+                    item_idx, False
                 ),
                 valid=True,
             )
@@ -211,9 +245,14 @@ class EthernetParserSequence(GenericSequence):
         self.set_manual_frame(frame_bytes)
         await self.sof0_driver()
 
-    async def send_IPV6_ethernet(self, frame_bytes: list[int]):
+    async def send_IPV6_ethernet(
+        self,
+        frame_bytes: list[int],
+        start_mode: Literal["sof0", "sof4"] = "sof0",
+    ):
         self.set_manual_frame(frame_bytes)
         self.set_ethertype("IPV6")
+        start_config = self._resolve_start_mode(start_mode)
         if (
             tuple(
                 self.frame[self.ETHERTYPE_OFFSET : self.ETHERTYPE_OFFSET + 2]
@@ -224,17 +263,25 @@ class EthernetParserSequence(GenericSequence):
         if self._expected_output_from_frame() != EthernetParserSequenceItem.OUTPUT_IPV6:
             raise ValueError("expected_outputs_o must resolve to OUTPUT_IPV6")
         await self._drive_frame(
-            start_count=self.SOF0_BYTES,
-            start_lane=self.SOF0_START_LANE,
-            start_mask=self.SOF0_MASK,
+            start_count=start_config["start_count"],
+            start_lane=start_config["start_lane"],
+            start_mask=start_config["start_mask"],
             expected_outputs_overrides={
-                1: EthernetParserSequenceItem.OUTPUT_IPV6
+                start_config["parse_result_item_idx"]: EthernetParserSequenceItem.OUTPUT_IPV6
+            },
+            expected_payload_time_overrides={
+                start_config["parse_result_item_idx"]: True
             },
         )
 
-    async def send_IPV4_ethernet(self, frame_bytes: list[int]):
+    async def send_IPV4_ethernet(
+        self,
+        frame_bytes: list[int],
+        start_mode: Literal["sof0", "sof4"] = "sof0",
+    ):
         self.set_manual_frame(frame_bytes)
         self.set_ethertype("IPV4")
+        start_config = self._resolve_start_mode(start_mode)
         if (
             tuple(
                 self.frame[self.ETHERTYPE_OFFSET : self.ETHERTYPE_OFFSET + 2]
@@ -245,11 +292,14 @@ class EthernetParserSequence(GenericSequence):
         if self._expected_output_from_frame() != EthernetParserSequenceItem.OUTPUT_IPV4:
             raise ValueError("expected_outputs_o must resolve to OUTPUT_IPV4")
         await self._drive_frame(
-            start_count=self.SOF0_BYTES,
-            start_lane=self.SOF0_START_LANE,
-            start_mask=self.SOF0_MASK,
+            start_count=start_config["start_count"],
+            start_lane=start_config["start_lane"],
+            start_mask=start_config["start_mask"],
             expected_outputs_overrides={
-                1: EthernetParserSequenceItem.OUTPUT_IPV4
+                start_config["parse_result_item_idx"]: EthernetParserSequenceItem.OUTPUT_IPV4
+            },
+            expected_payload_time_overrides={
+                start_config["parse_result_item_idx"]: True
             },
         )
 
@@ -270,6 +320,9 @@ class EthernetParserSequence(GenericSequence):
             start_count=self.SOF0_BYTES,
             start_lane=self.SOF0_START_LANE,
             start_mask=self.SOF0_MASK,
+            expected_payload_time_overrides={
+                1: True,
+            },
         )
 
     async def sof4_driver(self):
@@ -277,6 +330,9 @@ class EthernetParserSequence(GenericSequence):
             start_count=self.SOF4_BYTES,
             start_lane=self.SOF4_START_LANE,
             start_mask=self.SOF4_MASK,
+            expected_payload_time_overrides={
+                2: True,
+            },
         )
 
     async def send_invalid_blocks(self, count: int = 10):
@@ -290,3 +346,4 @@ class EthernetParserSequence(GenericSequence):
                 EthernetParserSequenceItem.OUTPUT_OTHER,
                 valid=False,
             )
+ 
