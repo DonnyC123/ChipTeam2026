@@ -41,6 +41,7 @@ function automatic logic [15:0] fold_checksum(input logic [31:0] acc);
 endfunction
 
 always_comb begin
+    // Defaults
     state_d     = state_q;
     ihl_bytes_d = ihl_bytes_q;
     byte_cnt_d  = byte_cnt_q;
@@ -51,54 +52,71 @@ always_comb begin
 
     case (state_q)
         IDLE: begin
-            // NEED TO CHECK WHICH BYTE THE IHL IS DEPENDING ON. SOF
-            if (valid_i && payload_i && ipv4_i) begin
-                if(sof0) begin
-                    // ihl_bytes_d is the last byte streamed
-                    ihl_bytes_d = {data_i[59:56], 2'b00};
-                end else begin
-                    //ihl_bytes is the 3rd byte streamed
-                    ihl_bytes_d = {data_i[19:16], 2'b00};
-                end
+            if (valid_i && payload_i) begin
+                ihl_bytes_d = sof0 ? {data_i[59:56], 2'b00}
+                                : {data_i[19:16], 2'b00};
+
                 byte_cnt_d  = '0;
                 acc_d       = '0;
                 odd_byte_d  = 1'b0;
-                state_d     = ACCUMULATE;
+
+                if (sof0) begin
+                    // Header starts at MSB
+                    for (int i = 7; i >= 0; i--) begin
+                        if (mask_i[i]) begin
+                            if (!odd_byte_d)
+                                acc_hi_d = data_i[i*8 +: 8];
+                            else
+                                acc_d = acc_d + {acc_hi_d, data_i[i*8 +: 8]};
+
+                            odd_byte_d = ~odd_byte_d;
+                            byte_cnt_d++;
+                        end
+                    end
+
+                end else begin
+                    // Header starts at 3rd least-significant byte
+                    for (int i = 2; i < MASK_W; i++) begin
+                        if (mask_i[i]) begin
+                            if (!odd_byte_d)
+                                acc_hi_d = data_i[i*8 +: 8];
+                            else
+                                acc_d = acc_d + {acc_hi_d, data_i[i*8 +: 8]};
+
+                            odd_byte_d = ~odd_byte_d;
+                            byte_cnt_d++;
+                        end
+                    end
+                end
+
+                state_d = ACCUMULATE;
             end
         end
 
         ACCUMULATE: begin
             if (valid_i) begin
-                for (int i = 0; i < MASK_W; i++) begin
+                for (int i = MASK_W-1; i >= 0; i--) begin
                     if (mask_i[i] && (byte_cnt_d < ihl_bytes_q)) begin
-                        raw_byte = data_i[i*8 +: 8];
-                        eff_byte = ((byte_cnt_d == 6'd10) || (byte_cnt_d == 6'd11)) ? -raw_byte : raw_byte;
-
-                        if (!odd_byte_d)
-                            acc_hi_d = eff_byte;
-                        else
-                            acc_d    = acc_d + {acc_hi_d, eff_byte};
-
+                        if (!odd_byte_d) begin
+                            acc_hi_d = data_i[i*8 +: 8];
+                        end else begin
+                            acc_d = acc_d + {acc_hi_d, data_i[i*8 +: 8]};
+                        end
                         odd_byte_d = ~odd_byte_d;
                         byte_cnt_d = byte_cnt_d + 1'b1;
                     end
                 end
-                if(odd_byte_d) begin
-                    acc_d = acc_d + acc_hi_d;
-                end
-                if (byte_cnt_d >= ihl_bytes_q)
+                
+                if (byte_cnt_d >= ihl_bytes_q) begin
+                    if (odd_byte_d) acc_d = acc_d + {acc_hi_d, 8'h00};
                     state_d = VERIFY;
+                end
             end
         end
 
         VERIFY: begin
-            // need to do comparison to the actual checksum value (either taht or add the negative checksum value)
-            drop_d  = (fold_checksum(acc_q) != 16'h0000);
-            state_d = drop_d ? DROP : IDLE;
-        end
-
-        DROP: begin
-            drop_d  = 1'b1;
+            // acc_q now holds the final latched sum
+            drop_d  = (fold_checksum(acc_d) != 16'h0000);
             state_d = IDLE;
         end
     endcase
