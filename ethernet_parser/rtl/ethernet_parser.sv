@@ -1,9 +1,8 @@
 import parser_pkg::*;
 
 module ethernet_parser #(
-    parameter DATA_IN_W  = 64,
-    parameter BYTES_OUT  = DATA_IN_W / SIZE_BYTE,
-    localparam SIZE_BYTE = 8
+    parameter DATA_IN_W = 64,
+    parameter BYTES_OUT = DATA_IN_W / SIZE_BYTE
 )(
     input logic                 clk,
     input logic                 rst,
@@ -74,7 +73,7 @@ always_comb begin
         PARSE_L0 : begin 
             if(data_valid_i) begin
                 next_state = IDLE;
-                valid_d    = 1'b1; 
+                valid_d    = 1'b1;
                 if (data_i[55-:SIZE_BYTE*2] == IPV4_CODE) begin
                     outputs_d = IPV4;
                 end else if (data_i[55-:SIZE_BYTE*2] == IPV6_CODE) begin
