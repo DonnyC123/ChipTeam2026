@@ -13,6 +13,7 @@ testpaths = [
     "rx_tb/tb",
     "rx_fifo/tb",
     "ethernet_assembler/tb",
+    "ethernet_parser/tb",
 ]
 
 python_files = ["*_runner.py"]
