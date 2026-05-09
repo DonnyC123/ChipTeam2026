@@ -11,7 +11,7 @@ module ethernet_parser #(
     input logic [DATA_IN_W-1:0] data_i,
     input logic [BYTES_OUT-1:0] bytes_valid_i,
 
-    output logic sof_type_o,
+    output logic sof_type_o, //1 = sof0 0 = sof4
     output logic payload_time_o, //high when payload
     output logic valid_o,
 
@@ -23,6 +23,7 @@ typedef enum logic [3:0] {IDLE, PAUSE, PARSE_L4, PARSE_L0} state_t;
 outputs_t outputs_d;
 logic [$bits(outputs_t)-1:0] outputs_pipe_i;
 logic [$bits(outputs_t)-1:0] outputs_pipe_o;
+
 state_t current_state, next_state;
 
 logic valid_d;
@@ -45,17 +46,20 @@ always_comb begin
     case(current_state)
         IDLE : begin 
             if(data_valid_i) begin
-                if(bytes_valid_i == 8'hFE) begin //b1111_1110
-                    sof_or_eof_d = !sof_or_eof_q;
-                    
-                    if(!sof_or_eof_q) begin
-                        payload_time_d = 1'b1;
-                        next_state     = PARSE_L0;
+                if(sof_or_eof_q) begin
+                    if(bytes_valid_i == 8'hE0) begin
+                        sof_or_eof_d = 1'b0;
+                    end else if(bytes_valid_i != 8'hFF) begin
+                        sof_or_eof_d = 1'b0;
                     end
-
-                end else if(bytes_valid_i == 8'hE0 && !sof_or_eof_q) begin //b1110_0000
-                    next_state   = !sof_or_eof_q ? PAUSE : IDLE;
-                    sof_or_eof_d = !sof_or_eof_q;
+                end else if(bytes_valid_i == 8'hFE) begin //b1111_1110
+                    sof_or_eof_d   = 1'b1;
+                    next_state     = PARSE_L0;
+                    payload_time_d = 1'b1;
+                    sof_type_d     = 1'b1;
+                end else if(bytes_valid_i == 8'hE0) begin //b1110_0000
+                    sof_or_eof_d = 1'b1;
+                    next_state   = PAUSE;
                 end
             end
         end
