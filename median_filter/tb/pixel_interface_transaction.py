@@ -12,7 +12,11 @@ class PixelStruct:
 
     @property
     def value_tuple(self):
-        return (self.red.integer, self.green.integer, self.blue.integer)
+        return (
+            self.red.to_unsigned(),
+            self.green.to_unsigned(),
+            self.blue.to_unsigned(),
+        )
 
 
 @dataclass
